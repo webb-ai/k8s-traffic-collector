@@ -4,7 +4,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 type tlsReader struct {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 func handleClientStream(progress *api.ReadProgress, capture api.Capture, tcpID *api.TcpID, counterPair *api.CounterPair, captureTime time.Time, emitter api.Emitter, request *RedisPacket, reqResMatcher *requestResponseMatcher) error {

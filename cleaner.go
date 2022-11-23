@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/gopacket/reassembly"
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 type CleanerStats struct {

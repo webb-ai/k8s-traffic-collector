@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 // Key is {client_addr}_{client_port}_{dest_addr}_{dest_port}_{channel_id}_{class_id}_{method_id}

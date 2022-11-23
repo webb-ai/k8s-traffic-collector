@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
-	"github.com/kubeshark/kubeshark/tap/diagnose"
+	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/diagnose"
 )
 
 type tcpStreamMap struct {

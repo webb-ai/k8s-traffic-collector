@@ -1,6 +1,6 @@
 package tlstapper
 
-import "github.com/kubeshark/kubeshark/tap/api"
+import "github.com/kubeshark/worker/api"
 
 type tlsStream struct {
 	reader   *tlsReader

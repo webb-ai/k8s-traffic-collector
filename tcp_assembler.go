@@ -3,20 +3,21 @@ package tap
 import (
 	"encoding/hex"
 	"fmt"
-	lru "github.com/hashicorp/golang-lru"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
+
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
-	"github.com/kubeshark/kubeshark/tap/dbgctl"
-	"github.com/kubeshark/kubeshark/tap/diagnose"
-	"github.com/kubeshark/kubeshark/tap/source"
+	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/dbgctl"
+	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/source"
 )
 
 const (

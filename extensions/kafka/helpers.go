@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/fatih/camelcase"
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 	"github.com/ohler55/ojg/jp"
 	"github.com/ohler55/ojg/oj"
 )

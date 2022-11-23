@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
-	"github.com/kubeshark/kubeshark/tap/dbgctl"
+	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/dbgctl"
 )
 
 type tcpStreamCallbacks interface {

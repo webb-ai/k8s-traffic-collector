@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
-	"github.com/kubeshark/kubeshark/tap/dbgctl"
+	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/dbgctl"
 )
 
 /* TcpReader gets reads from a channel of bytes of tcp payload, and parses it into requests and responses.

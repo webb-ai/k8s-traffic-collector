@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 var http10protocol = api.Protocol{

@@ -1,3 +1,3 @@
-module github.com/kubeshark/kubeshark/tap/dbgctl
+module github.com/kubeshark/worker/dbgctl
 
 go 1.18

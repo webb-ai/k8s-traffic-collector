@@ -8,9 +8,9 @@ import (
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
-	"github.com/kubeshark/kubeshark/tap/dbgctl"
-	"github.com/kubeshark/kubeshark/tap/diagnose"
+	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/dbgctl"
+	"github.com/kubeshark/worker/diagnose"
 )
 
 type Handle interface {

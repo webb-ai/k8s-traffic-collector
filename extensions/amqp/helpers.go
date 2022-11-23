@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 var connectionMethodMap = map[int]string{

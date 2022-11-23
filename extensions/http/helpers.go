@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 func mapSliceRebuildAsMap(mapSlice []interface{}) (newMap map[string]interface{}) {

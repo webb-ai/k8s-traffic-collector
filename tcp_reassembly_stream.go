@@ -6,7 +6,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers" // pulls in all layers decoders
 	"github.com/google/gopacket/reassembly"
-	"github.com/kubeshark/kubeshark/tap/diagnose"
+	"github.com/kubeshark/worker/diagnose"
 )
 
 type tcpReassemblyStream struct {

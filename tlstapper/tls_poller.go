@@ -17,7 +17,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 const (

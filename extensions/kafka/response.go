@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 type Response struct {

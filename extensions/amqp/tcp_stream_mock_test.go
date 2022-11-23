@@ -3,7 +3,7 @@ package amqp
 import (
 	"sync"
 
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 )
 
 type tcpStream struct {

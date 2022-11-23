@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/tap/api"
+	"github.com/kubeshark/worker/api"
 	v1 "k8s.io/api/core/v1"
 )
 
