@@ -26,7 +26,7 @@ var profiler = flag.Bool("profiler", false, "Run pprof server")
 const (
 	HostModeEnvVar             = "HOST_MODE"
 	NodeNameEnvVar             = "NODE_NAME"
-	socketConnectionRetries    = 30
+	socketConnectionRetries    = 3
 	socketConnectionRetryDelay = time.Second * 2
 	socketHandshakeTimeout     = time.Second * 2
 )
