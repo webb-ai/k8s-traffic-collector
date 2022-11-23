@@ -11,15 +11,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kubeshark/kubeshark/agent/pkg/models"
-
-	"github.com/kubeshark/kubeshark/agent/pkg/app"
-
 	"github.com/gorilla/websocket"
 	"github.com/kubeshark/kubeshark/logger"
-	"github.com/kubeshark/kubeshark/shared"
-	tap "github.com/kubeshark/worker"
-	tapApi "github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/dbgctl"
 	"github.com/op/go-logging"
 )
@@ -31,6 +25,9 @@ var harsDir = flag.String("hars-dir", "", "Directory to read hars from")
 var profiler = flag.Bool("profiler", false, "Run pprof server")
 
 const (
+	HostModeEnvVar             = "HOST_MODE"
+	LogLevelEnvVar             = "LOG_LEVEL"
+	NodeNameEnvVar             = "NODE_NAME"
 	socketConnectionRetries    = 30
 	socketConnectionRetryDelay = time.Second * 2
 	socketHandshakeTimeout     = time.Second * 2
@@ -41,7 +38,7 @@ func main() {
 	logger.InitLoggerStd(logLevel)
 	flag.Parse()
 
-	app.LoadExtensions()
+	loadExtensions()
 
 	runInTapperMode()
 
@@ -58,15 +55,15 @@ func runInTapperMode() {
 		panic("API server address must be provided with --api-server-address when using --tap")
 	}
 
-	hostMode := os.Getenv(shared.HostModeEnvVar) == "1"
-	tapOpts := &tap.TapOpts{
+	hostMode := os.Getenv(HostModeEnvVar) == "1"
+	tapOpts := &TapOpts{
 		HostMode: hostMode,
 	}
 
-	filteredOutputItemsChannel := make(chan *tapApi.OutputChannelItem)
+	filteredOutputItemsChannel := make(chan *api.OutputChannelItem)
 
 	filteringOptions := getTrafficFilteringOptions()
-	tap.StartPassiveTapper(tapOpts, filteredOutputItemsChannel, app.Extensions, filteringOptions)
+	StartPassiveTapper(tapOpts, filteredOutputItemsChannel, Extensions, filteringOptions)
 	socketConnection, err := dialSocketWithRetry(*apiServerAddress, socketConnectionRetries, socketConnectionRetryDelay)
 	if err != nil {
 		panic(fmt.Sprintf("Error connecting to socket server at %s %v", *apiServerAddress, err))
@@ -76,23 +73,13 @@ func runInTapperMode() {
 	go pipeTapChannelToSocket(socketConnection, filteredOutputItemsChannel)
 }
 
-func getTrafficFilteringOptions() *tapApi.TrafficFilteringOptions {
-	filteringOptionsJson := os.Getenv(shared.KubesharkFilteringOptionsEnvVar)
-	if filteringOptionsJson == "" {
-		return &tapApi.TrafficFilteringOptions{
-			IgnoredUserAgents: []string{},
-		}
+func getTrafficFilteringOptions() *api.TrafficFilteringOptions {
+	return &api.TrafficFilteringOptions{
+		IgnoredUserAgents: []string{},
 	}
-	var filteringOptions tapApi.TrafficFilteringOptions
-	err := json.Unmarshal([]byte(filteringOptionsJson), &filteringOptions)
-	if err != nil {
-		panic(fmt.Sprintf("env var %s's value of %s is invalid! json must match the api.TrafficFilteringOptions struct %v", shared.KubesharkFilteringOptionsEnvVar, filteringOptionsJson, err))
-	}
-
-	return &filteringOptions
 }
 
-func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-chan *tapApi.OutputChannelItem) {
+func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-chan *api.OutputChannelItem) {
 	if connection == nil {
 		panic("Websocket connection is nil")
 	}
@@ -102,7 +89,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 	}
 
 	for messageData := range messageDataChannel {
-		marshaledData, err := models.CreateWebsocketTappedEntryMessage(messageData)
+		marshaledData, err := CreateWebsocketTappedEntryMessage(messageData)
 		if err != nil {
 			logger.Log.Errorf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			continue
@@ -112,7 +99,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 			continue
 		}
 
-		// NOTE: This is where the `*tapApi.OutputChannelItem` leaves the code
+		// NOTE: This is where the `*api.OutputChannelItem` leaves the code
 		// and goes into the intermediate WebSocket.
 		err = connection.WriteMessage(websocket.TextMessage, marshaledData)
 		if err != nil {
@@ -132,7 +119,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 }
 
 func determineLogLevel() (logLevel logging.Level) {
-	logLevel, err := logging.LogLevel(os.Getenv(shared.LogLevelEnvVar))
+	logLevel, err := logging.LogLevel(os.Getenv(LogLevelEnvVar))
 	if err != nil {
 		logLevel = logging.INFO
 	}
@@ -171,26 +158,26 @@ func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 				return
 			}
 		} else {
-			var socketMessageBase shared.WebSocketMessageMetadata
+			var socketMessageBase WebSocketMessageMetadata
 			if err := json.Unmarshal(message, &socketMessageBase); err != nil {
 				logger.Log.Errorf("Could not unmarshal websocket message %v", err)
 			} else {
 				switch socketMessageBase.MessageType {
-				case shared.WebSocketMessageTypeTapConfig:
-					var tapConfigMessage *shared.WebSocketTapConfigMessage
+				case WebSocketMessageTypeTapConfig:
+					var tapConfigMessage *WebSocketTapConfigMessage
 					if err := json.Unmarshal(message, &tapConfigMessage); err != nil {
 						logger.Log.Errorf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
 					} else {
-						tap.UpdateTapTargets(tapConfigMessage.TapTargets)
+						UpdateTapTargets(tapConfigMessage.TapTargets)
 					}
-				case shared.WebSocketMessageTypeUpdateTappedPods:
-					var tappedPodsMessage shared.WebSocketTappedPodsMessage
+				case WebSocketMessageTypeUpdateTappedPods:
+					var tappedPodsMessage WebSocketTappedPodsMessage
 					if err := json.Unmarshal(message, &tappedPodsMessage); err != nil {
 						logger.Log.Infof("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
 						return
 					}
-					nodeName := os.Getenv(shared.NodeNameEnvVar)
-					tap.UpdateTapTargets(tappedPodsMessage.NodeToTappedPodMap[nodeName])
+					nodeName := os.Getenv(NodeNameEnvVar)
+					UpdateTapTargets(tappedPodsMessage.NodeToTappedPodMap[nodeName])
 				default:
 					logger.Log.Warningf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
 				}
