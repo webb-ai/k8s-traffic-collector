@@ -25,3 +25,6 @@ go.work
 
 # Editors/IDEs
 .vscode/
+
+# The executable
+worker

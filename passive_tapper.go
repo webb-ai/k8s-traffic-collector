@@ -6,7 +6,7 @@
 
 // The pcapdump binary implements a tcpdump-like command line tool with gopacket
 // using pcap as a backend data collection mechanism.
-package tap
+package main
 
 import (
 	"encoding/json"
