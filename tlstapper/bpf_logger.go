@@ -13,10 +13,11 @@ import (
 const logPrefix = "[bpf] "
 
 // The same consts defined in log.h
-//
-const logLevelError = 0
-const logLevelInfo = 1
-const logLevelDebug = 2
+var logLevels = map[int]string{
+	0: "ERROR",
+	1: "INFO",
+	2: "DEBUG",
+}
 
 type logMessage struct {
 	Level       uint32
@@ -95,12 +96,12 @@ func (p *bpfLogger) log(msg *logMessage) {
 	tokensCount := strings.Count(format, "%")
 
 	if tokensCount == 0 {
-		log.Printf(format, format)
+		log.Printf(logPrefix + logLevels[int(msg.Level)] + " " + format)
 	} else if tokensCount == 1 {
-		log.Printf(format, format, msg.Arg1)
+		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1)
 	} else if tokensCount == 2 {
-		log.Printf(format, format, msg.Arg1, msg.Arg2)
+		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1, msg.Arg2)
 	} else if tokensCount == 3 {
-		log.Printf(format, format, msg.Arg1, msg.Arg2, msg.Arg3)
+		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1, msg.Arg2, msg.Arg3)
 	}
 }

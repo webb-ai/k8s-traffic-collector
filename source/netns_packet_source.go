@@ -14,14 +14,14 @@ func newNetnsPacketSource(procfs string, pid string, interfaceName string, packe
 	nsh, err := netns.GetFromPath(fmt.Sprintf("%s/%s/ns/net", procfs, pid))
 
 	if err != nil {
-		log.Printf("Unable to get netns of pid %s - %w", pid, err)
+		log.Printf("Unable to get netns of pid %s - %v", pid, err)
 		return nil, err
 	}
 
 	src, err := newPacketSourceFromNetnsHandle(pid, nsh, interfaceName, packetCapture, behaviour, origin)
 
 	if err != nil {
-		log.Printf("Error starting netns packet source for %s - %w", pid, err)
+		log.Printf("Error starting netns packet source for %s - %v", pid, err)
 		return nil, err
 	}
 
@@ -46,13 +46,13 @@ func newPacketSourceFromNetnsHandle(pid string, nsh netns.NsHandle, interfaceNam
 		oldnetns, err := netns.Get()
 
 		if err != nil {
-			log.Printf("Unable to get netns of current thread %w", err)
+			log.Printf("Unable to get netns of current thread %v", err)
 			errors <- err
 			return
 		}
 
 		if err := netns.Set(nsh); err != nil {
-			log.Printf("Unable to set netns of pid %s - %w", pid, err)
+			log.Printf("Unable to set netns of pid %s - %v", pid, err)
 			errors <- err
 			return
 		}
@@ -61,13 +61,13 @@ func newPacketSourceFromNetnsHandle(pid string, nsh netns.NsHandle, interfaceNam
 		src, err := newTcpPacketSource(name, "", interfaceName, packetCapture, behaviour, origin)
 
 		if err != nil {
-			log.Printf("Error listening to PID %s - %w", pid, err)
+			log.Printf("Error listening to PID %s - %v", pid, err)
 			errors <- err
 			return
 		}
 
 		if err := netns.Set(oldnetns); err != nil {
-			log.Printf("Unable to set back netns of current thread %w", err)
+			log.Printf("Unable to set back netns of current thread %v", err)
 			errors <- err
 			return
 		}

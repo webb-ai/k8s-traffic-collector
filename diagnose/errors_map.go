@@ -80,6 +80,6 @@ func (e *errorsMap) GetErrorsSummary() (int, string) {
 func (e *errorsMap) PrintSummary() {
 	log.Printf("Errors: %d", e.ErrorsCount)
 	for t := range e.errorsMap {
-		log.Printf(" %s:\t\t%d", e, e.errorsMap[t])
+		log.Printf(" %v:\t\t%d", e, e.errorsMap[t])
 	}
 }

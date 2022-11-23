@@ -106,7 +106,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	relevantPids[hostSourcePid] = api.Pcap
 
 	if envoyPids, err := discoverRelevantEnvoyPids(procfs, pods); err != nil {
-		log.Printf("Unable to discover envoy pids - %w", err)
+		log.Printf("Unable to discover envoy pids - %v", err)
 	} else {
 		for _, pid := range envoyPids {
 			relevantPids[pid] = api.Envoy
@@ -114,7 +114,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	}
 
 	if linkerdPids, err := discoverRelevantLinkerdPids(procfs, pods); err != nil {
-		log.Printf("Unable to discover linkerd pids - %w", err)
+		log.Printf("Unable to discover linkerd pids - %v", err)
 	} else {
 		for _, pid := range linkerdPids {
 			relevantPids[pid] = api.Linkerd
@@ -143,7 +143,7 @@ func (m *PacketSourceManager) setBPFFilter(pods []v1.Pod) {
 	var expr string
 
 	if len(pods) > bpfFilterMaxPods {
-		log.Print("Too many pods for setting ebpf filter %d, setting just not 443", len(pods))
+		log.Printf("Too many pods for setting ebpf filter %d, setting just not 443", len(pods))
 		expr = "port not 443"
 	} else {
 		expr = buildBPFExpr(pods)
@@ -153,7 +153,7 @@ func (m *PacketSourceManager) setBPFFilter(pods []v1.Pod) {
 
 	for pid, src := range m.sources {
 		if err := src.setBPFFilter(expr); err != nil {
-			log.Printf("Error setting bpf filter for %s %v - %w", pid, src, err)
+			log.Printf("Error setting bpf filter for %s %v - %v", pid, src, err)
 		}
 	}
 }

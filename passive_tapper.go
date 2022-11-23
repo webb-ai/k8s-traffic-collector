@@ -97,7 +97,7 @@ func StartPassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, 
 	assembler, err := initializePassiveTapper(opts, outputItems, streamsMap)
 
 	if err != nil {
-		log.Printf("Error initializing tapper %w", err)
+		log.Printf("Error initializing tapper %v", err)
 		return
 	}
 

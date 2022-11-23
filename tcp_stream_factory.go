@@ -33,7 +33,7 @@ func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
 		// TODO: think this over
 		log.Print("Failed to get self IP addresses")
-		log.Printf("Getting-Self-Address", "Error getting self ip address: %s (%v,%+v)", err, err, err)
+		log.Printf("Getting-Self-Address. Error getting self ip address: %v (%v,%+v)", err, err, err)
 		ownIps = make([]string, 0)
 	} else {
 		ownIps = localhostIPs

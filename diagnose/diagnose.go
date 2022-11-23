@@ -26,7 +26,7 @@ func StartMemoryProfiler(envDumpPath string, envTimeInterval string) {
 		}
 	}
 
-	log.Print("Profiling is on, results will be written to %s", dumpPath)
+	log.Printf("Profiling is on, results will be written to %s", dumpPath)
 	go func() {
 		if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
 			if err := os.Mkdir(dumpPath, 0777); err != nil {

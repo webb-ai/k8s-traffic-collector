@@ -18,10 +18,6 @@ import (
 )
 
 var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
-var namespace = flag.String("namespace", "", "Resolve IPs if they belong to resources in this namespace (default is all)")
-var harsReaderMode = flag.Bool("hars-read", false, "Run in hars-read mode")
-var harsDir = flag.String("hars-dir", "", "Directory to read hars from")
-var profiler = flag.Bool("profiler", false, "Run pprof server")
 
 const (
 	HostModeEnvVar             = "HOST_MODE"
