@@ -1,6 +1,6 @@
 package diagnose
 
-import "github.com/kubeshark/kubeshark/logger"
+import "log"
 
 type tapperInternalStats struct {
 	Ipdefrag            int
@@ -27,20 +27,20 @@ func InitializeTapperInternalStats() {
 }
 
 func (stats *tapperInternalStats) PrintStatsSummary() {
-	logger.Log.Infof("IPdefrag:\t\t%d", stats.Ipdefrag)
-	logger.Log.Infof("TCP stats:")
-	logger.Log.Infof(" missed bytes:\t\t%d", stats.MissedBytes)
-	logger.Log.Infof(" total packets:\t\t%d", stats.Pkt)
-	logger.Log.Infof(" rejected FSM:\t\t%d", stats.RejectFsm)
-	logger.Log.Infof(" rejected Options:\t%d", stats.RejectOpt)
-	logger.Log.Infof(" reassembled bytes:\t%d", stats.Sz)
-	logger.Log.Infof(" total TCP bytes:\t%d", stats.Totalsz)
-	logger.Log.Infof(" conn rejected FSM:\t%d", stats.RejectConnFsm)
-	logger.Log.Infof(" reassembled chunks:\t%d", stats.Reassembled)
-	logger.Log.Infof(" out-of-order packets:\t%d", stats.OutOfOrderPackets)
-	logger.Log.Infof(" out-of-order bytes:\t%d", stats.OutOfOrderBytes)
-	logger.Log.Infof(" biggest-chunk packets:\t%d", stats.BiggestChunkPackets)
-	logger.Log.Infof(" biggest-chunk bytes:\t%d", stats.BiggestChunkBytes)
-	logger.Log.Infof(" overlap packets:\t%d", stats.OverlapPackets)
-	logger.Log.Infof(" overlap bytes:\t\t%d", stats.OverlapBytes)
+	log.Printf("IPdefrag:\t\t%d", stats.Ipdefrag)
+	log.Printf("TCP stats:")
+	log.Printf(" missed bytes:\t\t%d", stats.MissedBytes)
+	log.Printf(" total packets:\t\t%d", stats.Pkt)
+	log.Printf(" rejected FSM:\t\t%d", stats.RejectFsm)
+	log.Printf(" rejected Options:\t%d", stats.RejectOpt)
+	log.Printf(" reassembled bytes:\t%d", stats.Sz)
+	log.Printf(" total TCP bytes:\t%d", stats.Totalsz)
+	log.Printf(" conn rejected FSM:\t%d", stats.RejectConnFsm)
+	log.Printf(" reassembled chunks:\t%d", stats.Reassembled)
+	log.Printf(" out-of-order packets:\t%d", stats.OutOfOrderPackets)
+	log.Printf(" out-of-order bytes:\t%d", stats.OutOfOrderBytes)
+	log.Printf(" biggest-chunk packets:\t%d", stats.BiggestChunkPackets)
+	log.Printf(" biggest-chunk bytes:\t%d", stats.BiggestChunkBytes)
+	log.Printf(" overlap packets:\t%d", stats.OverlapPackets)
+	log.Printf(" overlap bytes:\t\t%d", stats.OverlapBytes)
 }

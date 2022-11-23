@@ -3,11 +3,11 @@ package tlstapper
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 func findSsllib(procfs string, pid uint32) (string, error) {
@@ -17,7 +17,7 @@ func findSsllib(procfs string, pid uint32) (string, error) {
 		return "", errors.Wrap(err, 0)
 	}
 
-	logger.Log.Debugf("Binary file for %v = %v", pid, binary)
+	log.Printf("Binary file for %v = %v", pid, binary)
 
 	if strings.HasSuffix(binary, "/node") {
 		return findLibraryByPid(procfs, pid, binary)

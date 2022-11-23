@@ -6,13 +6,13 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"runtime"
 
 	"github.com/Masterminds/semver"
 	"github.com/cilium/ebpf/link"
 	"github.com/knightsc/gapstone"
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 type goAbi int
@@ -234,7 +234,7 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 	}
 
 	engineMajor, engineMinor := engine.Version()
-	logger.Log.Infof(
+	log.Printf(
 		"Disassembling %s with Capstone %d.%d (arch: %d, mode: %d)",
 		filePath,
 		engineMajor,
@@ -309,7 +309,7 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 		// collect the bytes of the symbol
 		textSectionDataLen := uint64(len(textSectionData) - 1)
 		if symEndingIndex > textSectionDataLen {
-			logger.Log.Warningf(
+			log.Printf(
 				"Skipping symbol %v, ending index %v is bigger than text section data length %v",
 				sym.Name,
 				symEndingIndex,

@@ -1,12 +1,12 @@
 package tlstapper
 
 import (
+	"log"
 	"strconv"
 	"sync"
 
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	"github.com/moby/moby/pkg/parsers/kernel"
 )
@@ -31,7 +31,7 @@ type TlsTapper struct {
 }
 
 func (t *TlsTapper) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
-	logger.Log.Infof("Initializing tls tapper (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
+	log.Printf("Initializing tls tapper (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
 
 	var err error
 	err = setupRLimit()
@@ -45,7 +45,7 @@ func (t *TlsTapper) Init(chunksBufferSize int, logBufferSize int, procfs string,
 		return err
 	}
 
-	logger.Log.Infof("Detected Linux kernel version: %s", kernelVersion)
+	log.Printf("Detected Linux kernel version: %s", kernelVersion)
 
 	t.bpfObjects = tlsTapperObjects{}
 	// TODO: cilium/ebpf does not support .kconfig Therefore; for now, we load object files according to kernel version.
@@ -110,7 +110,7 @@ func (t *TlsTapper) AddSSLLibPid(procfs string, pid uint32, namespace string) er
 	sslLibrary, err := findSsllib(procfs, pid)
 
 	if err != nil {
-		logger.Log.Infof("PID skipped no libssl.so found (pid: %d) %v", pid, err)
+		log.Printf("PID skipped no libssl.so found (pid: %d) %v", pid, err)
 		return nil // hide the error on purpose, it's OK for a process to not use libssl.so
 	}
 
@@ -122,7 +122,7 @@ func (t *TlsTapper) AddGoPid(procfs string, pid uint32, namespace string) error 
 }
 
 func (t *TlsTapper) RemovePid(pid uint32) error {
-	logger.Log.Infof("Removing PID (pid: %v)", pid)
+	log.Printf("Removing PID (pid: %v)", pid)
 
 	pids := t.bpfObjects.tlsTapperMaps.PidsMap
 
@@ -196,7 +196,7 @@ func (t *TlsTapper) tapSSLLibPid(pid uint32, sslLibrary string, namespace string
 		return err
 	}
 
-	logger.Log.Infof("Tapping TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary)
+	log.Printf("Tapping TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary)
 
 	t.sslHooksStructs = append(t.sslHooksStructs, newSsl)
 
@@ -222,11 +222,11 @@ func (t *TlsTapper) tapGoPid(procfs string, pid uint32, namespace string) error 
 	hooks := goHooks{}
 
 	if err := hooks.installUprobes(&t.bpfObjects, exePath); err != nil {
-		logger.Log.Infof("PID skipped not a Go binary or symbol table is stripped (pid: %v) %v", pid, exePath)
+		log.Printf("PID skipped not a Go binary or symbol table is stripped (pid: %v) %v", pid, exePath)
 		return nil // hide the error on purpose, its OK for a process to be not a Go binary or stripped Go binary
 	}
 
-	logger.Log.Infof("Tapping TLS (pid: %v) (Go: %v)", pid, exePath)
+	log.Printf("Tapping TLS (pid: %v) (Go: %v)", pid, exePath)
 
 	t.goHooksStructs = append(t.goHooksStructs, hooks)
 
@@ -246,8 +246,8 @@ func (t *TlsTapper) tapGoPid(procfs string, pid uint32, namespace string) error 
 func LogError(err error) {
 	var e *errors.Error
 	if errors.As(err, &e) {
-		logger.Log.Errorf("Error: %v", e.ErrorStack())
+		log.Printf("Error: %v", e.ErrorStack())
 	} else {
-		logger.Log.Errorf("Error: %v", err)
+		log.Printf("Error: %v", err)
 	}
 }

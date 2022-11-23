@@ -2,9 +2,9 @@ package tap
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	v1 "k8s.io/api/core/v1"
 
@@ -32,8 +32,8 @@ func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts 
 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
 		// TODO: think this over
-		logger.Log.Info("Failed to get self IP addresses")
-		logger.Log.Errorf("Getting-Self-Address", "Error getting self ip address: %s (%v,%+v)", err, err, err)
+		log.Print("Failed to get self IP addresses")
+		log.Printf("Getting-Self-Address", "Error getting self ip address: %s (%v,%+v)", err, err, err)
 		ownIps = make([]string, 0)
 	} else {
 		ownIps = localhostIPs

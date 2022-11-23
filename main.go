@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,10 +13,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/dbgctl"
-	"github.com/op/go-logging"
 )
 
 var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
@@ -26,7 +25,6 @@ var profiler = flag.Bool("profiler", false, "Run pprof server")
 
 const (
 	HostModeEnvVar             = "HOST_MODE"
-	LogLevelEnvVar             = "LOG_LEVEL"
 	NodeNameEnvVar             = "NODE_NAME"
 	socketConnectionRetries    = 30
 	socketConnectionRetryDelay = time.Second * 2
@@ -34,8 +32,6 @@ const (
 )
 
 func main() {
-	logLevel := determineLogLevel()
-	logger.InitLoggerStd(logLevel)
 	flag.Parse()
 
 	loadExtensions()
@@ -46,11 +42,11 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
 
-	logger.Log.Info("Exiting")
+	log.Print("Exiting")
 }
 
 func runInTapperMode() {
-	logger.Log.Infof("Starting tapper, websocket address: %s", *apiServerAddress)
+	log.Printf("Starting tapper, websocket address: %s", *apiServerAddress)
 	if *apiServerAddress == "" {
 		panic("API server address must be provided with --api-server-address when using --tap")
 	}
@@ -68,7 +64,7 @@ func runInTapperMode() {
 	if err != nil {
 		panic(fmt.Sprintf("Error connecting to socket server at %s %v", *apiServerAddress, err))
 	}
-	logger.Log.Infof("Connected successfully to websocket %s", *apiServerAddress)
+	log.Printf("Connected successfully to websocket %s", *apiServerAddress)
 
 	go pipeTapChannelToSocket(socketConnection, filteredOutputItemsChannel)
 }
@@ -91,7 +87,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 	for messageData := range messageDataChannel {
 		marshaledData, err := CreateWebsocketTappedEntryMessage(messageData)
 		if err != nil {
-			logger.Log.Errorf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
+			log.Printf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			continue
 		}
 
@@ -103,28 +99,19 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 		// and goes into the intermediate WebSocket.
 		err = connection.WriteMessage(websocket.TextMessage, marshaledData)
 		if err != nil {
-			logger.Log.Errorf("error sending message through socket server %v, err: %s, (%v,%+v)", messageData, err, err, err)
+			log.Printf("error sending message through socket server %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			if errors.Is(err, syscall.EPIPE) {
-				logger.Log.Warning("detected socket disconnection, reestablishing socket connection")
+				log.Printf("detected socket disconnection, reestablishing socket connection")
 				connection, err = dialSocketWithRetry(*apiServerAddress, socketConnectionRetries, socketConnectionRetryDelay)
 				if err != nil {
-					logger.Log.Fatalf("error reestablishing socket connection: %v", err)
+					log.Fatalf("error reestablishing socket connection: %v", err)
 				} else {
-					logger.Log.Info("recovered connection successfully")
+					log.Print("recovered connection successfully")
 				}
 			}
 			continue
 		}
 	}
-}
-
-func determineLogLevel() (logLevel logging.Level) {
-	logLevel, err := logging.LogLevel(os.Getenv(LogLevelEnvVar))
-	if err != nil {
-		logLevel = logging.INFO
-	}
-
-	return
 }
 
 func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.Duration) (*websocket.Conn, error) {
@@ -138,7 +125,7 @@ func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.
 		if err != nil {
 			lastErr = err
 			if i < retryAmount {
-				logger.Log.Infof("socket connection to %s failed: %v, retrying %d out of %d in %d seconds...", socketAddress, err, i, retryAmount, retryDelay/time.Second)
+				log.Printf("socket connection to %s failed: %v, retrying %d out of %d in %d seconds...", socketAddress, err, i, retryAmount, retryDelay/time.Second)
 				time.Sleep(retryDelay)
 			}
 		} else {
@@ -152,7 +139,7 @@ func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.
 func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 	for {
 		if _, message, err := socketConnection.ReadMessage(); err != nil {
-			logger.Log.Errorf("error reading message from socket connection, err: %s, (%v,%+v)", err, err, err)
+			log.Printf("error reading message from socket connection, err: %s, (%v,%+v)", err, err, err)
 			if errors.Is(err, syscall.EPIPE) {
 				// socket has disconnected, we can safely stop this goroutine
 				return
@@ -160,26 +147,26 @@ func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 		} else {
 			var socketMessageBase WebSocketMessageMetadata
 			if err := json.Unmarshal(message, &socketMessageBase); err != nil {
-				logger.Log.Errorf("Could not unmarshal websocket message %v", err)
+				log.Printf("Could not unmarshal websocket message %v", err)
 			} else {
 				switch socketMessageBase.MessageType {
 				case WebSocketMessageTypeTapConfig:
 					var tapConfigMessage *WebSocketTapConfigMessage
 					if err := json.Unmarshal(message, &tapConfigMessage); err != nil {
-						logger.Log.Errorf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
+						log.Printf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
 					} else {
 						UpdateTapTargets(tapConfigMessage.TapTargets)
 					}
 				case WebSocketMessageTypeUpdateTappedPods:
 					var tappedPodsMessage WebSocketTappedPodsMessage
 					if err := json.Unmarshal(message, &tappedPodsMessage); err != nil {
-						logger.Log.Infof("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
+						log.Printf("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
 						return
 					}
 					nodeName := os.Getenv(NodeNameEnvVar)
 					UpdateTapTargets(tappedPodsMessage.NodeToTappedPodMap[nodeName])
 				default:
-					logger.Log.Warningf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
+					log.Printf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
 				}
 			}
 		}

@@ -2,10 +2,10 @@ package source
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 
-	"github.com/kubeshark/kubeshark/logger"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -20,7 +20,7 @@ func discoverRelevantLinkerdPids(procfs string, pods []v1.Pod) ([]string, error)
 		return result, err
 	}
 
-	logger.Log.Infof("Starting linkerd auto discoverer %v %v - scanning %v potential pids",
+	log.Printf("Starting linkerd auto discoverer %v %v - scanning %v potential pids",
 		procfs, pods, len(pids))
 
 	for _, pid := range pids {
@@ -37,7 +37,7 @@ func discoverRelevantLinkerdPids(procfs string, pods []v1.Pod) ([]string, error)
 		}
 	}
 
-	logger.Log.Infof("Found %v relevant linkerd processes - %v", len(result), result)
+	log.Printf("Found %v relevant linkerd processes - %v", len(result), result)
 
 	return result, nil
 }
@@ -50,7 +50,7 @@ func checkLinkerdPid(procfs string, pid string, pods []v1.Pod) bool {
 		// Debug on purpose - it may happen due to many reasons and we only care
 		//	for it during troubleshooting
 		//
-		logger.Log.Debugf("Unable to read link %v - %v\n", execLink, err)
+		log.Printf("Unable to read link %v - %v\n", execLink, err)
 		return false
 	}
 
@@ -66,11 +66,11 @@ func checkLinkerdPid(procfs string, pid string, pods []v1.Pod) bool {
 	}
 
 	if podName == "" {
-		logger.Log.Debugf("Found a linkerd process without _pod_name variable %v\n", pid)
+		log.Printf("Found a linkerd process without _pod_name variable %v\n", pid)
 		return false
 	}
 
-	logger.Log.Infof("Found linkerd pid %v with pod name %v", pid, podName)
+	log.Printf("Found linkerd pid %v with pod name %v", pid, podName)
 
 	for _, pod := range pods {
 		if pod.Name == podName {

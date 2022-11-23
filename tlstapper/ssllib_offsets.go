@@ -2,9 +2,9 @@ package tlstapper
 
 import (
 	"debug/elf"
+	"log"
 
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 type sslOffsets struct {
@@ -35,7 +35,7 @@ func getSslOffsets(sslLibraryPath string) (sslOffsets, error) {
 		return sslOffsets{}, errors.Wrap(err, 0)
 	}
 
-	logger.Log.Debugf("Found TLS offsets (base: 0x%X) (write: 0x%X) (read: 0x%X)", base, offsets.SslWriteOffset, offsets.SslReadOffset)
+	log.Printf("Found TLS offsets (base: 0x%X) (write: 0x%X) (read: 0x%X)", base, offsets.SslWriteOffset, offsets.SslReadOffset)
 	return offsets, nil
 }
 

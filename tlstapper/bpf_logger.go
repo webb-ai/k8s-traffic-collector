@@ -3,11 +3,11 @@ package tlstapper
 import (
 	"bytes"
 	"encoding/binary"
+	"log"
 	"strings"
 
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 const logPrefix = "[bpf] "
@@ -53,7 +53,7 @@ func (p *bpfLogger) close() error {
 }
 
 func (p *bpfLogger) poll() {
-	logger.Log.Infof("Start polling for bpf logs")
+	log.Printf("Start polling for bpf logs")
 
 	for {
 		record, err := p.logReader.Read()
@@ -68,7 +68,7 @@ func (p *bpfLogger) poll() {
 		}
 
 		if record.LostSamples != 0 {
-			logger.Log.Infof("Log buffer is full, dropped %d logs", record.LostSamples)
+			log.Printf("Log buffer is full, dropped %d logs", record.LostSamples)
 			continue
 		}
 
@@ -85,32 +85,22 @@ func (p *bpfLogger) poll() {
 	}
 }
 
-func (p *bpfLogger) log(log *logMessage) {
-	if int(log.MessageCode) >= len(bpfLogMessages) {
-		logger.Log.Errorf("Unknown message code from bpf logger %d", log.MessageCode)
+func (p *bpfLogger) log(msg *logMessage) {
+	if int(msg.MessageCode) >= len(bpfLogMessages) {
+		log.Printf("Unknown message code from bpf logger %d", msg.MessageCode)
 		return
 	}
 
-	format := bpfLogMessages[log.MessageCode]
+	format := bpfLogMessages[msg.MessageCode]
 	tokensCount := strings.Count(format, "%")
 
 	if tokensCount == 0 {
-		p.logLevel(log.Level, format)
+		log.Printf(format, format)
 	} else if tokensCount == 1 {
-		p.logLevel(log.Level, format, log.Arg1)
+		log.Printf(format, format, msg.Arg1)
 	} else if tokensCount == 2 {
-		p.logLevel(log.Level, format, log.Arg1, log.Arg2)
+		log.Printf(format, format, msg.Arg1, msg.Arg2)
 	} else if tokensCount == 3 {
-		p.logLevel(log.Level, format, log.Arg1, log.Arg2, log.Arg3)
-	}
-}
-
-func (p *bpfLogger) logLevel(level uint32, format string, args ...interface{}) {
-	if level == logLevelError {
-		logger.Log.Errorf(logPrefix+format, args...)
-	} else if level == logLevelInfo {
-		logger.Log.Infof(logPrefix+format, args...)
-	} else if level == logLevelDebug {
-		logger.Log.Debugf(logPrefix+format, args...)
+		log.Printf(format, format, msg.Arg1, msg.Arg2, msg.Arg3)
 	}
 }

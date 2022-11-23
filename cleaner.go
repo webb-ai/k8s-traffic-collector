@@ -1,11 +1,11 @@
 package tap
 
 import (
+	"log"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket/reassembly"
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 )
 
@@ -38,7 +38,7 @@ func (cl *Cleaner) clean() {
 	})
 
 	cl.statsMutex.Lock()
-	logger.Log.Debugf("Assembler Stats after cleaning %s", cl.assembler.Dump())
+	log.Printf("Assembler Stats after cleaning %s", cl.assembler.Dump())
 	cl.statsMutex.Unlock()
 }
 

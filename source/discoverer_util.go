@@ -1,11 +1,10 @@
 package source
 
 import (
+	"log"
 	"os"
 	"regexp"
 	"strings"
-
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 var numberRegex = regexp.MustCompile("[0-9]+")
@@ -14,7 +13,7 @@ func getSingleValueFromEnvironmentVariableFile(filePath string, variableName str
 	bytes, err := os.ReadFile(filePath)
 
 	if err != nil {
-		logger.Log.Warningf("Error reading environment file %v - %v", filePath, err)
+		log.Printf("Error reading environment file %v - %v", filePath, err)
 		return "", err
 	}
 

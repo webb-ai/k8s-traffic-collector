@@ -12,13 +12,13 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
@@ -97,7 +97,7 @@ func StartPassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, 
 	assembler, err := initializePassiveTapper(opts, outputItems, streamsMap)
 
 	if err != nil {
-		logger.Log.Errorf("Error initializing tapper %w", err)
+		log.Printf("Error initializing tapper %w", err)
 		return
 	}
 
@@ -129,9 +129,9 @@ func printNewTapTargets(success bool) {
 	printStr = strings.TrimRight(printStr, ", ")
 
 	if success {
-		logger.Log.Infof("Now tapping: %s", printStr)
+		log.Printf("Now tapping: %s", printStr)
 	} else {
-		logger.Log.Errorf("Failed to start tapping: %s", printStr)
+		log.Printf("Failed to start tapping: %s", printStr)
 	}
 }
 
@@ -155,7 +155,7 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		// Since the start
 		errorMapLen, errorsSummery := diagnose.TapErrors.GetErrorsSummary()
 
-		logger.Log.Infof("%v (errors: %v, errTypes:%v) - Errors Summary: %s",
+		log.Printf("%v (errors: %v, errTypes:%v) - Errors Summary: %s",
 			time.Since(diagnose.AppStats.StartTime),
 			diagnose.TapErrors.ErrorsCount,
 			errorMapLen,
@@ -172,7 +172,7 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 				Memory: -1,
 			}
 		}
-		logger.Log.Infof(
+		log.Printf(
 			"heap-alloc: %d, heap-idle: %d, heap-objects: %d, goroutines: %d, cpu: %f, cores: %d/%d, rss: %f",
 			memStats.HeapAlloc,
 			memStats.HeapIdle,
@@ -186,7 +186,7 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		// Since the last print
 		cleanStats := cleaner.dumpStats()
 		assemblerStats := assembler.DumpStats()
-		logger.Log.Infof(
+		log.Printf(
 			"cleaner - flushed connections: %d, closed connections: %d, deleted messages: %d",
 			assemblerStats.flushedConnections,
 			assemblerStats.closedConnections,
@@ -194,10 +194,10 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		)
 		currentAppStats := diagnose.AppStats.DumpStats()
 		appStatsJSON, _ := json.Marshal(currentAppStats)
-		logger.Log.Infof("app stats - %v", string(appStatsJSON))
+		log.Printf("app stats - %v", string(appStatsJSON))
 
 		// At the moment
-		logger.Log.Infof("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), packetSourceManager.Stats())
+		log.Printf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), packetSourceManager.Stats())
 	}
 }
 
@@ -233,7 +233,7 @@ func initializePassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelI
 	mainPacketInputChan = make(chan source.TcpPacketInfo)
 
 	if err := initializePacketSources(); err != nil {
-		logger.Log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	opts.IgnoredPorts = append(opts.IgnoredPorts, buildIgnoredPortsList(*ignoredPorts)...)
@@ -266,14 +266,14 @@ func startPassiveTapper(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 	}
 
 	if err := diagnose.DumpMemoryProfile(*memprofile); err != nil {
-		logger.Log.Errorf("Error dumping memory profile %v", err)
+		log.Printf("Error dumping memory profile %v", err)
 	}
 
 	assembler.waitAndDump()
 
 	diagnose.InternalStats.PrintStatsSummary()
 	diagnose.TapErrors.PrintSummary()
-	logger.Log.Infof("AppStats: %v", diagnose.AppStats)
+	log.Printf("AppStats: %v", diagnose.AppStats)
 }
 
 func startTlsTapper(extension *api.Extension, outputItems chan *api.OutputChannelItem,

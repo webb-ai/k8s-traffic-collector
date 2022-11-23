@@ -3,10 +3,10 @@ package amqp
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strconv"
 
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 )
 
@@ -613,7 +613,7 @@ func representConnectionStart(event map[string]interface{}) []interface{} {
 				x, _ := json.Marshal(value)
 				outcome = string(x)
 			default:
-				logger.Log.Info("Unknown data type for the server property!")
+				log.Print("Unknown data type for the server property!")
 			}
 			headers = append(headers, api.TableData{
 				Name:     name,
@@ -672,7 +672,7 @@ func representConnectionStartOk(event map[string]interface{}) []interface{} {
 				x, _ := json.Marshal(value)
 				outcome = string(x)
 			default:
-				logger.Log.Info("Unknown data type for the client property!")
+				log.Print("Unknown data type for the client property!")
 			}
 			headers = append(headers, api.TableData{
 				Name:     name,

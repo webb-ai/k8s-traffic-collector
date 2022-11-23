@@ -1,11 +1,10 @@
 package tap
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/kubeshark/kubeshark/logger"
 )
 
 const (
@@ -62,11 +61,11 @@ func GetCloseTimedoutTcpChannelsInterval() time.Duration {
 	} else {
 		closeTimedoutTcpChannelsIntervalMs, err := strconv.Atoi(closeTimedoutTcpChannelsIntervalMsStr)
 		if err != nil {
-			logger.Log.Warningf("Error parsing environment variable %s: %v\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, err)
+			log.Printf("Error parsing environment variable %s: %v\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, err)
 			return defaultDuration
 		} else {
 			if closeTimedoutTcpChannelsIntervalMs < rangeMin || closeTimedoutTcpChannelsIntervalMs > rangeMax {
-				logger.Log.Warningf("The value of environment variable %s is not in acceptable range: %d - %d\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, rangeMin, rangeMax)
+				log.Printf("The value of environment variable %s is not in acceptable range: %d - %d\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, rangeMin, rangeMax)
 				return defaultDuration
 			} else {
 				return time.Duration(closeTimedoutTcpChannelsIntervalMs) * time.Millisecond

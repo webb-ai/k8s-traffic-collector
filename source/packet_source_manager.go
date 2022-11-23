@@ -2,9 +2,9 @@ package source
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	v1 "k8s.io/api/core/v1"
 )
@@ -80,7 +80,7 @@ func (m *PacketSourceManager) updateMtlsPods(procfs string, pods []v1.Pod,
 	interfaceName string, packetCapture string, behaviour TcpPacketSourceBehaviour, ipdefrag bool, packets chan<- TcpPacketInfo) {
 
 	relevantPids := m.getRelevantPids(procfs, pods)
-	logger.Log.Infof("Updating mtls pods (new: %v) (current: %v)", relevantPids, m.sources)
+	log.Printf("Updating mtls pods (new: %v) (current: %v)", relevantPids, m.sources)
 
 	for pid, src := range m.sources {
 		if _, ok := relevantPids[pid]; !ok {
@@ -106,7 +106,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	relevantPids[hostSourcePid] = api.Pcap
 
 	if envoyPids, err := discoverRelevantEnvoyPids(procfs, pods); err != nil {
-		logger.Log.Warningf("Unable to discover envoy pids - %w", err)
+		log.Printf("Unable to discover envoy pids - %w", err)
 	} else {
 		for _, pid := range envoyPids {
 			relevantPids[pid] = api.Envoy
@@ -114,7 +114,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	}
 
 	if linkerdPids, err := discoverRelevantLinkerdPids(procfs, pods); err != nil {
-		logger.Log.Warningf("Unable to discover linkerd pids - %w", err)
+		log.Printf("Unable to discover linkerd pids - %w", err)
 	} else {
 		for _, pid := range linkerdPids {
 			relevantPids[pid] = api.Linkerd
@@ -136,24 +136,24 @@ func buildBPFExpr(pods []v1.Pod) string {
 
 func (m *PacketSourceManager) setBPFFilter(pods []v1.Pod) {
 	if len(pods) == 0 {
-		logger.Log.Info("No pods provided, skipping pcap bpf filter")
+		log.Print("No pods provided, skipping pcap bpf filter")
 		return
 	}
 
 	var expr string
 
 	if len(pods) > bpfFilterMaxPods {
-		logger.Log.Info("Too many pods for setting ebpf filter %d, setting just not 443", len(pods))
+		log.Print("Too many pods for setting ebpf filter %d, setting just not 443", len(pods))
 		expr = "port not 443"
 	} else {
 		expr = buildBPFExpr(pods)
 	}
 
-	logger.Log.Infof("Setting pcap bpf filter %s", expr)
+	log.Printf("Setting pcap bpf filter %s", expr)
 
 	for pid, src := range m.sources {
 		if err := src.setBPFFilter(expr); err != nil {
-			logger.Log.Warningf("Error setting bpf filter for %s %v - %w", pid, src, err)
+			log.Printf("Error setting bpf filter for %s %v - %w", pid, src, err)
 		}
 	}
 }

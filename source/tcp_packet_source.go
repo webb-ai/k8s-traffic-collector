@@ -3,11 +3,11 @@ package source
 import (
 	"fmt"
 	"io"
+	"log"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
-	"github.com/kubeshark/kubeshark/logger"
 	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/dbgctl"
 	"github.com/kubeshark/worker/diagnose"
@@ -66,7 +66,7 @@ func newTcpPacketSource(name, filename string, interfaceName string, packetCaptu
 		if err != nil {
 			return nil, err
 		}
-		logger.Log.Infof("Using AF_PACKET socket as the capture source")
+		log.Printf("Using AF_PACKET socket as the capture source")
 	default:
 		result.Handle, err = newPcapHandle(
 			filename,
@@ -78,7 +78,7 @@ func newTcpPacketSource(name, filename string, interfaceName string, packetCaptu
 		if err != nil {
 			return nil, err
 		}
-		logger.Log.Infof("Using libpcap as the capture source")
+		log.Printf("Using libpcap as the capture source")
 	}
 
 	var decoder gopacket.Decoder
@@ -92,7 +92,7 @@ func newTcpPacketSource(name, filename string, interfaceName string, packetCaptu
 	result.Handle.SetDecoder(decoder, behaviour.Lazy, true)
 
 	if behaviour.BpfFilter != "" {
-		logger.Log.Infof("Using BPF filter %q", behaviour.BpfFilter)
+		log.Printf("Using BPF filter %q", behaviour.BpfFilter)
 		if err = result.setBPFFilter(behaviour.BpfFilter); err != nil {
 			return nil, fmt.Errorf("BPF filter error: %v", err)
 		}
@@ -123,17 +123,17 @@ func (source *tcpPacketSource) readPackets(ipdefrag bool, packets chan<- TcpPack
 	if dbgctl.KubesharkTapperDisablePcap {
 		return
 	}
-	logger.Log.Infof("Start reading packets from %v", source.name)
+	log.Printf("Start reading packets from %v", source.name)
 
 	for {
 		packet, err := source.Handle.NextPacket()
 
 		if err == io.EOF {
-			logger.Log.Infof("Got EOF while reading packets from %v", source.name)
+			log.Printf("Got EOF while reading packets from %v", source.name)
 			return
 		} else if err != nil {
 			if err.Error() != "Timeout Expired" {
-				logger.Log.Debugf("Error while reading from %v - %v", source.name, err)
+				log.Printf("Error while reading from %v - %v", source.name, err)
 			}
 			continue
 		}
@@ -145,17 +145,17 @@ func (source *tcpPacketSource) readPackets(ipdefrag bool, packets chan<- TcpPack
 				l := ip4.Length
 				newip4, err := source.defragger.DefragIPv4(ip4)
 				if err != nil {
-					logger.Log.Fatal("Error while de-fragmenting", err)
+					log.Print("Error while de-fragmenting", err)
 				} else if newip4 == nil {
-					logger.Log.Debugf("Fragment...")
+					log.Printf("Fragment...")
 					continue // packet fragment, we don't have whole packet yet.
 				}
 				if newip4.Length != l {
 					diagnose.InternalStats.Ipdefrag++
-					logger.Log.Debugf("Decoding re-assembled packet: %s", newip4.NextLayerType())
+					log.Printf("Decoding re-assembled packet: %s", newip4.NextLayerType())
 					pb, ok := packet.(gopacket.PacketBuilder)
 					if !ok {
-						logger.Log.Panic("Not a PacketBuilder")
+						log.Print("Not a PacketBuilder")
 					}
 					nextDecoder := newip4.NextLayerType()
 					_ = nextDecoder.Decode(newip4.Payload, pb)
