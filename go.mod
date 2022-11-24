@@ -15,6 +15,7 @@ require (
 	github.com/mertyildiran/gqlparser/v2 v2.4.6
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/ohler55/ojg v1.12.12
+	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/segmentio/kafka-go v0.4.27
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/stretchr/testify v1.7.0
