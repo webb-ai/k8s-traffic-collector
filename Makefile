@@ -9,3 +9,6 @@ endif
 
 bpf:
 	BPF_TARGET="$(BPF_TARGET)" BPF_CFLAGS="-O2 -g -D__TARGET_ARCH_$(BPF_ARCH_SUFFIX)" go generate tlstapper/tls_tapper.go
+
+lint:
+	golangci-lint run
