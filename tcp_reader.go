@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/dbgctl"
 )
 
 /* TcpReader gets reads from a channel of bytes of tcp payload, and parses it into requests and responses.
@@ -49,12 +48,6 @@ func NewTcpReader(ident string, tcpId *api.TcpID, parent *tcpStream, isClient bo
 
 func (reader *tcpReader) run(options *api.TrafficFilteringOptions, wg *sync.WaitGroup) {
 	defer wg.Done()
-
-	if dbgctl.KubesharkTapperDisableDissectors {
-		b := bufio.NewReader(reader)
-		_, _ = io.ReadAll(b)
-		return
-	}
 
 	for i, extension := range extensions {
 		reader.reqResMatcher = reader.parent.reqResMatchers[i]

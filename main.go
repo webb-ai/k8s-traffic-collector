@@ -14,7 +14,6 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/dbgctl"
 )
 
 var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
@@ -84,10 +83,6 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 		marshaledData, err := CreateWebsocketTappedEntryMessage(messageData)
 		if err != nil {
 			log.Printf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
-			continue
-		}
-
-		if dbgctl.KubesharkTapperDisableSending {
 			continue
 		}
 

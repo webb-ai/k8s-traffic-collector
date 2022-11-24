@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/dbgctl"
 )
 
 type tcpStreamCallbacks interface {
@@ -102,9 +101,6 @@ func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
 }
 
 func (t *tcpStream) GetIsTapTarget() bool {
-	if dbgctl.KubesharkTapperDisableTcpStream {
-		return false
-	}
 	return t.isTapTarget
 }
 

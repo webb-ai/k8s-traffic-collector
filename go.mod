@@ -11,7 +11,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/knightsc/gapstone v0.0.0-20191231144527-6fa5afaf11a9
 	github.com/kubeshark/worker/api v0.0.0
-	github.com/kubeshark/worker/dbgctl v0.0.0
 	github.com/kubeshark/worker/extensions/amqp v0.0.0
 	github.com/kubeshark/worker/extensions/http v0.0.0
 	github.com/kubeshark/worker/extensions/kafka v0.0.0
@@ -60,8 +59,6 @@ require (
 )
 
 replace github.com/kubeshark/worker/api v0.0.0 => ./api
-
-replace github.com/kubeshark/worker/dbgctl v0.0.0 => ./dbgctl
 
 replace github.com/kubeshark/worker/extensions/amqp v0.0.0 => ./extensions/amqp
 

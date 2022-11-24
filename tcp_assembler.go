@@ -15,7 +15,6 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/reassembly"
 	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/dbgctl"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
 )
@@ -182,9 +181,7 @@ func (a *tcpAssembler) processTcpPacket(origin api.Capture, packet gopacket.Pack
 		Origin:      origin,
 	}
 	diagnose.InternalStats.Totalsz += len(tcp.Payload)
-	if !dbgctl.KubesharkTapperDisableTcpReassembly {
-		a.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
-	}
+	a.AssembleWithContext(packet.NetworkLayer().NetworkFlow(), tcp, &c)
 }
 
 func (a *tcpAssembler) tcpStreamCreated(stream *tcpStream) {

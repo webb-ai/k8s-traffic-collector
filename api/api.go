@@ -7,8 +7,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/kubeshark/worker/dbgctl"
 )
 
 const UnknownNamespace = ""
@@ -160,10 +158,6 @@ type Emitter interface {
 
 func (e *Emitting) Emit(item *OutputChannelItem) {
 	e.AppStats.IncMatchedPairs()
-
-	if dbgctl.KubesharkTapperDisableEmitting {
-		return
-	}
 
 	e.OutputChannel <- item
 }

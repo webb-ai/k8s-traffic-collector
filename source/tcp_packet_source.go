@@ -9,7 +9,6 @@ import (
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
 	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/dbgctl"
 	"github.com/kubeshark/worker/diagnose"
 )
 
@@ -120,9 +119,6 @@ func (source *tcpPacketSource) Stats() (packetsReceived uint, packetsDropped uin
 }
 
 func (source *tcpPacketSource) readPackets(ipdefrag bool, packets chan<- TcpPacketInfo) {
-	if dbgctl.KubesharkTapperDisablePcap {
-		return
-	}
 	log.Printf("Start reading packets from %v", source.name)
 
 	for {
