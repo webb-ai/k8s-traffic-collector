@@ -1,5 +1,7 @@
 package models
 
 const (
-	DataDirPath = "/app/data/"
+	ConfigDirPath  = "/app/config/"
+	ConfigFileName = "kubeshark-config.json"
+	DataDirPath    = "/app/data/"
 )
