@@ -32,7 +32,7 @@ jobs:
             llvm \
             libbpf-dev \
             linux-headers-$(uname -r)
-          ./devops/install-capstone.sh
+          ./install-capstone.sh
 
       - name: Generate eBPF object files and Go bindings
         run: make bpf
