@@ -14,6 +14,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/worker/models"
 )
 
 var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
@@ -80,7 +81,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 	}
 
 	for messageData := range messageDataChannel {
-		marshaledData, err := CreateWebsocketTappedEntryMessage(messageData)
+		marshaledData, err := models.CreateWebsocketTappedEntryMessage(messageData)
 		if err != nil {
 			log.Printf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			continue
@@ -136,20 +137,20 @@ func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 				return
 			}
 		} else {
-			var socketMessageBase WebSocketMessageMetadata
+			var socketMessageBase models.WebSocketMessageMetadata
 			if err := json.Unmarshal(message, &socketMessageBase); err != nil {
 				log.Printf("Could not unmarshal websocket message %v", err)
 			} else {
 				switch socketMessageBase.MessageType {
-				case WebSocketMessageTypeTapConfig:
-					var tapConfigMessage *WebSocketTapConfigMessage
+				case models.WebSocketMessageTypeTapConfig:
+					var tapConfigMessage *models.WebSocketTapConfigMessage
 					if err := json.Unmarshal(message, &tapConfigMessage); err != nil {
 						log.Printf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
 					} else {
 						UpdateTapTargets(tapConfigMessage.TapTargets)
 					}
-				case WebSocketMessageTypeUpdateTappedPods:
-					var tappedPodsMessage WebSocketTappedPodsMessage
+				case models.WebSocketMessageTypeUpdateTappedPods:
+					var tappedPodsMessage models.WebSocketTappedPodsMessage
 					if err := json.Unmarshal(message, &tappedPodsMessage); err != nil {
 						log.Printf("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
 						return

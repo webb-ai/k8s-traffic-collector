@@ -1,4 +1,4 @@
-package main
+package models
 
 import (
 	"encoding/json"
@@ -23,25 +23,6 @@ const (
 	WebSocketMessageTypeTapConfig        WebSocketMessageType = "tapConfig"
 )
 
-type TappedPodStatus struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	IsTapped  bool   `json:"isTapped"`
-}
-
-type NodeToPodsMap map[string][]v1.Pod
-
-func (np NodeToPodsMap) Summary() map[string][]string {
-	summary := make(map[string][]string)
-	for node, pods := range np {
-		for _, pod := range pods {
-			summary[node] = append(summary[node], pod.Namespace+"/"+pod.Name)
-		}
-	}
-
-	return summary
-}
-
 type WebSocketMessageMetadata struct {
 	MessageType WebSocketMessageType `json:"messageType,omitempty"`
 }
@@ -61,23 +42,6 @@ type WebSocketTapConfigMessage struct {
 	TapTargets []v1.Pod `json:"pods"`
 }
 
-type EntriesRequest struct {
-	LeftOff   string `form:"leftOff" validate:"required"`
-	Direction int    `form:"direction" validate:"required,oneof='1' '-1'"`
-	Query     string `form:"query"`
-	Limit     int    `form:"limit" validate:"required,min=1"`
-	TimeoutMs int    `form:"timeoutMs" validate:"min=1"`
-}
-
-type SingleEntryRequest struct {
-	Query string `form:"query"`
-}
-
-type EntriesResponse struct {
-	Data []interface{}      `json:"data"`
-	Meta *basenine.Metadata `json:"meta"`
-}
-
 type WebSocketEntryMessage struct {
 	*WebSocketMessageMetadata
 	Data *api.BaseEntry `json:"data,omitempty"`
@@ -91,12 +55,6 @@ type WebSocketFullEntryMessage struct {
 type WebSocketTappedEntryMessage struct {
 	*WebSocketMessageMetadata
 	Data *api.OutputChannelItem
-}
-
-type ToastMessage struct {
-	Type      string `json:"type"`
-	AutoClose uint   `json:"autoClose"`
-	Text      string `json:"text"`
 }
 
 type WebSocketToastMessage struct {
