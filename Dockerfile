@@ -63,8 +63,6 @@ RUN go mod download
 
 COPY . .
 
-WORKDIR /app/build
-
 RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 
 ### The shipped image
