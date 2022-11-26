@@ -7,7 +7,7 @@ on:
 name: Release
 
 concurrency:
-  group: front-publish-${{ github.ref }}
+  group: worker-publish-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -36,7 +36,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            kubeshark/front
+            kubeshark/worker
           tags: |
             type=raw,value=${{ steps.version.outputs.tag }}
             type=raw,value=latest
@@ -76,7 +76,7 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: |
-            kubeshark/front
+            kubeshark/worker
           tags: |
             type=raw,value=${{ steps.version.outputs.tag }}
             type=raw,value=latest
