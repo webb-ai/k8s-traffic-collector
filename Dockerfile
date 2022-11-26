@@ -63,6 +63,12 @@ RUN go mod download
 
 COPY . .
 
+WORKDIR /app/build/tlstapper
+RUN rm *_bpfel_*
+RUN GOARCH=${BUILDARCH} go generate tls_tapper.go
+
+WORKDIR /app/build
+
 RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 
 ### The shipped image
