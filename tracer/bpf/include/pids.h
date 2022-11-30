@@ -6,17 +6,17 @@ Copyright (C) Kubeshark
 #ifndef __PIDS__
 #define __PIDS__
 
-int should_tap(__u32 pid) {
-	__u32* shouldTap = bpf_map_lookup_elem(&pids_map, &pid);
+int should_target(__u32 pid) {
+	__u32* shouldTarget = bpf_map_lookup_elem(&pids_map, &pid);
 	
-	if (shouldTap != NULL && *shouldTap == 1) {
+	if (shouldTarget != NULL && *shouldTarget == 1) {
 		return 1;
 	}
 	
 	__u32 globalPid = 0;
-	__u32* shouldTapGlobally = bpf_map_lookup_elem(&pids_map, &globalPid);
+	__u32* shouldTargetGlobally = bpf_map_lookup_elem(&pids_map, &globalPid);
 	
-	return shouldTapGlobally != NULL && *shouldTapGlobally == 1;
+	return shouldTargetGlobally != NULL && *shouldTargetGlobally == 1;
 }
 
 #endif /* __PIDS__ */

@@ -11,7 +11,7 @@ import (
 	"github.com/moby/moby/pkg/parsers/kernel"
 )
 
-const GlobalTapPid = 0
+const GlobalWorkerPid = 0
 
 // TODO: cilium/ebpf does not support .kconfig Therefore; for now, we build object files per kernel version.
 
@@ -31,7 +31,7 @@ type Tracer struct {
 }
 
 func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
-	log.Printf("Initializing tls tapper (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
+	log.Printf("Initializing tracer (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
 
 	var err error
 	err = setupRLimit()
@@ -94,7 +94,7 @@ func (t *Tracer) PollForLogging() {
 }
 
 func (t *Tracer) GlobalSSLLibTarget(sslLibrary string) error {
-	return t.tapSSLLibPid(GlobalTapPid, sslLibrary, api.UnknownNamespace)
+	return t.targetSSLLibPid(GlobalWorkerPid, sslLibrary, api.UnknownNamespace)
 }
 
 func (t *Tracer) GlobalGoTarget(procfs string, pid string) error {
@@ -103,7 +103,7 @@ func (t *Tracer) GlobalGoTarget(procfs string, pid string) error {
 		return err
 	}
 
-	return t.tapGoPid(procfs, uint32(_pid), api.UnknownNamespace)
+	return t.targetGoPid(procfs, uint32(_pid), api.UnknownNamespace)
 }
 
 func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error {
@@ -114,11 +114,11 @@ func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error
 		return nil // hide the error on purpose, it's OK for a process to not use libssl.so
 	}
 
-	return t.tapSSLLibPid(pid, sslLibrary, namespace)
+	return t.targetSSLLibPid(pid, sslLibrary, namespace)
 }
 
 func (t *Tracer) AddGoPid(procfs string, pid uint32, namespace string) error {
-	return t.tapGoPid(procfs, pid, namespace)
+	return t.targetGoPid(procfs, pid, namespace)
 }
 
 func (t *Tracer) RemovePid(pid uint32) error {
@@ -137,7 +137,7 @@ func (t *Tracer) ClearPids() {
 	t.poller.clearPids()
 	t.registeredPids.Range(func(key, v interface{}) bool {
 		pid := key.(uint32)
-		if pid == GlobalTapPid {
+		if pid == GlobalWorkerPid {
 			return true
 		}
 
@@ -189,14 +189,14 @@ func setupRLimit() error {
 	return nil
 }
 
-func (t *Tracer) tapSSLLibPid(pid uint32, sslLibrary string, namespace string) error {
+func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string) error {
 	newSsl := sslHooks{}
 
 	if err := newSsl.installUprobes(&t.bpfObjects, sslLibrary); err != nil {
 		return err
 	}
 
-	log.Printf("Tapping TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary)
+	log.Printf("Targetting TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary)
 
 	t.sslHooksStructs = append(t.sslHooksStructs, newSsl)
 
@@ -213,7 +213,7 @@ func (t *Tracer) tapSSLLibPid(pid uint32, sslLibrary string, namespace string) e
 	return nil
 }
 
-func (t *Tracer) tapGoPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error {
 	exePath, err := findLibraryByPid(procfs, pid, "")
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (t *Tracer) tapGoPid(procfs string, pid uint32, namespace string) error {
 		return nil // hide the error on purpose, its OK for a process to be not a Go binary or stripped Go binary
 	}
 
-	log.Printf("Tapping TLS (pid: %v) (Go: %v)", pid, exePath)
+	log.Printf("Targetting TLS (pid: %v) (Go: %v)", pid, exePath)
 
 	t.goHooksStructs = append(t.goHooksStructs, hooks)
 

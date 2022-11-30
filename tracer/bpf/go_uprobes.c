@@ -151,7 +151,7 @@ static __always_inline __u32 go_crypto_tls_get_fd_from_tcp_conn(struct pt_regs *
 static __always_inline void go_crypto_tls_uprobe(struct pt_regs *ctx, struct bpf_map_def* go_context, enum ABI abi) {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u64 pid = pid_tgid >> 32;
-    if (!should_tap(pid)) {
+    if (!should_target(pid)) {
         return;
     }
 
@@ -222,7 +222,7 @@ static __always_inline void go_crypto_tls_uprobe(struct pt_regs *ctx, struct bpf
 static __always_inline void go_crypto_tls_ex_uprobe(struct pt_regs *ctx, struct bpf_map_def* go_context, struct bpf_map_def* go_user_kernel_context, __u32 flags, enum ABI abi) {
     __u64 pid_tgid = bpf_get_current_pid_tgid();
     __u64 pid = pid_tgid >> 32;
-    if (!should_tap(pid)) {
+    if (!should_target(pid)) {
         return;
     }
 

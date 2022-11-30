@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshark/base/pkg/models"
 )
 
-var hubWsAddress = flag.String("hub-ws-address", "ws://localhost:8899/wsWorker", "The address of the Hub WebSocket endpoint.")
+var hubWsAddress = flag.String("hub-ws-address", "ws://localhost:8898/wsWorker", "The address of the Hub WebSocket endpoint.")
 
 const (
 	HostModeEnvVar             = "HOST_MODE"

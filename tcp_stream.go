@@ -21,7 +21,7 @@ type tcpStream struct {
 	id             int64
 	isClosed       bool
 	protocol       *api.Protocol
-	isTapTarget    bool
+	isTargetted    bool
 	client         *tcpReader
 	server         *tcpReader
 	origin         api.Capture
@@ -34,10 +34,10 @@ type tcpStream struct {
 	sync.Mutex
 }
 
-func NewTcpStream(isTapTarget bool, streamsMap api.TcpStreamMap, capture api.Capture,
+func NewTcpStream(isTargetted bool, streamsMap api.TcpStreamMap, capture api.Capture,
 	connectionId connectionId, callbacks tcpStreamCallbacks) *tcpStream {
 	t := &tcpStream{
-		isTapTarget:  isTapTarget,
+		isTargetted:  isTargetted,
 		streamsMap:   streamsMap,
 		origin:       capture,
 		createdAt:    time.Now(),
@@ -101,7 +101,7 @@ func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
 }
 
 func (t *tcpStream) GetIsTargetted() bool {
-	return t.isTapTarget
+	return t.isTargetted
 }
 
 func (t *tcpStream) GetIsClosed() bool {

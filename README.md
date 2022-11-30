@@ -13,7 +13,7 @@ go build -o worker .
 Run:
 
 ```shell
-sudo ./worker --hub-ws-address ws://localhost:8898/wsTapper -i any
+sudo ./worker --hub-ws-address ws://localhost:8898/wsWorker -i any
 ```
 
 > `-i` is the network interface that you want to sniff. `any` is only available on Linux. See `ifconfig -a`

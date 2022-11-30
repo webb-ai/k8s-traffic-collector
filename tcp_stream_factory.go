@@ -58,9 +58,9 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 	dstPort := transport.Dst().String()
 
 	props := factory.getStreamProps(srcIp, srcPort, dstIp, dstPort)
-	isTapTarget := props.isTapTarget
+	isTargetted := props.isTargetted
 	connectionId := getConnectionId(srcIp, srcPort, dstIp, dstPort)
-	stream := NewTcpStream(isTapTarget, factory.streamsMap, getPacketOrigin(ac), connectionId, factory.streamsCallbacks)
+	stream := NewTcpStream(isTargetted, factory.streamsMap, getPacketOrigin(ac), connectionId, factory.streamsCallbacks)
 	reassemblyStream := NewTcpReassemblyStream(fmt.Sprintf("%s:%s", net, transport), tcpLayer, fsmOptions, stream)
 	if stream.GetIsTargetted() {
 		stream.setId(factory.streamsMap.NextId())
@@ -128,17 +128,17 @@ func inArrayPod(pods []v1.Pod, address string) bool {
 func (factory *tcpStreamFactory) getStreamProps(srcIP string, srcPort string, dstIP string, dstPort string) *streamProps {
 	if factory.opts.HostMode {
 		if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
-			return &streamProps{isTapTarget: true, isOutgoing: false}
+			return &streamProps{isTargetted: true, isOutgoing: false}
 		} else if inArrayPod(targettedPods, dstIP) {
-			return &streamProps{isTapTarget: true, isOutgoing: false}
+			return &streamProps{isTargetted: true, isOutgoing: false}
 		} else if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
-			return &streamProps{isTapTarget: true, isOutgoing: true}
+			return &streamProps{isTargetted: true, isOutgoing: true}
 		} else if inArrayPod(targettedPods, srcIP) {
-			return &streamProps{isTapTarget: true, isOutgoing: true}
+			return &streamProps{isTargetted: true, isOutgoing: true}
 		}
-		return &streamProps{isTapTarget: false, isOutgoing: false}
+		return &streamProps{isTargetted: false, isOutgoing: false}
 	} else {
-		return &streamProps{isTapTarget: true}
+		return &streamProps{isTargetted: true}
 	}
 }
 
@@ -154,6 +154,6 @@ func getPacketOrigin(ac reassembly.AssemblerContext) api.Capture {
 }
 
 type streamProps struct {
-	isTapTarget bool
+	isTargetted bool
 	isOutgoing  bool
 }
