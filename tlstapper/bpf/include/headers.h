@@ -1,6 +1,5 @@
 /*
-Note: This file is licenced differently from the rest of the project
-SPDX-License-Identifier: GPL-2.0
+SPDX-License-Identifier: GPL-3.0
 Copyright (C) Kubeshark
 */
 
