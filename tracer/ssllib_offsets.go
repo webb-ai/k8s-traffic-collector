@@ -2,9 +2,10 @@ package tracer
 
 import (
 	"debug/elf"
-	"log"
+	"fmt"
 
 	"github.com/go-errors/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type sslOffsets struct {
@@ -35,7 +36,12 @@ func getSslOffsets(sslLibraryPath string) (sslOffsets, error) {
 		return sslOffsets{}, errors.Wrap(err, 0)
 	}
 
-	log.Printf("Found TLS offsets (base: 0x%X) (write: 0x%X) (read: 0x%X)", base, offsets.SslWriteOffset, offsets.SslReadOffset)
+	log.Debug().Msg(fmt.Sprintf(
+		"Found TLS offsets (base: 0x%X) (write: 0x%X) (read: 0x%X)",
+		base,
+		offsets.SslWriteOffset,
+		offsets.SslReadOffset,
+	))
 	return offsets, nil
 }
 

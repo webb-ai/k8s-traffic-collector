@@ -6,13 +6,13 @@ import (
 	"debug/elf"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"runtime"
 
 	"github.com/Masterminds/semver"
 	"github.com/cilium/ebpf/link"
 	"github.com/knightsc/gapstone"
+	"github.com/rs/zerolog/log"
 )
 
 type goAbi int
@@ -234,14 +234,14 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 	}
 
 	engineMajor, engineMinor := engine.Version()
-	log.Printf(
+	log.Info().Msg(fmt.Sprintf(
 		"Disassembling %s with Capstone %d.%d (arch: %d, mode: %d)",
 		filePath,
 		engineMajor,
 		engineMinor,
 		engine.Arch(),
 		engine.Mode(),
-	)
+	))
 
 	offsets = make(map[string]*goExtendedOffset)
 	var fd *os.File
@@ -309,12 +309,12 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 		// collect the bytes of the symbol
 		textSectionDataLen := uint64(len(textSectionData) - 1)
 		if symEndingIndex > textSectionDataLen {
-			log.Printf(
+			log.Info().Msg(fmt.Sprintf(
 				"Skipping symbol %v, ending index %v is bigger than text section data length %v",
 				sym.Name,
 				symEndingIndex,
 				textSectionDataLen,
-			)
+			))
 			continue
 		}
 		symBytes := textSectionData[symStartingIndex:symEndingIndex]

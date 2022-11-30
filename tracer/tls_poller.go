@@ -3,21 +3,20 @@ package tracer
 import (
 	"bufio"
 	"bytes"
-	"fmt"
-	"log"
-	"sync"
-	"time"
-
 	"encoding/binary"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -98,7 +97,7 @@ func (p *tlsPoller) poll(emitter api.Emitter, options *api.TrafficFilteringOptio
 }
 
 func (p *tlsPoller) pollChunksPerfBuffer(chunks chan<- *tracerTlsChunk) {
-	log.Printf("Start polling for tls events")
+	log.Info().Msg("Start polling for tls events")
 
 	for {
 		record, err := p.chunksReader.Read()
@@ -115,7 +114,7 @@ func (p *tlsPoller) pollChunksPerfBuffer(chunks chan<- *tracerTlsChunk) {
 		}
 
 		if record.LostSamples != 0 {
-			log.Printf("Buffer is full, dropped %d chunks", record.LostSamples)
+			log.Info().Msg(fmt.Sprintf("Buffer is full, dropped %d chunks", record.LostSamples))
 			continue
 		}
 
@@ -199,7 +198,7 @@ func dissect(extension *api.Extension, reader api.TcpReader, options *api.Traffi
 	err := extension.Dissector.Dissect(b, reader, options)
 
 	if err != nil {
-		log.Printf("Error dissecting TLS %v - %v", reader.GetTcpID(), err)
+		log.Warn().Err(err).Interface("tcp-id", reader.GetTcpID()).Msg("While dissecting TLS")
 	}
 }
 
@@ -266,16 +265,16 @@ func (p *tlsPoller) logTls(chunk *tracerTlsChunk, key string, reader *tlsReader)
 
 	str := strings.ReplaceAll(strings.ReplaceAll(string(chunk.Data[0:chunk.Recorded]), "\n", " "), "\r", "")
 
-	log.Printf("[%-44s] %s #%-4d (fd: %d) (recorded %d/%d:%d) - %s - %s",
+	log.Info().Msg(fmt.Sprintf("[%-44s] %s #%-4d (fd: %d) (recorded %d/%d:%d) - %s - %s",
 		key, flagsStr, reader.seenChunks, chunk.Fd,
 		chunk.Recorded, chunk.Len, chunk.Start,
-		str, hex.EncodeToString(chunk.Data[0:chunk.Recorded]))
+		str, hex.EncodeToString(chunk.Data[0:chunk.Recorded])))
 }
 
 func (p *tlsPoller) fdCacheEvictCallback(key interface{}, value interface{}) {
 	p.evictedCounter = p.evictedCounter + 1
 
 	if p.evictedCounter%1000000 == 0 {
-		log.Printf("Tls fdCache evicted %d items", p.evictedCounter)
+		log.Info().Msg(fmt.Sprintf("Tls fdCache evicted %d items", p.evictedCounter))
 	}
 }

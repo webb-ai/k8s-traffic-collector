@@ -3,11 +3,11 @@ package tracer
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/go-errors/errors"
+	"github.com/rs/zerolog/log"
 )
 
 func findSsllib(procfs string, pid uint32) (string, error) {
@@ -17,7 +17,7 @@ func findSsllib(procfs string, pid uint32) (string, error) {
 		return "", errors.Wrap(err, 0)
 	}
 
-	log.Printf("Binary file for %v = %v", pid, binary)
+	log.Debug().Msg(fmt.Sprintf("Binary file for %v = %v", pid, binary))
 
 	if strings.HasSuffix(binary, "/node") {
 		return findLibraryByPid(procfs, pid, binary)

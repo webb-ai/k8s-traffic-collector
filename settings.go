@@ -1,10 +1,11 @@
 package main
 
 import (
-	"log"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -61,11 +62,11 @@ func GetCloseTimedoutTcpChannelsInterval() time.Duration {
 	} else {
 		closeTimedoutTcpChannelsIntervalMs, err := strconv.Atoi(closeTimedoutTcpChannelsIntervalMsStr)
 		if err != nil {
-			log.Printf("Error parsing environment variable %s: %v\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, err)
+			log.Error().Err(err).Str("env-var", CloseTimedoutTcpChannelsIntervalMsEnvVarName).Msg("While parsing environment variable!")
 			return defaultDuration
 		} else {
 			if closeTimedoutTcpChannelsIntervalMs < rangeMin || closeTimedoutTcpChannelsIntervalMs > rangeMax {
-				log.Printf("The value of environment variable %s is not in acceptable range: %d - %d\n", CloseTimedoutTcpChannelsIntervalMsEnvVarName, rangeMin, rangeMax)
+				log.Error().Err(err).Str("env-var", CloseTimedoutTcpChannelsIntervalMsEnvVarName).Int("min", rangeMin).Int("max", rangeMax).Msg("The value of environment variable is not in acceptable range!")
 				return defaultDuration
 			} else {
 				return time.Duration(closeTimedoutTcpChannelsIntervalMs) * time.Millisecond

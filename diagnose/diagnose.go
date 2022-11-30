@@ -2,7 +2,6 @@ package diagnose
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"runtime/pprof"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/rs/zerolog/log"
 )
 
 var AppStats = api.AppStats{}
@@ -26,11 +26,11 @@ func StartMemoryProfiler(envDumpPath string, envTimeInterval string) {
 		}
 	}
 
-	log.Printf("Profiling is on, results will be written to %s", dumpPath)
+	log.Info().Str("path", dumpPath).Msg("Profiling is on, results will be written to:")
 	go func() {
 		if _, err := os.Stat(dumpPath); os.IsNotExist(err) {
 			if err := os.Mkdir(dumpPath, 0777); err != nil {
-				log.Fatal("could not create directory for profile: ", err)
+				log.Fatal().Err(err).Msg("Couldn't create directory for the profile!")
 			}
 		}
 
@@ -39,15 +39,15 @@ func StartMemoryProfiler(envDumpPath string, envTimeInterval string) {
 
 			filename := fmt.Sprintf("%s/%s__mem.prof", dumpPath, t.Format("15_04_05"))
 
-			log.Printf("Writing memory profile to %s", filename)
+			log.Info().Str("file", filename).Msg("Writing memory profile to:")
 
 			f, err := os.Create(filename)
 			if err != nil {
-				log.Fatal("could not create memory profile: ", err)
+				log.Fatal().Err(err).Msg("Couldn't create memory profile!")
 			}
 			runtime.GC() // get up-to-date statistics
 			if err := pprof.WriteHeapProfile(f); err != nil {
-				log.Fatal("could not write memory profile: ", err)
+				log.Fatal().Err(err).Msg("Couldn't create memory profile!")
 			}
 			_ = f.Close()
 			time.Sleep(time.Second * time.Duration(timeInterval))

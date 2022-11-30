@@ -1,10 +1,11 @@
 package source
 
 import (
-	"log"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 var numberRegex = regexp.MustCompile("[0-9]+")
@@ -13,7 +14,7 @@ func getSingleValueFromEnvironmentVariableFile(filePath string, variableName str
 	bytes, err := os.ReadFile(filePath)
 
 	if err != nil {
-		log.Printf("Error reading environment file %v - %v", filePath, err)
+		log.Warn().Err(err).Str("file", filePath).Msg("While reading environment file!")
 		return "", err
 	}
 

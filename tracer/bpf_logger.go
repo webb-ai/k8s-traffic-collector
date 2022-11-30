@@ -3,21 +3,22 @@ package tracer
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
+	"fmt"
 	"strings"
 
 	"github.com/cilium/ebpf/perf"
 	"github.com/go-errors/errors"
+	"github.com/rs/zerolog/log"
 )
 
 const logPrefix = "[bpf] "
 
 // The same consts defined in log.h
-var logLevels = map[int]string{
-	0: "ERROR",
-	1: "INFO",
-	2: "DEBUG",
-}
+const (
+	logLevelError = 0
+	logLevelInfo  = 1
+	logLevelDebug = 2
+)
 
 type logMessage struct {
 	Level       uint32
@@ -54,7 +55,7 @@ func (p *bpfLogger) close() error {
 }
 
 func (p *bpfLogger) poll() {
-	log.Printf("Start polling for bpf logs")
+	log.Info().Msg("Start polling for bpf logs")
 
 	for {
 		record, err := p.logReader.Read()
@@ -69,7 +70,7 @@ func (p *bpfLogger) poll() {
 		}
 
 		if record.LostSamples != 0 {
-			log.Printf("Log buffer is full, dropped %d logs", record.LostSamples)
+			log.Info().Msg(fmt.Sprintf("Log buffer is full, dropped %d logs", record.LostSamples))
 			continue
 		}
 
@@ -88,7 +89,7 @@ func (p *bpfLogger) poll() {
 
 func (p *bpfLogger) log(msg *logMessage) {
 	if int(msg.MessageCode) >= len(bpfLogMessages) {
-		log.Printf("Unknown message code from bpf logger %d", msg.MessageCode)
+		log.Info().Msg(fmt.Sprintf("Unknown message code from bpf logger %d", msg.MessageCode))
 		return
 	}
 
@@ -96,12 +97,22 @@ func (p *bpfLogger) log(msg *logMessage) {
 	tokensCount := strings.Count(format, "%")
 
 	if tokensCount == 0 {
-		log.Printf(logPrefix + logLevels[int(msg.Level)] + " " + format)
+		p.logLevel(msg.Level, format)
 	} else if tokensCount == 1 {
-		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1)
+		p.logLevel(msg.Level, format, msg.Arg1)
 	} else if tokensCount == 2 {
-		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1, msg.Arg2)
+		p.logLevel(msg.Level, format, msg.Arg1, msg.Arg2)
 	} else if tokensCount == 3 {
-		log.Printf(logPrefix+logLevels[int(msg.Level)]+" "+format, msg.Arg1, msg.Arg2, msg.Arg3)
+		p.logLevel(msg.Level, format, msg.Arg1, msg.Arg2, msg.Arg3)
+	}
+}
+
+func (p *bpfLogger) logLevel(level uint32, format string, args ...interface{}) {
+	if level == logLevelError {
+		log.Error().Msg(fmt.Sprintf(logPrefix+format, args...))
+	} else if level == logLevelInfo {
+		log.Info().Msg(fmt.Sprintf(logPrefix+format, args...))
+	} else if level == logLevelDebug {
+		log.Debug().Msg(fmt.Sprintf(logPrefix+format, args...))
 	}
 }

@@ -2,10 +2,10 @@ package diagnose
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/google/gopacket/examples/util"
+	"github.com/rs/zerolog/log"
 )
 
 var ErrorsMap *errorsMap
@@ -41,7 +41,7 @@ func newErrorsMap(outputLevel int) *errorsMap {
 
 /* minOutputLevel: Error will be printed only if outputLevel is above this value
  * t:              key for errorsMap (counting errors)
- * s, a:           arguments log.Printf
+ * s, a:           arguments log.Error
  * Note:           Too bad for perf that a... is evaluated
  */
 func (e *errorsMap) logError(minOutputLevel int, t string, s string, a ...interface{}) {
@@ -53,7 +53,7 @@ func (e *errorsMap) logError(minOutputLevel int, t string, s string, a ...interf
 
 	if e.OutputLevel >= minOutputLevel {
 		formatStr := fmt.Sprintf("%s: %s", t, s)
-		log.Printf(formatStr, a...)
+		log.Error().Msg(fmt.Sprintf(formatStr, a...))
 	}
 }
 
@@ -66,7 +66,7 @@ func (e *errorsMap) SilentError(t string, s string, a ...interface{}) {
 }
 
 func (e *errorsMap) Debug(s string, a ...interface{}) {
-	log.Printf(s, a...)
+	log.Debug().Msg(fmt.Sprintf(s, a...))
 }
 
 func (e *errorsMap) GetErrorsSummary() (int, string) {
@@ -78,8 +78,8 @@ func (e *errorsMap) GetErrorsSummary() (int, string) {
 }
 
 func (e *errorsMap) PrintSummary() {
-	log.Printf("Errors: %d", e.ErrorsCount)
+	log.Info().Msg(fmt.Sprintf("Errors: %d", e.ErrorsCount))
 	for t := range e.errorsMap {
-		log.Printf(" %v:\t\t%d", e, e.errorsMap[t])
+		log.Info().Msg(fmt.Sprintf(" %v:\t\t%d", e, e.errorsMap[t]))
 	}
 }

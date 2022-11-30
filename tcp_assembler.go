@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"sync"
@@ -17,6 +16,7 @@ import (
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -87,8 +87,11 @@ func NewTcpAssembler(outputItems chan *api.OutputChannelItem, streamsMap api.Tcp
 
 	maxBufferedPagesTotal := GetMaxBufferedPagesPerConnection()
 	maxBufferedPagesPerConnection := GetMaxBufferedPagesTotal()
-	log.Printf("Assembler options: maxBufferedPagesTotal=%d, maxBufferedPagesPerConnection=%d, opts=%+v",
-		maxBufferedPagesTotal, maxBufferedPagesPerConnection, opts)
+	log.Info().
+		Int("maxBufferedPagesTotal", maxBufferedPagesTotal).
+		Int("maxBufferedPagesPerConnection", maxBufferedPagesPerConnection).
+		Interface("opts", opts).
+		Msg("Assembler options:")
 	a.Assembler.AssemblerOptions.MaxBufferedPagesTotal = maxBufferedPagesTotal
 	a.Assembler.AssemblerOptions.MaxBufferedPagesPerConnection = maxBufferedPagesPerConnection
 
@@ -111,7 +114,7 @@ out:
 				break out
 			}
 		case <-signalChan:
-			log.Printf("Caught SIGINT: aborting")
+			log.Info().Msg("Caught SIGINT: aborting")
 			break out
 		case <-ticker.C:
 			a.periodicClean()
@@ -119,21 +122,21 @@ out:
 	}
 
 	closed := a.FlushAll()
-	log.Printf("Final flush: %d closed", closed)
+	log.Debug().Int("closed", closed).Msg("Final flush.")
 }
 
 func (a *tcpAssembler) processPacket(packetInfo source.TcpPacketInfo, dumpPacket bool) bool {
 	packetsCount := diagnose.AppStats.IncPacketsCount()
 
 	if packetsCount%packetsSeenLogThreshold == 0 {
-		log.Printf("Packets seen: #%d", packetsCount)
+		log.Debug().Int("count", int(packetsCount)).Msg("Packets seen:")
 	}
 
 	packet := packetInfo.Packet
 	data := packet.Data()
 	diagnose.AppStats.UpdateProcessedBytes(uint64(len(data)))
 	if dumpPacket {
-		log.Printf("Packet content (%d/0x%x) - %s", len(data), len(data), hex.Dump(data))
+		log.Debug().Msg(fmt.Sprintf("Packet content (%d/0x%x) - %s", len(data), len(data), hex.Dump(data)))
 	}
 
 	tcp := packet.Layer(layers.LayerTypeTCP)
@@ -144,12 +147,15 @@ func (a *tcpAssembler) processPacket(packetInfo source.TcpPacketInfo, dumpPacket
 	done := *maxcount > 0 && int64(diagnose.AppStats.PacketsCount) >= *maxcount
 	if done {
 		errorMapLen, _ := diagnose.ErrorsMap.GetErrorsSummary()
-		log.Printf("Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)",
-			diagnose.AppStats.PacketsCount,
-			diagnose.AppStats.ProcessedBytes,
-			time.Since(diagnose.AppStats.StartTime),
-			diagnose.ErrorsMap.ErrorsCount,
-			errorMapLen)
+		log.Info().Msg(
+			fmt.Sprintf(
+				"Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)",
+				diagnose.AppStats.PacketsCount,
+				diagnose.AppStats.ProcessedBytes,
+				time.Since(diagnose.AppStats.StartTime),
+				diagnose.ErrorsMap.ErrorsCount,
+				errorMapLen,
+			))
 	}
 	return done
 }
@@ -227,7 +233,7 @@ func (a *tcpAssembler) dumpStreamPool() {
 
 func (a *tcpAssembler) waitAndDump() {
 	a.streamFactory.WaitGoRoutines()
-	log.Printf("%s", a.Dump())
+	log.Debug().Msg(a.Dump())
 }
 
 func (a *tcpAssembler) shouldIgnorePort(port uint16) bool {

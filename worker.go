@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"runtime"
 	"strconv"
@@ -23,6 +22,7 @@ import (
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/tracer"
+	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/struCoder/pidusage"
 	v1 "k8s.io/api/core/v1"
@@ -97,7 +97,7 @@ func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensions
 	assembler, err := initializeWorker(opts, outputItems, streamsMap)
 
 	if err != nil {
-		log.Printf("Error initializing worker %v", err)
+		log.Error().Err(err).Msg("Coudln't initialize the worker!")
 		return
 	}
 
@@ -129,9 +129,9 @@ func printNewTargets(success bool) {
 	printStr = strings.TrimRight(printStr, ", ")
 
 	if success {
-		log.Printf("Now targetting: %s", printStr)
+		log.Info().Msg(fmt.Sprintf("Now targetting: %s", printStr))
 	} else {
-		log.Printf("Failed to start targetting: %s", printStr)
+		log.Error().Msg(fmt.Sprintf("Failed to start targetting: %s", printStr))
 	}
 }
 
@@ -155,12 +155,14 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		// Since the start
 		errorMapLen, errorsSummery := diagnose.ErrorsMap.GetErrorsSummary()
 
-		log.Printf("%v (errors: %v, errTypes:%v) - Errors Summary: %s",
-			time.Since(diagnose.AppStats.StartTime),
-			diagnose.ErrorsMap.ErrorsCount,
-			errorMapLen,
-			errorsSummery,
-		)
+		log.Info().
+			Msg(fmt.Sprintf(
+				"%v (errors: %v, errTypes:%v) - Errors Summary: %s",
+				time.Since(diagnose.AppStats.StartTime),
+				diagnose.ErrorsMap.ErrorsCount,
+				errorMapLen,
+				errorsSummery,
+			))
 
 		// At this moment
 		memStats := runtime.MemStats{}
@@ -172,32 +174,35 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 				Memory: -1,
 			}
 		}
-		log.Printf(
-			"heap-alloc: %d, heap-idle: %d, heap-objects: %d, goroutines: %d, cpu: %f, cores: %d/%d, rss: %f",
-			memStats.HeapAlloc,
-			memStats.HeapIdle,
-			memStats.HeapObjects,
-			runtime.NumGoroutine(),
-			sysInfo.CPU,
-			logicalCoreCount,
-			physicalCoreCount,
-			sysInfo.Memory)
+		log.Info().
+			Msg(fmt.Sprintf(
+				"heap-alloc: %d, heap-idle: %d, heap-objects: %d, goroutines: %d, cpu: %f, cores: %d/%d, rss: %f",
+				memStats.HeapAlloc,
+				memStats.HeapIdle,
+				memStats.HeapObjects,
+				runtime.NumGoroutine(),
+				sysInfo.CPU,
+				logicalCoreCount,
+				physicalCoreCount,
+				sysInfo.Memory,
+			))
 
 		// Since the last print
 		cleanStats := cleaner.dumpStats()
 		assemblerStats := assembler.DumpStats()
-		log.Printf(
-			"cleaner - flushed connections: %d, closed connections: %d, deleted messages: %d",
-			assemblerStats.flushedConnections,
-			assemblerStats.closedConnections,
-			cleanStats.deleted,
-		)
+		log.Info().
+			Msg(fmt.Sprintf(
+				"Cleaner - flushed connections: %d, closed connections: %d, deleted messages: %d",
+				assemblerStats.flushedConnections,
+				assemblerStats.closedConnections,
+				cleanStats.deleted,
+			))
 		currentAppStats := diagnose.AppStats.DumpStats()
 		appStatsJSON, _ := json.Marshal(currentAppStats)
-		log.Printf("app stats - %v", string(appStatsJSON))
+		log.Info().Msg(fmt.Sprintf("App stats - %v", string(appStatsJSON)))
 
 		// At the moment
-		log.Printf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), packetSourceManager.Stats())
+		log.Info().Msg(fmt.Sprintf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), packetSourceManager.Stats()))
 	}
 }
 
@@ -233,7 +238,7 @@ func initializeWorker(opts *Opts, outputItems chan *api.OutputChannelItem, strea
 	mainPacketInputChan = make(chan source.TcpPacketInfo)
 
 	if err := initializePacketSources(); err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Send()
 	}
 
 	opts.IgnoredPorts = append(opts.IgnoredPorts, buildIgnoredPortsList(*ignoredPorts)...)
@@ -266,14 +271,14 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 	}
 
 	if err := diagnose.DumpMemoryProfile(*memprofile); err != nil {
-		log.Printf("Error dumping memory profile %v", err)
+		log.Error().Err(err).Msg("Couldn't dump memory profile!")
 	}
 
 	assembler.waitAndDump()
 
 	diagnose.InternalStats.PrintStatsSummary()
 	diagnose.ErrorsMap.PrintSummary()
-	log.Printf("AppStats: %v", diagnose.AppStats)
+	log.Info().Interface("AppStats", diagnose.AppStats).Send()
 }
 
 func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem,

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"runtime"
 	_debug "runtime/debug"
 	"sync"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/rs/zerolog/log"
 )
 
 type tcpStreamMap struct {
@@ -44,7 +45,11 @@ func (streamMap *tcpStreamMap) NextId() int64 {
 func (streamMap *tcpStreamMap) CloseTimedoutTcpStreamChannels() {
 	tcpStreamChannelTimeoutMs := GetTcpChannelTimeoutMs()
 	closeTimedoutTcpChannelsIntervalMs := GetCloseTimedoutTcpChannelsInterval()
-	log.Printf("Using %d ms as the close timedout TCP stream channels interval", closeTimedoutTcpChannelsIntervalMs/time.Millisecond)
+	log.Info().
+		Msg(fmt.Sprintf(
+			"Using %d ms as the close timedout TCP stream channels interval",
+			closeTimedoutTcpChannelsIntervalMs/time.Millisecond,
+		))
 
 	ticker := time.NewTicker(closeTimedoutTcpChannelsIntervalMs)
 	for {
@@ -63,8 +68,13 @@ func (streamMap *tcpStreamMap) CloseTimedoutTcpStreamChannels() {
 				if !stream.isClosed && time.Now().After(stream.createdAt.Add(tcpStreamChannelTimeoutMs)) {
 					stream.close()
 					diagnose.AppStats.IncDroppedTcpStreams()
-					log.Printf("Dropped an unidentified TCP stream because of timeout. Total dropped: %d Total Goroutines: %d Timeout (ms): %d",
-						diagnose.AppStats.DroppedTcpStreams, runtime.NumGoroutine(), tcpStreamChannelTimeoutMs/time.Millisecond)
+					log.Debug().
+						Msg(fmt.Sprintf(
+							"Dropped an unidentified TCP stream because of timeout. Total dropped: %d Total Goroutines: %d Timeout (ms): %d",
+							diagnose.AppStats.DroppedTcpStreams,
+							runtime.NumGoroutine(),
+							tcpStreamChannelTimeoutMs/time.Millisecond,
+						))
 				}
 			}
 			return true

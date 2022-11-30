@@ -2,7 +2,6 @@ package tracer
 
 import (
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"path"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-errors/errors"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -49,8 +49,8 @@ func findContainerPids(procfs string, containerIds map[string]v1.Pod) (map[uint3
 		return result, err
 	}
 
-	log.Printf("Starting tls auto discoverer %v %v - scanning %v potential pids",
-		procfs, containerIds, len(pids))
+	log.Info().Msg(fmt.Sprintf("Starting tls auto discoverer %v %v - scanning %v potential pids",
+		procfs, containerIds, len(pids)))
 
 	for _, pid := range pids {
 		if !pid.IsDir() {
@@ -93,7 +93,7 @@ func buildContainerIdsMap(pods *[]v1.Pod) map[string]v1.Pod {
 			parsedUrl, err := url.Parse(container.ContainerID)
 
 			if err != nil {
-				log.Printf("Expecting URL like container ID %v", container.ContainerID)
+				log.Warn().Msg(fmt.Sprintf("Expecting URL like container ID %v", container.ContainerID))
 				continue
 			}
 
@@ -110,7 +110,7 @@ func getProcessCgroup(procfs string, pid string) (string, error) {
 	bytes, err := os.ReadFile(filePath)
 
 	if err != nil {
-		log.Printf("Error reading cgroup file %s - %v", filePath, err)
+		log.Warn().Msg(fmt.Sprintf("Error reading cgroup file %s - %v", filePath, err))
 		return "", err
 	}
 

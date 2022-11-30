@@ -2,10 +2,10 @@ package source
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -20,8 +20,8 @@ func discoverRelevantEnvoyPids(procfs string, pods []v1.Pod) ([]string, error) {
 		return result, err
 	}
 
-	log.Printf("Starting envoy auto discoverer %v %v - scanning %v potential pids",
-		procfs, pods, len(pids))
+	log.Info().Msg(fmt.Sprintf("Starting envoy auto discoverer %v %v - scanning %v potential pids",
+		procfs, pods, len(pids)))
 
 	for _, pid := range pids {
 		if !pid.IsDir() {
@@ -37,7 +37,7 @@ func discoverRelevantEnvoyPids(procfs string, pods []v1.Pod) ([]string, error) {
 		}
 	}
 
-	log.Printf("Found %v relevant envoy processes - %v", len(result), result)
+	log.Info().Msg(fmt.Sprintf("Found %v relevant envoy processes - %v", len(result), result))
 
 	return result, nil
 }
@@ -50,7 +50,7 @@ func checkEnvoyPid(procfs string, pid string, pods []v1.Pod) bool {
 		// Debug on purpose - it may happen due to many reasons and we only care
 		//	for it during troubleshooting
 		//
-		log.Printf("Unable to read link %v - %v\n", execLink, err)
+		log.Debug().Msg(fmt.Sprintf("Unable to read link %v - %v\n", execLink, err))
 		return false
 	}
 
@@ -66,11 +66,11 @@ func checkEnvoyPid(procfs string, pid string, pods []v1.Pod) bool {
 	}
 
 	if podIp == "" {
-		log.Printf("Found an envoy process without INSTANCE_IP variable %v\n", pid)
+		log.Debug().Msg(fmt.Sprintf("Found an envoy process without INSTANCE_IP variable %v\n", pid))
 		return false
 	}
 
-	log.Printf("Found envoy pid %v with cluster ip %v", pid, podIp)
+	log.Info().Msg(fmt.Sprintf("Found envoy pid %v with cluster ip %v", pid, podIp))
 
 	for _, pod := range pods {
 		if pod.Status.PodIP == podIp {

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,6 +14,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/base/pkg/models"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var hubWsAddress = flag.String("hub-ws-address", "ws://localhost:8898/wsWorker", "The address of the Hub WebSocket endpoint.")
@@ -30,6 +31,13 @@ const (
 func main() {
 	flag.Parse()
 
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+
+	if *debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
 	loadExtensions()
 
 	run()
@@ -38,11 +46,11 @@ func main() {
 	signal.Notify(signalChan, os.Interrupt)
 	<-signalChan
 
-	log.Print("Exiting")
+	log.Info().Msg("Exiting")
 }
 
 func run() {
-	log.Printf("Starting worker, WebSocket address: %s", *hubWsAddress)
+	log.Info().Str("addr", *hubWsAddress).Msg("Starting worker, WebSocket address:")
 
 	hostMode := os.Getenv(HostModeEnvVar) == "1"
 	opts := &Opts{
@@ -55,9 +63,10 @@ func run() {
 	startWorker(opts, filteredOutputItemsChannel, Extensions, filteringOptions)
 	socketConnection, err := dialSocketWithRetry(*hubWsAddress, socketConnectionRetries, socketConnectionRetryDelay)
 	if err != nil {
-		panic(fmt.Sprintf("Error connecting to socket server at %s %v", *hubWsAddress, err))
+		log.Fatal().Err(err).Str("addr", *hubWsAddress).Msg("Error connecting to socket server!")
 	}
-	log.Printf("Connected successfully to websocket %s", *hubWsAddress)
+
+	log.Info().Str("addr", *hubWsAddress).Msg("Connected successfully to the WebSocket")
 
 	go pipeWorkerChannelToSocket(socketConnection, filteredOutputItemsChannel)
 }
@@ -69,18 +78,10 @@ func getTrafficFilteringOptions() *api.TrafficFilteringOptions {
 }
 
 func pipeWorkerChannelToSocket(connection *websocket.Conn, messageDataChannel <-chan *api.OutputChannelItem) {
-	if connection == nil {
-		panic("Websocket connection is nil")
-	}
-
-	if messageDataChannel == nil {
-		panic("Channel of captured messages is nil")
-	}
-
 	for messageData := range messageDataChannel {
 		marshaledData, err := models.CreateWebsocketWorkerEntryMessage(messageData)
 		if err != nil {
-			log.Printf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
+			log.Error().Err(err).Interface("message-data", messageData).Msg("While converting message to JSON!")
 			continue
 		}
 
@@ -88,14 +89,14 @@ func pipeWorkerChannelToSocket(connection *websocket.Conn, messageDataChannel <-
 		// and goes into the intermediate WebSocket.
 		err = connection.WriteMessage(websocket.TextMessage, marshaledData)
 		if err != nil {
-			log.Printf("error sending message through socket server %v, err: %s, (%v,%+v)", messageData, err, err, err)
+			log.Error().Err(err).Interface("message-data", messageData).Msg("While sending message through socket server!")
 			if errors.Is(err, syscall.EPIPE) {
-				log.Printf("detected socket disconnection, reestablishing socket connection")
+				log.Warn().Msg("Detected socket disconnection, reestablishing socket connection...")
 				connection, err = dialSocketWithRetry(*hubWsAddress, socketConnectionRetries, socketConnectionRetryDelay)
 				if err != nil {
-					log.Fatalf("error reestablishing socket connection: %v", err)
+					log.Fatal().Err(err).Msg("While re-establishing socket connection!")
 				} else {
-					log.Print("recovered connection successfully")
+					log.Info().Msg("Recovered the connection successfully.")
 				}
 			}
 			continue
@@ -114,7 +115,7 @@ func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.
 		if err != nil {
 			lastErr = err
 			if i < retryAmount {
-				log.Printf("socket connection to %s failed: %v, retrying %d out of %d in %d seconds...", socketAddress, err, i, retryAmount, retryDelay/time.Second)
+				log.Warn().Err(err).Str("addr", socketAddress).Msg(fmt.Sprintf("Socket connection attempt is failed! Retrying %d out of %d in %d seconds...", i, retryAmount, retryDelay/time.Second))
 				time.Sleep(retryDelay)
 			}
 		} else {
@@ -128,7 +129,7 @@ func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.
 func handleIncomingMessageAsWorker(socketConnection *websocket.Conn) {
 	for {
 		if _, message, err := socketConnection.ReadMessage(); err != nil {
-			log.Printf("error reading message from socket connection, err: %s, (%v,%+v)", err, err, err)
+			log.Error().Err(err).Msg("While reading message from the socket connection!")
 			if errors.Is(err, syscall.EPIPE) {
 				// socket has disconnected, we can safely stop this goroutine
 				return
@@ -136,26 +137,26 @@ func handleIncomingMessageAsWorker(socketConnection *websocket.Conn) {
 		} else {
 			var socketMessageBase models.WebSocketMessageMetadata
 			if err := json.Unmarshal(message, &socketMessageBase); err != nil {
-				log.Printf("Could not unmarshal websocket message %v", err)
+				log.Error().Err(err).Msg("Couldn't unmarshal socket message!")
 			} else {
 				switch socketMessageBase.MessageType {
 				case models.WebSocketMessageTypeWorkerConfig:
 					var configMessage *models.WebSocketWorkerConfigMessage
 					if err := json.Unmarshal(message, &configMessage); err != nil {
-						log.Printf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
+						log.Error().Err(err).Str("msg", string(message)).Msg("Received unknown message from the socket connection:")
 					} else {
 						UpdateTargets(configMessage.TargettedPods)
 					}
 				case models.WebSocketMessageTypeUpdateTargettedPods:
 					var targettedPodsMessage models.WebSocketTargettedPodsMessage
 					if err := json.Unmarshal(message, &targettedPodsMessage); err != nil {
-						log.Printf("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
+						log.Error().Err(err).Str("msg-type", string(socketMessageBase.MessageType)).Msg("Couldn't unmarshal message of message type:")
 						return
 					}
 					nodeName := os.Getenv(NodeNameEnvVar)
 					UpdateTargets(targettedPodsMessage.NodeToTargettedPodsMap[nodeName])
 				default:
-					log.Printf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
+					log.Error().Str("msg-type", string(socketMessageBase.MessageType)).Msg("Received a socket message type which no handlers are defined for!")
 				}
 			}
 		}

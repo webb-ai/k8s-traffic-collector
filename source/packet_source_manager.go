@@ -2,10 +2,10 @@ package source
 
 import (
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -80,7 +80,7 @@ func (m *PacketSourceManager) updateMtlsPods(procfs string, pods []v1.Pod,
 	interfaceName string, packetCapture string, behaviour TcpPacketSourceBehaviour, ipdefrag bool, packets chan<- TcpPacketInfo) {
 
 	relevantPids := m.getRelevantPids(procfs, pods)
-	log.Printf("Updating mtls pods (new: %v) (current: %v)", relevantPids, m.sources)
+	log.Info().Msg(fmt.Sprintf("Updating mtls pods (new: %v) (current: %v)", relevantPids, m.sources))
 
 	for pid, src := range m.sources {
 		if _, ok := relevantPids[pid]; !ok {
@@ -106,7 +106,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	relevantPids[hostSourcePid] = api.Pcap
 
 	if envoyPids, err := discoverRelevantEnvoyPids(procfs, pods); err != nil {
-		log.Printf("Unable to discover envoy pids - %v", err)
+		log.Warn().Msg(fmt.Sprintf("Unable to discover envoy pids - %v", err))
 	} else {
 		for _, pid := range envoyPids {
 			relevantPids[pid] = api.Envoy
@@ -114,7 +114,7 @@ func (m *PacketSourceManager) getRelevantPids(procfs string, pods []v1.Pod) map[
 	}
 
 	if linkerdPids, err := discoverRelevantLinkerdPids(procfs, pods); err != nil {
-		log.Printf("Unable to discover linkerd pids - %v", err)
+		log.Warn().Msg(fmt.Sprintf("Unable to discover linkerd pids - %v", err))
 	} else {
 		for _, pid := range linkerdPids {
 			relevantPids[pid] = api.Linkerd
@@ -143,17 +143,17 @@ func (m *PacketSourceManager) setBPFFilter(pods []v1.Pod) {
 	var expr string
 
 	if len(pods) > bpfFilterMaxPods {
-		log.Printf("Too many pods for setting ebpf filter %d, setting just not 443", len(pods))
+		log.Info().Msg(fmt.Sprintf("Too many pods for setting ebpf filter %d, setting just not 443", len(pods)))
 		expr = "port not 443"
 	} else {
 		expr = buildBPFExpr(pods)
 	}
 
-	log.Printf("Setting pcap bpf filter %s", expr)
+	log.Info().Msg(fmt.Sprintf("Setting pcap bpf filter %s", expr))
 
 	for pid, src := range m.sources {
 		if err := src.setBPFFilter(expr); err != nil {
-			log.Printf("Error setting bpf filter for %s %v - %v", pid, src, err)
+			log.Info().Msg(fmt.Sprintf("Error setting bpf filter for %s %v - %v", pid, src, err))
 		}
 	}
 }

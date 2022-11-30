@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket/reassembly"
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/rs/zerolog/log"
 )
 
 type CleanerStats struct {
@@ -38,7 +38,7 @@ func (cl *Cleaner) clean() {
 	})
 
 	cl.statsMutex.Lock()
-	log.Printf("Assembler Stats after cleaning %s", cl.assembler.Dump())
+	log.Debug().Str("dump", cl.assembler.Dump()).Msg("Assembler Stats after cleaning.")
 	cl.statsMutex.Unlock()
 }
 

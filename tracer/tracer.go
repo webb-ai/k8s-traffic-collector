@@ -1,7 +1,7 @@
 package tracer
 
 import (
-	"log"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -9,6 +9,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/moby/moby/pkg/parsers/kernel"
+	"github.com/rs/zerolog/log"
 )
 
 const GlobalWorkerPid = 0
@@ -31,7 +32,7 @@ type Tracer struct {
 }
 
 func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
-	log.Printf("Initializing tracer (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
+	log.Info().Msg(fmt.Sprintf("Initializing tracer (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize))
 
 	var err error
 	err = setupRLimit()
@@ -45,7 +46,7 @@ func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, ex
 		return err
 	}
 
-	log.Printf("Detected Linux kernel version: %s", kernelVersion)
+	log.Info().Msg(fmt.Sprintf("Detected Linux kernel version: %s", kernelVersion))
 
 	t.bpfObjects = tracerObjects{}
 	// TODO: cilium/ebpf does not support .kconfig Therefore; for now, we load object files according to kernel version.
@@ -110,7 +111,7 @@ func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error
 	sslLibrary, err := findSsllib(procfs, pid)
 
 	if err != nil {
-		log.Printf("PID skipped no libssl.so found (pid: %d) %v", pid, err)
+		log.Info().Msg(fmt.Sprintf("PID skipped no libssl.so found (pid: %d) %v", pid, err))
 		return nil // hide the error on purpose, it's OK for a process to not use libssl.so
 	}
 
@@ -122,7 +123,7 @@ func (t *Tracer) AddGoPid(procfs string, pid uint32, namespace string) error {
 }
 
 func (t *Tracer) RemovePid(pid uint32) error {
-	log.Printf("Removing PID (pid: %v)", pid)
+	log.Info().Msg(fmt.Sprintf("Removing PID (pid: %v)", pid))
 
 	pids := t.bpfObjects.tracerMaps.PidsMap
 
@@ -196,7 +197,7 @@ func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string
 		return err
 	}
 
-	log.Printf("Targetting TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary)
+	log.Info().Msg(fmt.Sprintf("Targetting TLS (pid: %v) (sslLibrary: %v)", pid, sslLibrary))
 
 	t.sslHooksStructs = append(t.sslHooksStructs, newSsl)
 
@@ -222,11 +223,11 @@ func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error 
 	hooks := goHooks{}
 
 	if err := hooks.installUprobes(&t.bpfObjects, exePath); err != nil {
-		log.Printf("PID skipped not a Go binary or symbol table is stripped (pid: %v) %v", pid, exePath)
+		log.Info().Msg(fmt.Sprintf("PID skipped not a Go binary or symbol table is stripped (pid: %v) %v", pid, exePath))
 		return nil // hide the error on purpose, its OK for a process to be not a Go binary or stripped Go binary
 	}
 
-	log.Printf("Targetting TLS (pid: %v) (Go: %v)", pid, exePath)
+	log.Info().Msg(fmt.Sprintf("Targetting TLS (pid: %v) (Go: %v)", pid, exePath))
 
 	t.goHooksStructs = append(t.goHooksStructs, hooks)
 
@@ -246,8 +247,8 @@ func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error 
 func LogError(err error) {
 	var e *errors.Error
 	if errors.As(err, &e) {
-		log.Printf("Error: %v", e.ErrorStack())
+		log.Error().Str("stack", e.ErrorStack()).Send()
 	} else {
-		log.Printf("Error: %v", err)
+		log.Error().Err(err).Send()
 	}
 }

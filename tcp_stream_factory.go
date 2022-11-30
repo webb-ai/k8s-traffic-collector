@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"sync"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -11,6 +10,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers" // pulls in all layers decoders
 	"github.com/google/gopacket/reassembly"
+	"github.com/rs/zerolog/log"
 )
 
 /*
@@ -32,8 +32,7 @@ func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts 
 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
 		// TODO: think this over
-		log.Print("Failed to get self IP addresses")
-		log.Printf("Getting-Self-Address. Error getting self ip address: %v (%v,%+v)", err, err, err)
+		log.Error().Err(err).Msg("While getting self IP address!")
 		ownIps = make([]string, 0)
 	} else {
 		ownIps = localhostIPs
