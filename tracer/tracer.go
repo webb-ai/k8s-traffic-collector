@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"log"
@@ -15,12 +15,12 @@ const GlobalTapPid = 0
 
 // TODO: cilium/ebpf does not support .kconfig Therefore; for now, we build object files per kernel version.
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go@v0.9.0 -target $BPF_TARGET -cflags $BPF_CFLAGS -type tls_chunk -type goid_offsets tlsTapper bpf/tls_tapper.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go@v0.9.0 -target $BPF_TARGET -cflags $BPF_CFLAGS -type tls_chunk -type goid_offsets tracer bpf/tracer.c
 
-//go:generate go run github.com/cilium/ebpf/cmd/bpf2go@v0.9.0 -target $BPF_TARGET -cflags "${BPF_CFLAGS} -DKERNEL_BEFORE_4_6" -type tls_chunk -type goid_offsets tlsTapper46 bpf/tls_tapper.c
+//go:generate go run github.com/cilium/ebpf/cmd/bpf2go@v0.9.0 -target $BPF_TARGET -cflags "${BPF_CFLAGS} -DKERNEL_BEFORE_4_6" -type tls_chunk -type goid_offsets tracer46 bpf/tracer.c
 
-type TlsTapper struct {
-	bpfObjects      tlsTapperObjects
+type Tracer struct {
+	bpfObjects      tracerObjects
 	syscallHooks    syscallHooks
 	tcpKprobeHooks  tcpKprobeHooks
 	sslHooksStructs []sslHooks
@@ -30,7 +30,7 @@ type TlsTapper struct {
 	registeredPids  sync.Map
 }
 
-func (t *TlsTapper) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
+func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
 	log.Printf("Initializing tls tapper (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize)
 
 	var err error
@@ -47,14 +47,14 @@ func (t *TlsTapper) Init(chunksBufferSize int, logBufferSize int, procfs string,
 
 	log.Printf("Detected Linux kernel version: %s", kernelVersion)
 
-	t.bpfObjects = tlsTapperObjects{}
+	t.bpfObjects = tracerObjects{}
 	// TODO: cilium/ebpf does not support .kconfig Therefore; for now, we load object files according to kernel version.
 	if kernel.CompareKernelVersion(*kernelVersion, kernel.VersionInfo{Kernel: 4, Major: 6, Minor: 0}) < 1 {
-		if err := loadTlsTapper46Objects(&t.bpfObjects, nil); err != nil {
+		if err := loadTracer46Objects(&t.bpfObjects, nil); err != nil {
 			return errors.Wrap(err, 0)
 		}
 	} else {
-		if err := loadTlsTapperObjects(&t.bpfObjects, nil); err != nil {
+		if err := loadTracerObjects(&t.bpfObjects, nil); err != nil {
 			return errors.Wrap(err, 0)
 		}
 	}
@@ -85,19 +85,19 @@ func (t *TlsTapper) Init(chunksBufferSize int, logBufferSize int, procfs string,
 	return t.poller.init(&t.bpfObjects, chunksBufferSize)
 }
 
-func (t *TlsTapper) Poll(emitter api.Emitter, options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) {
+func (t *Tracer) Poll(emitter api.Emitter, options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) {
 	t.poller.poll(emitter, options, streamsMap)
 }
 
-func (t *TlsTapper) PollForLogging() {
+func (t *Tracer) PollForLogging() {
 	t.bpfLogger.poll()
 }
 
-func (t *TlsTapper) GlobalSSLLibTap(sslLibrary string) error {
+func (t *Tracer) GlobalSSLLibTarget(sslLibrary string) error {
 	return t.tapSSLLibPid(GlobalTapPid, sslLibrary, api.UnknownNamespace)
 }
 
-func (t *TlsTapper) GlobalGoTap(procfs string, pid string) error {
+func (t *Tracer) GlobalGoTarget(procfs string, pid string) error {
 	_pid, err := strconv.Atoi(pid)
 	if err != nil {
 		return err
@@ -106,7 +106,7 @@ func (t *TlsTapper) GlobalGoTap(procfs string, pid string) error {
 	return t.tapGoPid(procfs, uint32(_pid), api.UnknownNamespace)
 }
 
-func (t *TlsTapper) AddSSLLibPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error {
 	sslLibrary, err := findSsllib(procfs, pid)
 
 	if err != nil {
@@ -117,14 +117,14 @@ func (t *TlsTapper) AddSSLLibPid(procfs string, pid uint32, namespace string) er
 	return t.tapSSLLibPid(pid, sslLibrary, namespace)
 }
 
-func (t *TlsTapper) AddGoPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) AddGoPid(procfs string, pid uint32, namespace string) error {
 	return t.tapGoPid(procfs, pid, namespace)
 }
 
-func (t *TlsTapper) RemovePid(pid uint32) error {
+func (t *Tracer) RemovePid(pid uint32) error {
 	log.Printf("Removing PID (pid: %v)", pid)
 
-	pids := t.bpfObjects.tlsTapperMaps.PidsMap
+	pids := t.bpfObjects.tracerMaps.PidsMap
 
 	if err := pids.Delete(pid); err != nil {
 		return errors.Wrap(err, 0)
@@ -133,7 +133,7 @@ func (t *TlsTapper) RemovePid(pid uint32) error {
 	return nil
 }
 
-func (t *TlsTapper) ClearPids() {
+func (t *Tracer) ClearPids() {
 	t.poller.clearPids()
 	t.registeredPids.Range(func(key, v interface{}) bool {
 		pid := key.(uint32)
@@ -149,7 +149,7 @@ func (t *TlsTapper) ClearPids() {
 	})
 }
 
-func (t *TlsTapper) Close() []error {
+func (t *Tracer) Close() []error {
 	returnValue := make([]error, 0)
 
 	if err := t.bpfObjects.Close(); err != nil {
@@ -189,7 +189,7 @@ func setupRLimit() error {
 	return nil
 }
 
-func (t *TlsTapper) tapSSLLibPid(pid uint32, sslLibrary string, namespace string) error {
+func (t *Tracer) tapSSLLibPid(pid uint32, sslLibrary string, namespace string) error {
 	newSsl := sslHooks{}
 
 	if err := newSsl.installUprobes(&t.bpfObjects, sslLibrary); err != nil {
@@ -202,7 +202,7 @@ func (t *TlsTapper) tapSSLLibPid(pid uint32, sslLibrary string, namespace string
 
 	t.poller.addPid(pid, namespace)
 
-	pids := t.bpfObjects.tlsTapperMaps.PidsMap
+	pids := t.bpfObjects.tracerMaps.PidsMap
 
 	if err := pids.Put(pid, uint32(1)); err != nil {
 		return errors.Wrap(err, 0)
@@ -213,7 +213,7 @@ func (t *TlsTapper) tapSSLLibPid(pid uint32, sslLibrary string, namespace string
 	return nil
 }
 
-func (t *TlsTapper) tapGoPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) tapGoPid(procfs string, pid uint32, namespace string) error {
 	exePath, err := findLibraryByPid(procfs, pid, "")
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (t *TlsTapper) tapGoPid(procfs string, pid uint32, namespace string) error 
 
 	t.poller.addPid(pid, namespace)
 
-	pids := t.bpfObjects.tlsTapperMaps.PidsMap
+	pids := t.bpfObjects.tracerMaps.PidsMap
 
 	if err := pids.Put(pid, uint32(1)); err != nil {
 		return errors.Wrap(err, 0)

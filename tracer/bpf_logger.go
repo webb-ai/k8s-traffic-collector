@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"bytes"
@@ -37,7 +37,7 @@ func newBpfLogger() *bpfLogger {
 	}
 }
 
-func (p *bpfLogger) init(bpfObjects *tlsTapperObjects, bufferSize int) error {
+func (p *bpfLogger) init(bpfObjects *tracerObjects, bufferSize int) error {
 	var err error
 
 	p.logReader, err = perf.NewReader(bpfObjects.LogBuffer, bufferSize)

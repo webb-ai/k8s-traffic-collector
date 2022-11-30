@@ -2,7 +2,7 @@
 //go:build 386 || amd64
 // +build 386 amd64
 
-package tlstapper
+package tracer
 
 import (
 	"bytes"
@@ -13,12 +13,12 @@ import (
 	"github.com/cilium/ebpf"
 )
 
-type tlsTapper46GoidOffsets struct {
+type tracer46GoidOffsets struct {
 	G_addrOffset uint64
 	GoidOffset   uint64
 }
 
-type tlsTapper46TlsChunk struct {
+type tracer46TlsChunk struct {
 	Pid         uint32
 	Tgid        uint32
 	Len         uint32
@@ -35,28 +35,28 @@ type tlsTapper46TlsChunk struct {
 	Data [4096]uint8
 }
 
-// loadTlsTapper46 returns the embedded CollectionSpec for tlsTapper46.
-func loadTlsTapper46() (*ebpf.CollectionSpec, error) {
-	reader := bytes.NewReader(_TlsTapper46Bytes)
+// loadTracer46 returns the embedded CollectionSpec for tracer46.
+func loadTracer46() (*ebpf.CollectionSpec, error) {
+	reader := bytes.NewReader(_Tracer46Bytes)
 	spec, err := ebpf.LoadCollectionSpecFromReader(reader)
 	if err != nil {
-		return nil, fmt.Errorf("can't load tlsTapper46: %w", err)
+		return nil, fmt.Errorf("can't load tracer46: %w", err)
 	}
 
 	return spec, err
 }
 
-// loadTlsTapper46Objects loads tlsTapper46 and converts it into a struct.
+// loadTracer46Objects loads tracer46 and converts it into a struct.
 //
 // The following types are suitable as obj argument:
 //
-//     *tlsTapper46Objects
-//     *tlsTapper46Programs
-//     *tlsTapper46Maps
+//     *tracer46Objects
+//     *tracer46Programs
+//     *tracer46Maps
 //
 // See ebpf.CollectionSpec.LoadAndAssign documentation for details.
-func loadTlsTapper46Objects(obj interface{}, opts *ebpf.CollectionOptions) error {
-	spec, err := loadTlsTapper46()
+func loadTracer46Objects(obj interface{}, opts *ebpf.CollectionOptions) error {
+	spec, err := loadTracer46()
 	if err != nil {
 		return err
 	}
@@ -64,18 +64,18 @@ func loadTlsTapper46Objects(obj interface{}, opts *ebpf.CollectionOptions) error
 	return spec.LoadAndAssign(obj, opts)
 }
 
-// tlsTapper46Specs contains maps and programs before they are loaded into the kernel.
+// tracer46Specs contains maps and programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
-type tlsTapper46Specs struct {
-	tlsTapper46ProgramSpecs
-	tlsTapper46MapSpecs
+type tracer46Specs struct {
+	tracer46ProgramSpecs
+	tracer46MapSpecs
 }
 
-// tlsTapper46Specs contains programs before they are loaded into the kernel.
+// tracer46Specs contains programs before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
-type tlsTapper46ProgramSpecs struct {
+type tracer46ProgramSpecs struct {
 	GoCryptoTlsAbi0Read           *ebpf.ProgramSpec `ebpf:"go_crypto_tls_abi0_read"`
 	GoCryptoTlsAbi0ReadEx         *ebpf.ProgramSpec `ebpf:"go_crypto_tls_abi0_read_ex"`
 	GoCryptoTlsAbi0Write          *ebpf.ProgramSpec `ebpf:"go_crypto_tls_abi0_write"`
@@ -104,10 +104,10 @@ type tlsTapper46ProgramSpecs struct {
 	TcpSendmsg                    *ebpf.ProgramSpec `ebpf:"tcp_sendmsg"`
 }
 
-// tlsTapper46MapSpecs contains maps before they are loaded into the kernel.
+// tracer46MapSpecs contains maps before they are loaded into the kernel.
 //
 // It can be passed ebpf.CollectionSpec.Assign.
-type tlsTapper46MapSpecs struct {
+type tracer46MapSpecs struct {
 	AcceptSyscallContext     *ebpf.MapSpec `ebpf:"accept_syscall_context"`
 	ChunksBuffer             *ebpf.MapSpec `ebpf:"chunks_buffer"`
 	ConnectSyscallInfo       *ebpf.MapSpec `ebpf:"connect_syscall_info"`
@@ -126,25 +126,25 @@ type tlsTapper46MapSpecs struct {
 	PidsMap                  *ebpf.MapSpec `ebpf:"pids_map"`
 }
 
-// tlsTapper46Objects contains all objects after they have been loaded into the kernel.
+// tracer46Objects contains all objects after they have been loaded into the kernel.
 //
-// It can be passed to loadTlsTapper46Objects or ebpf.CollectionSpec.LoadAndAssign.
-type tlsTapper46Objects struct {
-	tlsTapper46Programs
-	tlsTapper46Maps
+// It can be passed to loadTracer46Objects or ebpf.CollectionSpec.LoadAndAssign.
+type tracer46Objects struct {
+	tracer46Programs
+	tracer46Maps
 }
 
-func (o *tlsTapper46Objects) Close() error {
-	return _TlsTapper46Close(
-		&o.tlsTapper46Programs,
-		&o.tlsTapper46Maps,
+func (o *tracer46Objects) Close() error {
+	return _Tracer46Close(
+		&o.tracer46Programs,
+		&o.tracer46Maps,
 	)
 }
 
-// tlsTapper46Maps contains all maps after they have been loaded into the kernel.
+// tracer46Maps contains all maps after they have been loaded into the kernel.
 //
-// It can be passed to loadTlsTapper46Objects or ebpf.CollectionSpec.LoadAndAssign.
-type tlsTapper46Maps struct {
+// It can be passed to loadTracer46Objects or ebpf.CollectionSpec.LoadAndAssign.
+type tracer46Maps struct {
 	AcceptSyscallContext     *ebpf.Map `ebpf:"accept_syscall_context"`
 	ChunksBuffer             *ebpf.Map `ebpf:"chunks_buffer"`
 	ConnectSyscallInfo       *ebpf.Map `ebpf:"connect_syscall_info"`
@@ -163,8 +163,8 @@ type tlsTapper46Maps struct {
 	PidsMap                  *ebpf.Map `ebpf:"pids_map"`
 }
 
-func (m *tlsTapper46Maps) Close() error {
-	return _TlsTapper46Close(
+func (m *tracer46Maps) Close() error {
+	return _Tracer46Close(
 		m.AcceptSyscallContext,
 		m.ChunksBuffer,
 		m.ConnectSyscallInfo,
@@ -184,10 +184,10 @@ func (m *tlsTapper46Maps) Close() error {
 	)
 }
 
-// tlsTapper46Programs contains all programs after they have been loaded into the kernel.
+// tracer46Programs contains all programs after they have been loaded into the kernel.
 //
-// It can be passed to loadTlsTapper46Objects or ebpf.CollectionSpec.LoadAndAssign.
-type tlsTapper46Programs struct {
+// It can be passed to loadTracer46Objects or ebpf.CollectionSpec.LoadAndAssign.
+type tracer46Programs struct {
 	GoCryptoTlsAbi0Read           *ebpf.Program `ebpf:"go_crypto_tls_abi0_read"`
 	GoCryptoTlsAbi0ReadEx         *ebpf.Program `ebpf:"go_crypto_tls_abi0_read_ex"`
 	GoCryptoTlsAbi0Write          *ebpf.Program `ebpf:"go_crypto_tls_abi0_write"`
@@ -216,8 +216,8 @@ type tlsTapper46Programs struct {
 	TcpSendmsg                    *ebpf.Program `ebpf:"tcp_sendmsg"`
 }
 
-func (p *tlsTapper46Programs) Close() error {
-	return _TlsTapper46Close(
+func (p *tracer46Programs) Close() error {
+	return _Tracer46Close(
 		p.GoCryptoTlsAbi0Read,
 		p.GoCryptoTlsAbi0ReadEx,
 		p.GoCryptoTlsAbi0Write,
@@ -247,7 +247,7 @@ func (p *tlsTapper46Programs) Close() error {
 	)
 }
 
-func _TlsTapper46Close(closers ...io.Closer) error {
+func _Tracer46Close(closers ...io.Closer) error {
 	for _, closer := range closers {
 		if err := closer.Close(); err != nil {
 			return err
@@ -257,5 +257,5 @@ func _TlsTapper46Close(closers ...io.Closer) error {
 }
 
 // Do not access this directly.
-//go:embed tlstapper46_bpfel_x86.o
-var _TlsTapper46Bytes []byte
+//go:embed tracer46_bpfel_x86.o
+var _Tracer46Bytes []byte

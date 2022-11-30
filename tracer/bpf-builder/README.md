@@ -10,7 +10,7 @@ This directory helps those who do want to build the .o files, it also serve as a
 From you shell, go to this directory and run `./build.sh`
 
 Once the docker finished successfully, make sure to commit the four relevant files.
-> tlstapper_bpfeb.go
-> tlstapper_bpfel.go
-> tlstapper_bpfeb.o
-> tlstapper_bpfel.o
+> tracer_bpfeb.go
+> tracer_bpfel.go
+> tracer_bpfeb.o
+> tracer_bpfel.o

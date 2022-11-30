@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import "github.com/kubeshark/base/pkg/api"
 

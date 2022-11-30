@@ -22,7 +22,7 @@ import (
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
-	"github.com/kubeshark/worker/tlstapper"
+	"github.com/kubeshark/worker/tracer"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/struCoder/pidusage"
 	v1 "k8s.io/api/core/v1"
@@ -73,7 +73,7 @@ var filteringOptions *api.TrafficFilteringOptions   // global
 var targettedPods []v1.Pod                          // global
 var packetSourceManager *source.PacketSourceManager // global
 var mainPacketInputChan chan source.TcpPacketInfo   // global
-var tlsTapperInstance *tlstapper.TlsTapper          // global
+var tracerInstance *tracer.Tracer                   // global
 
 func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensionsRef []*api.Extension, options *api.TrafficFilteringOptions) {
 	extensions = extensionsRef
@@ -84,7 +84,7 @@ func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensions
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				tlsTapperInstance = startTracer(e, outputItems, options, streamsMap)
+				tracerInstance = startTracer(e, outputItems, options, streamsMap)
 				break
 			}
 		}
@@ -111,9 +111,9 @@ func UpdateTargets(newTargets []v1.Pod) {
 
 	packetSourceManager.UpdatePods(newTargets, !*nodefrag, mainPacketInputChan)
 
-	if tlsTapperInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
-		if err := tlstapper.UpdateTargets(tlsTapperInstance, &newTargets, *procfs); err != nil {
-			tlstapper.LogError(err)
+	if tracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
+		if err := tracer.UpdateTargets(tracerInstance, &newTargets, *procfs); err != nil {
+			tracer.LogError(err)
 			success = false
 		}
 	}
@@ -277,26 +277,26 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 }
 
 func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem,
-	options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) *tlstapper.TlsTapper {
-	tls := tlstapper.TlsTapper{}
+	options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) *tracer.Tracer {
+	tls := tracer.Tracer{}
 	chunksBufferSize := os.Getpagesize() * 100
 	logBufferSize := os.Getpagesize()
 
 	if err := tls.Init(chunksBufferSize, logBufferSize, *procfs, extension); err != nil {
-		tlstapper.LogError(err)
+		tracer.LogError(err)
 		return nil
 	}
 
-	if err := tlstapper.UpdateTargets(&tls, &targettedPods, *procfs); err != nil {
-		tlstapper.LogError(err)
+	if err := tracer.UpdateTargets(&tls, &targettedPods, *procfs); err != nil {
+		tracer.LogError(err)
 		return nil
 	}
 
 	// A quick way to instrument libssl.so without PID filtering - used for debuging and troubleshooting
 	//
 	if os.Getenv("KUBESHARK_GLOBAL_SSL_LIBRARY") != "" {
-		if err := tls.GlobalSSLLibTap(os.Getenv("KUBESHARK_GLOBAL_SSL_LIBRARY")); err != nil {
-			tlstapper.LogError(err)
+		if err := tls.GlobalSSLLibTarget(os.Getenv("KUBESHARK_GLOBAL_SSL_LIBRARY")); err != nil {
+			tracer.LogError(err)
 			return nil
 		}
 	}
@@ -304,8 +304,8 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 	// A quick way to instrument Go `crypto/tls` without PID filtering - used for debuging and troubleshooting
 	//
 	if os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") != "" {
-		if err := tls.GlobalGoTap(*procfs, os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID")); err != nil {
-			tlstapper.LogError(err)
+		if err := tls.GlobalGoTarget(*procfs, os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID")); err != nil {
+			tracer.LogError(err)
 			return nil
 		}
 	}

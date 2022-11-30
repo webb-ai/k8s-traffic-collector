@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"github.com/cilium/ebpf/link"
@@ -16,7 +16,7 @@ type syscallHooks struct {
 	sysExitConnect  link.Link
 }
 
-func (s *syscallHooks) installSyscallHooks(bpfObjects *tlsTapperObjects) error {
+func (s *syscallHooks) installSyscallHooks(bpfObjects *tracerObjects) error {
 	var err error
 
 	s.sysEnterRead, err = link.Tracepoint("syscalls", "sys_enter_read", bpfObjects.SysEnterRead, nil)

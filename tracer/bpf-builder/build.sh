@@ -2,7 +2,7 @@
 
 pushd "$(dirname "$0")" || exit 1
 
-KUBESHARK_HOME=$(realpath ../../../)
+KUBESHARK_HOME=$(realpath ../../)
 
 docker build -t kubeshark-ebpf-builder . || exit 1
 
@@ -20,8 +20,8 @@ docker run --rm \
 	-v $(go env GOPATH):/root/go \
 	kubeshark-ebpf-builder \
 	sh -c "
-		BPF_TARGET=\"$BPF_TARGET\" BPF_CFLAGS=\"$BPF_CFLAGS\" go generate tap/tlstapper/tls_tapper.go
-        chown $(id -u):$(id -g) tap/tlstapper/tlstapper*_bpf*
+		BPF_TARGET=\"$BPF_TARGET\" BPF_CFLAGS=\"$BPF_CFLAGS\" go generate tracer/tracer.go
+        chown $(id -u):$(id -g) tracer/tracer*_bpf*
 	" || exit 1
 
 popd

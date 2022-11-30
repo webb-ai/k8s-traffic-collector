@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"github.com/cilium/ebpf/link"
@@ -6,11 +6,11 @@ import (
 )
 
 type tcpKprobeHooks struct {
-	tcpSendmsg         link.Link
-	tcpRecvmsg         link.Link
+	tcpSendmsg link.Link
+	tcpRecvmsg link.Link
 }
 
-func (s *tcpKprobeHooks) installTcpKprobeHooks(bpfObjects *tlsTapperObjects) error {
+func (s *tcpKprobeHooks) installTcpKprobeHooks(bpfObjects *tracerObjects) error {
 	var err error
 
 	s.tcpSendmsg, err = link.Kprobe("tcp_sendmsg", bpfObjects.TcpSendmsg, nil)

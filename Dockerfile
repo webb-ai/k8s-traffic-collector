@@ -63,9 +63,9 @@ RUN go mod download
 
 COPY . .
 
-WORKDIR /app/build/tlstapper
+WORKDIR /app/build/tracer
 RUN rm *_bpfel_*
-RUN GOARCH=${BUILDARCH} go generate tls_tapper.go
+RUN GOARCH=${BUILDARCH} go generate tracer.go
 
 WORKDIR /app/build
 

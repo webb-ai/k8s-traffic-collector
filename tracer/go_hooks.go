@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"github.com/cilium/ebpf/link"
@@ -12,7 +12,7 @@ type goHooks struct {
 	goReadExProbes  []link.Link
 }
 
-func (s *goHooks) installUprobes(bpfObjects *tlsTapperObjects, filePath string) error {
+func (s *goHooks) installUprobes(bpfObjects *tracerObjects, filePath string) error {
 	ex, err := link.OpenExecutable(filePath)
 
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *goHooks) installUprobes(bpfObjects *tlsTapperObjects, filePath string) 
 	return s.installHooks(bpfObjects, ex, offsets)
 }
 
-func (s *goHooks) installHooks(bpfObjects *tlsTapperObjects, ex *link.Executable, offsets goOffsets) error {
+func (s *goHooks) installHooks(bpfObjects *tracerObjects, ex *link.Executable, offsets goOffsets) error {
 	var err error
 
 	goCryptoTlsWrite := bpfObjects.GoCryptoTlsAbiInternalWrite
@@ -43,9 +43,9 @@ func (s *goHooks) installHooks(bpfObjects *tlsTapperObjects, ex *link.Executable
 		goCryptoTlsReadEx = bpfObjects.GoCryptoTlsAbi0ReadEx
 
 		// Pass goid and g struct offsets to an eBPF map to retrieve it in eBPF context
-		if err := bpfObjects.tlsTapperMaps.GoidOffsetsMap.Put(
+		if err := bpfObjects.tracerMaps.GoidOffsetsMap.Put(
 			uint32(0),
-			tlsTapperGoidOffsets{
+			tracerGoidOffsets{
 				G_addrOffset: offsets.GStructOffset,
 				GoidOffset:   offsets.GoidOffset,
 			},

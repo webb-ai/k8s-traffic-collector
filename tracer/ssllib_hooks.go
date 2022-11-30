@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"github.com/cilium/ebpf/link"
@@ -16,7 +16,7 @@ type sslHooks struct {
 	sslReadExRetProbe  link.Link
 }
 
-func (s *sslHooks) installUprobes(bpfObjects *tlsTapperObjects, sslLibraryPath string) error {
+func (s *sslHooks) installUprobes(bpfObjects *tracerObjects, sslLibraryPath string) error {
 	sslLibrary, err := link.OpenExecutable(sslLibraryPath)
 
 	if err != nil {
@@ -32,7 +32,7 @@ func (s *sslHooks) installUprobes(bpfObjects *tlsTapperObjects, sslLibraryPath s
 	return s.installSslHooks(bpfObjects, sslLibrary, sslOffsets)
 }
 
-func (s *sslHooks) installSslHooks(bpfObjects *tlsTapperObjects, sslLibrary *link.Executable, offsets sslOffsets) error {
+func (s *sslHooks) installSslHooks(bpfObjects *tracerObjects, sslLibrary *link.Executable, offsets sslOffsets) error {
 	var err error
 
 	s.sslWriteProbe, err = sslLibrary.Uprobe("SSL_write", bpfObjects.SslWrite, &link.UprobeOptions{

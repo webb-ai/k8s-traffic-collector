@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 
 var numberRegex = regexp.MustCompile("[0-9]+")
 
-func UpdateTargets(tls *TlsTapper, pods *[]v1.Pod, procfs string) error {
+func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) error {
 	containerIds := buildContainerIdsMap(pods)
 	containerPids, err := findContainerPids(procfs, containerIds)
 

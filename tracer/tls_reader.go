@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"io"
@@ -9,7 +9,7 @@ import (
 
 type tlsReader struct {
 	key           string
-	chunks        chan *tlsTapperTlsChunk
+	chunks        chan *tracerTlsChunk
 	seenChunks    int
 	data          []byte
 	doneHandler   func(r *tlsReader)
@@ -24,14 +24,14 @@ type tlsReader struct {
 	reqResMatcher api.RequestResponseMatcher
 }
 
-func (r *tlsReader) newChunk(chunk *tlsTapperTlsChunk) {
+func (r *tlsReader) newChunk(chunk *tracerTlsChunk) {
 	r.captureTime = time.Now()
 	r.seenChunks = r.seenChunks + 1
 	r.chunks <- chunk
 }
 
 func (r *tlsReader) Read(p []byte) (int, error) {
-	var chunk *tlsTapperTlsChunk
+	var chunk *tracerTlsChunk
 
 	for len(r.data) == 0 {
 		var ok bool

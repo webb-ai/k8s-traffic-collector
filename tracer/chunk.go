@@ -1,4 +1,4 @@
-package tlstapper
+package tracer
 
 import (
 	"encoding/binary"
@@ -16,45 +16,45 @@ type addressPair struct {
 	dstPort uint16
 }
 
-func (c *tlsTapperTlsChunk) getSrcAddress() (net.IP, uint16) {
+func (c *tracerTlsChunk) getSrcAddress() (net.IP, uint16) {
 	ip := intToIP(c.AddressInfo.Saddr)
 	port := ntohs(c.AddressInfo.Sport)
 
 	return ip, port
 }
 
-func (c *tlsTapperTlsChunk) getDstAddress() (net.IP, uint16) {
+func (c *tracerTlsChunk) getDstAddress() (net.IP, uint16) {
 	ip := intToIP(c.AddressInfo.Daddr)
 	port := ntohs(c.AddressInfo.Dport)
 
 	return ip, port
 }
 
-func (c *tlsTapperTlsChunk) isClient() bool {
+func (c *tracerTlsChunk) isClient() bool {
 	return c.Flags&FlagsIsClientBit != 0
 }
 
-func (c *tlsTapperTlsChunk) isServer() bool {
+func (c *tracerTlsChunk) isServer() bool {
 	return !c.isClient()
 }
 
-func (c *tlsTapperTlsChunk) isRead() bool {
+func (c *tracerTlsChunk) isRead() bool {
 	return c.Flags&FlagsIsReadBit != 0
 }
 
-func (c *tlsTapperTlsChunk) isWrite() bool {
+func (c *tracerTlsChunk) isWrite() bool {
 	return !c.isRead()
 }
 
-func (c *tlsTapperTlsChunk) getRecordedData() []byte {
+func (c *tracerTlsChunk) getRecordedData() []byte {
 	return c.Data[:c.Recorded]
 }
 
-func (c *tlsTapperTlsChunk) isRequest() bool {
+func (c *tracerTlsChunk) isRequest() bool {
 	return (c.isClient() && c.isWrite()) || (c.isServer() && c.isRead())
 }
 
-func (c *tlsTapperTlsChunk) getAddressPair() addressPair {
+func (c *tracerTlsChunk) getAddressPair() addressPair {
 	var (
 		srcIp, dstIp     net.IP
 		srcPort, dstPort uint16
