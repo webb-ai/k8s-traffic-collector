@@ -17,7 +17,7 @@ import (
 	"github.com/kubeshark/base/pkg/models"
 )
 
-var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
+var hubWsAddress = flag.String("hub-ws-address", "ws://localhost:8899/wsWorker", "The address of the Hub WebSocket endpoint.")
 
 const (
 	HostModeEnvVar             = "HOST_MODE"
@@ -32,7 +32,7 @@ func main() {
 
 	loadExtensions()
 
-	runInTapperMode()
+	run()
 
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
@@ -41,28 +41,25 @@ func main() {
 	log.Print("Exiting")
 }
 
-func runInTapperMode() {
-	log.Printf("Starting tapper, websocket address: %s", *apiServerAddress)
-	if *apiServerAddress == "" {
-		panic("API server address must be provided with --api-server-address when using --tap")
-	}
+func run() {
+	log.Printf("Starting worker, WebSocket address: %s", *hubWsAddress)
 
 	hostMode := os.Getenv(HostModeEnvVar) == "1"
-	tapOpts := &TapOpts{
+	opts := &Opts{
 		HostMode: hostMode,
 	}
 
 	filteredOutputItemsChannel := make(chan *api.OutputChannelItem)
 
 	filteringOptions := getTrafficFilteringOptions()
-	StartPassiveTapper(tapOpts, filteredOutputItemsChannel, Extensions, filteringOptions)
-	socketConnection, err := dialSocketWithRetry(*apiServerAddress, socketConnectionRetries, socketConnectionRetryDelay)
+	startWorker(opts, filteredOutputItemsChannel, Extensions, filteringOptions)
+	socketConnection, err := dialSocketWithRetry(*hubWsAddress, socketConnectionRetries, socketConnectionRetryDelay)
 	if err != nil {
-		panic(fmt.Sprintf("Error connecting to socket server at %s %v", *apiServerAddress, err))
+		panic(fmt.Sprintf("Error connecting to socket server at %s %v", *hubWsAddress, err))
 	}
-	log.Printf("Connected successfully to websocket %s", *apiServerAddress)
+	log.Printf("Connected successfully to websocket %s", *hubWsAddress)
 
-	go pipeTapChannelToSocket(socketConnection, filteredOutputItemsChannel)
+	go pipeWorkerChannelToSocket(socketConnection, filteredOutputItemsChannel)
 }
 
 func getTrafficFilteringOptions() *api.TrafficFilteringOptions {
@@ -71,7 +68,7 @@ func getTrafficFilteringOptions() *api.TrafficFilteringOptions {
 	}
 }
 
-func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-chan *api.OutputChannelItem) {
+func pipeWorkerChannelToSocket(connection *websocket.Conn, messageDataChannel <-chan *api.OutputChannelItem) {
 	if connection == nil {
 		panic("Websocket connection is nil")
 	}
@@ -94,7 +91,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 			log.Printf("error sending message through socket server %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			if errors.Is(err, syscall.EPIPE) {
 				log.Printf("detected socket disconnection, reestablishing socket connection")
-				connection, err = dialSocketWithRetry(*apiServerAddress, socketConnectionRetries, socketConnectionRetryDelay)
+				connection, err = dialSocketWithRetry(*hubWsAddress, socketConnectionRetries, socketConnectionRetryDelay)
 				if err != nil {
 					log.Fatalf("error reestablishing socket connection: %v", err)
 				} else {
@@ -108,7 +105,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 
 func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.Duration) (*websocket.Conn, error) {
 	var lastErr error
-	dialer := &websocket.Dialer{ // we use our own dialer instead of the default due to the default's 45 sec handshake timeout, we occasionally encounter hanging socket handshakes when tapper tries to connect to api too soon
+	dialer := &websocket.Dialer{ // we use our own dialer instead of the default due to the default's 45 sec handshake timeout, we occasionally encounter hanging socket handshakes when Worker tries to connect to Hub too soon
 		Proxy:            http.ProxyFromEnvironment,
 		HandshakeTimeout: socketHandshakeTimeout,
 	}
@@ -121,14 +118,14 @@ func dialSocketWithRetry(socketAddress string, retryAmount int, retryDelay time.
 				time.Sleep(retryDelay)
 			}
 		} else {
-			go handleIncomingMessageAsTapper(socketConnection)
+			go handleIncomingMessageAsWorker(socketConnection)
 			return socketConnection, nil
 		}
 	}
 	return nil, lastErr
 }
 
-func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
+func handleIncomingMessageAsWorker(socketConnection *websocket.Conn) {
 	for {
 		if _, message, err := socketConnection.ReadMessage(); err != nil {
 			log.Printf("error reading message from socket connection, err: %s, (%v,%+v)", err, err, err)
@@ -143,20 +140,20 @@ func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 			} else {
 				switch socketMessageBase.MessageType {
 				case models.WebSocketMessageTypeWorkerConfig:
-					var tapConfigMessage *models.WebSocketWorkerConfigMessage
-					if err := json.Unmarshal(message, &tapConfigMessage); err != nil {
+					var configMessage *models.WebSocketWorkerConfigMessage
+					if err := json.Unmarshal(message, &configMessage); err != nil {
 						log.Printf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
 					} else {
-						UpdateTapTargets(tapConfigMessage.TargettedPods)
+						UpdateTargets(configMessage.TargettedPods)
 					}
 				case models.WebSocketMessageTypeUpdateTargettedPods:
-					var tappedPodsMessage models.WebSocketTargettedPodsMessage
-					if err := json.Unmarshal(message, &tappedPodsMessage); err != nil {
+					var targettedPodsMessage models.WebSocketTargettedPodsMessage
+					if err := json.Unmarshal(message, &targettedPodsMessage); err != nil {
 						log.Printf("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
 						return
 					}
 					nodeName := os.Getenv(NodeNameEnvVar)
-					UpdateTapTargets(tappedPodsMessage.NodeToTargettedPodsMap[nodeName])
+					UpdateTargets(targettedPodsMessage.NodeToTargettedPodsMap[nodeName])
 				default:
 					log.Printf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
 				}

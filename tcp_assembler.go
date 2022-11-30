@@ -60,7 +60,7 @@ func (c *context) GetCaptureInfo() gopacket.CaptureInfo {
 	return c.CaptureInfo
 }
 
-func NewTcpAssembler(outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *TapOpts) (*tcpAssembler, error) {
+func NewTcpAssembler(outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *Opts) (*tcpAssembler, error) {
 	var emitter api.Emitter = &api.Emitting{
 		AppStats:      &diagnose.AppStats,
 		OutputChannel: outputItems,
@@ -143,12 +143,12 @@ func (a *tcpAssembler) processPacket(packetInfo source.TcpPacketInfo, dumpPacket
 
 	done := *maxcount > 0 && int64(diagnose.AppStats.PacketsCount) >= *maxcount
 	if done {
-		errorMapLen, _ := diagnose.TapErrors.GetErrorsSummary()
+		errorMapLen, _ := diagnose.ErrorsMap.GetErrorsSummary()
 		log.Printf("Processed %v packets (%v bytes) in %v (errors: %v, errTypes:%v)",
 			diagnose.AppStats.PacketsCount,
 			diagnose.AppStats.ProcessedBytes,
 			time.Since(diagnose.AppStats.StartTime),
-			diagnose.TapErrors.ErrorsCount,
+			diagnose.ErrorsMap.ErrorsCount,
 			errorMapLen)
 	}
 	return done

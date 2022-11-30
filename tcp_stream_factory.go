@@ -23,11 +23,11 @@ type tcpStreamFactory struct {
 	emitter          api.Emitter
 	streamsMap       api.TcpStreamMap
 	ownIps           []string
-	opts             *TapOpts
+	opts             *Opts
 	streamsCallbacks tcpStreamCallbacks
 }
 
-func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts *TapOpts, streamsCallbacks tcpStreamCallbacks) *tcpStreamFactory {
+func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts *Opts, streamsCallbacks tcpStreamCallbacks) *tcpStreamFactory {
 	var ownIps []string
 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
@@ -127,13 +127,13 @@ func inArrayPod(pods []v1.Pod, address string) bool {
 
 func (factory *tcpStreamFactory) getStreamProps(srcIP string, srcPort string, dstIP string, dstPort string) *streamProps {
 	if factory.opts.HostMode {
-		if inArrayPod(tapTargets, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
+		if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
 			return &streamProps{isTapTarget: true, isOutgoing: false}
-		} else if inArrayPod(tapTargets, dstIP) {
+		} else if inArrayPod(targettedPods, dstIP) {
 			return &streamProps{isTapTarget: true, isOutgoing: false}
-		} else if inArrayPod(tapTargets, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
+		} else if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
 			return &streamProps{isTapTarget: true, isOutgoing: true}
-		} else if inArrayPod(tapTargets, srcIP) {
+		} else if inArrayPod(targettedPods, srcIP) {
 			return &streamProps{isTapTarget: true, isOutgoing: true}
 		}
 		return &streamProps{isTapTarget: false, isOutgoing: false}

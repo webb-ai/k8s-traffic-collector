@@ -2,4 +2,4 @@
 
 go build -o worker .
 
-sudo ./worker --api-server-address ws://localhost:8898/wsTapper -i any
+sudo ./worker --hub-ws-address ws://localhost:8898/wsTapper -i any

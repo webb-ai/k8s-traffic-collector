@@ -42,7 +42,7 @@ func initPrivateIPBlocks() {
 	} {
 		_, block, err := net.ParseCIDR(cidr)
 		if err != nil {
-			diagnose.TapErrors.Error("Private-IP-Block-Parse", "parse error on %q: %v", cidr, err)
+			diagnose.ErrorsMap.Error("Private-IP-Block-Parse", "parse error on %q: %v", cidr, err)
 		} else {
 			privateIPBlocks = append(privateIPBlocks, block)
 		}

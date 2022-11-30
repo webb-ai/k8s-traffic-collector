@@ -8,7 +8,7 @@ import (
 	"github.com/google/gopacket/examples/util"
 )
 
-var TapErrors *errorsMap
+var ErrorsMap *errorsMap
 
 type errorsMap struct {
 	errorsMap      map[string]uint
@@ -29,7 +29,7 @@ func InitializeErrorsMap(debug bool, verbose bool, quiet bool) {
 		outputLevel = -1
 	}
 
-	TapErrors = newErrorsMap(outputLevel)
+	ErrorsMap = newErrorsMap(outputLevel)
 }
 
 func newErrorsMap(outputLevel int) *errorsMap {

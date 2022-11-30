@@ -2,7 +2,7 @@ package diagnose
 
 import "log"
 
-type tapperInternalStats struct {
+type workerInternalStats struct {
 	Ipdefrag            int
 	MissedBytes         int
 	Pkt                 int
@@ -20,13 +20,13 @@ type tapperInternalStats struct {
 	OverlapPackets      int
 }
 
-var InternalStats *tapperInternalStats
+var InternalStats *workerInternalStats
 
-func InitializeTapperInternalStats() {
-	InternalStats = &tapperInternalStats{}
+func InitializeWorkerInternalStats() {
+	InternalStats = &workerInternalStats{}
 }
 
-func (stats *tapperInternalStats) PrintStatsSummary() {
+func (stats *workerInternalStats) PrintStatsSummary() {
 	log.Printf("IPdefrag:\t\t%d", stats.Ipdefrag)
 	log.Printf("TCP stats:")
 	log.Printf(" missed bytes:\t\t%d", stats.MissedBytes)

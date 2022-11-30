@@ -31,7 +31,7 @@ func NewTcpReassemblyStream(ident string, tcp *layers.TCP, fsmOptions reassembly
 func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, dir reassembly.TCPFlowDirection, nextSeq reassembly.Sequence, start *bool, ac reassembly.AssemblerContext) bool {
 	// FSM
 	if !t.tcpState.CheckState(tcp, dir) {
-		diagnose.TapErrors.SilentError("FSM-rejection", "%s: Packet rejected by FSM (state:%s)", t.ident, t.tcpState.String())
+		diagnose.ErrorsMap.SilentError("FSM-rejection", "%s: Packet rejected by FSM (state:%s)", t.ident, t.tcpState.String())
 		diagnose.InternalStats.RejectFsm++
 		if !t.fsmerr {
 			t.fsmerr = true
@@ -44,7 +44,7 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 	// Options
 	err := t.optchecker.Accept(tcp, ci, dir, nextSeq, start)
 	if err != nil {
-		diagnose.TapErrors.SilentError("OptionChecker-rejection", "%s: Packet rejected by OptionChecker: %s", t.ident, err)
+		diagnose.ErrorsMap.SilentError("OptionChecker-rejection", "%s: Packet rejected by OptionChecker: %s", t.ident, err)
 		diagnose.InternalStats.RejectOpt++
 		if !*nooptcheck {
 			return false
@@ -55,10 +55,10 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 	if *checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
-			diagnose.TapErrors.SilentError("ChecksumCompute", "%s: Got error computing checksum: %s", t.ident, err)
+			diagnose.ErrorsMap.SilentError("ChecksumCompute", "%s: Got error computing checksum: %s", t.ident, err)
 			accept = false
 		} else if c != 0x0 {
-			diagnose.TapErrors.SilentError("Checksum", "%s: Invalid checksum: 0x%x", t.ident, c)
+			diagnose.ErrorsMap.SilentError("Checksum", "%s: Invalid checksum: 0x%x", t.ident, c)
 			accept = false
 		}
 	}
@@ -95,7 +95,7 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
 		// In the original example this was handled with panic().
 		// I don't know what this error means or how to handle it properly.
-		diagnose.TapErrors.SilentError("Invalid-Overlap", "bytes:%d, pkts:%d", sgStats.OverlapBytes, sgStats.OverlapPackets)
+		diagnose.ErrorsMap.SilentError("Invalid-Overlap", "bytes:%d, pkts:%d", sgStats.OverlapBytes, sgStats.OverlapPackets)
 	}
 	diagnose.InternalStats.OverlapBytes += sgStats.OverlapBytes
 	diagnose.InternalStats.OverlapPackets += sgStats.OverlapPackets
@@ -116,18 +116,18 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 		}
 		dnsSize := binary.BigEndian.Uint16(data[:2])
 		missing := int(dnsSize) - len(data[2:])
-		diagnose.TapErrors.Debug("dnsSize: %d, missing: %d", dnsSize, missing)
+		diagnose.ErrorsMap.Debug("dnsSize: %d, missing: %d", dnsSize, missing)
 		if missing > 0 {
-			diagnose.TapErrors.Debug("Missing some bytes: %d", missing)
+			diagnose.ErrorsMap.Debug("Missing some bytes: %d", missing)
 			sg.KeepFrom(0)
 			return
 		}
 		p := gopacket.NewDecodingLayerParser(layers.LayerTypeDNS, dns)
 		err := p.DecodeLayers(data[2:], &decoded)
 		if err != nil {
-			diagnose.TapErrors.SilentError("DNS-parser", "Failed to decode DNS: %v", err)
+			diagnose.ErrorsMap.SilentError("DNS-parser", "Failed to decode DNS: %v", err)
 		} else {
-			diagnose.TapErrors.Debug("DNS: %s", gopacket.LayerDump(dns))
+			diagnose.ErrorsMap.Debug("DNS: %s", gopacket.LayerDump(dns))
 		}
 		if len(data) > 2+int(dnsSize) {
 			sg.KeepFrom(2 + int(dnsSize))

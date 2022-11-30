@@ -17,7 +17,7 @@ import (
 
 var numberRegex = regexp.MustCompile("[0-9]+")
 
-func UpdateTapTargets(tls *TlsTapper, pods *[]v1.Pod, procfs string) error {
+func UpdateTargets(tls *TlsTapper, pods *[]v1.Pod, procfs string) error {
 	containerIds := buildContainerIdsMap(pods)
 	containerPids, err := findContainerPids(procfs, containerIds)
 

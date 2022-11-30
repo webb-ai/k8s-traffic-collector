@@ -56,12 +56,12 @@ var tstype = flag.String("timestamp-type", "", "Type of timestamps to use")
 var promisc = flag.Bool("promisc", true, "Set promiscuous mode")
 var staleTimeoutSeconds = flag.Int("staletimout", 120, "Max time in seconds to keep connections which don't transmit data")
 var servicemesh = flag.Bool("servicemesh", false, "Record decrypted traffic if the cluster is configured with a service mesh and with mtls")
-var tls = flag.Bool("tls", false, "Enable TLS tapper")
+var tls = flag.Bool("tls", false, "Enable TLS tracing")
 var packetCapture = flag.String("packet-capture", "libpcap", "Packet capture backend. Possible values: libpcap, af_packet")
 
 var memprofile = flag.String("memprofile", "", "Write memory profile")
 
-type TapOpts struct {
+type Opts struct {
 	HostMode               bool
 	IgnoredPorts           []uint16
 	maxLiveStreams         int
@@ -70,12 +70,12 @@ type TapOpts struct {
 
 var extensions []*api.Extension                     // global
 var filteringOptions *api.TrafficFilteringOptions   // global
-var tapTargets []v1.Pod                             // global
+var targettedPods []v1.Pod                          // global
 var packetSourceManager *source.PacketSourceManager // global
 var mainPacketInputChan chan source.TcpPacketInfo   // global
 var tlsTapperInstance *tlstapper.TlsTapper          // global
 
-func StartPassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, extensionsRef []*api.Extension, options *api.TrafficFilteringOptions) {
+func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensionsRef []*api.Extension, options *api.TrafficFilteringOptions) {
 	extensions = extensionsRef
 	filteringOptions = options
 
@@ -84,7 +84,7 @@ func StartPassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, 
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				tlsTapperInstance = startTlsTapper(e, outputItems, options, streamsMap)
+				tlsTapperInstance = startTracer(e, outputItems, options, streamsMap)
 				break
 			}
 		}
@@ -94,44 +94,44 @@ func StartPassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, 
 		diagnose.StartMemoryProfiler(os.Getenv(MemoryProfilingDumpPath), os.Getenv(MemoryProfilingTimeIntervalSeconds))
 	}
 
-	assembler, err := initializePassiveTapper(opts, outputItems, streamsMap)
+	assembler, err := initializeWorker(opts, outputItems, streamsMap)
 
 	if err != nil {
-		log.Printf("Error initializing tapper %v", err)
+		log.Printf("Error initializing worker %v", err)
 		return
 	}
 
-	go startPassiveTapper(streamsMap, assembler)
+	go startAssembler(streamsMap, assembler)
 }
 
-func UpdateTapTargets(newTapTargets []v1.Pod) {
+func UpdateTargets(newTargets []v1.Pod) {
 	success := true
 
-	tapTargets = newTapTargets
+	targettedPods = newTargets
 
-	packetSourceManager.UpdatePods(tapTargets, !*nodefrag, mainPacketInputChan)
+	packetSourceManager.UpdatePods(newTargets, !*nodefrag, mainPacketInputChan)
 
 	if tlsTapperInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
-		if err := tlstapper.UpdateTapTargets(tlsTapperInstance, &tapTargets, *procfs); err != nil {
+		if err := tlstapper.UpdateTargets(tlsTapperInstance, &newTargets, *procfs); err != nil {
 			tlstapper.LogError(err)
 			success = false
 		}
 	}
 
-	printNewTapTargets(success)
+	printNewTargets(success)
 }
 
-func printNewTapTargets(success bool) {
+func printNewTargets(success bool) {
 	printStr := ""
-	for _, tapTarget := range tapTargets {
-		printStr += fmt.Sprintf("%s (%s), ", tapTarget.Status.PodIP, tapTarget.Name)
+	for _, pod := range targettedPods {
+		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
 	}
 	printStr = strings.TrimRight(printStr, ", ")
 
 	if success {
-		log.Printf("Now tapping: %s", printStr)
+		log.Printf("Now targetting: %s", printStr)
 	} else {
-		log.Printf("Failed to start tapping: %s", printStr)
+		log.Printf("Failed to start targetting: %s", printStr)
 	}
 }
 
@@ -153,11 +153,11 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		<-ticker.C
 
 		// Since the start
-		errorMapLen, errorsSummery := diagnose.TapErrors.GetErrorsSummary()
+		errorMapLen, errorsSummery := diagnose.ErrorsMap.GetErrorsSummary()
 
 		log.Printf("%v (errors: %v, errTypes:%v) - Errors Summary: %s",
 			time.Since(diagnose.AppStats.StartTime),
-			diagnose.TapErrors.ErrorsCount,
+			diagnose.ErrorsMap.ErrorsCount,
 			errorMapLen,
 			errorsSummery,
 		)
@@ -222,13 +222,13 @@ func initializePacketSources() error {
 	}
 
 	var err error
-	packetSourceManager, err = source.NewPacketSourceManager(*procfs, *fname, *iface, *servicemesh, tapTargets, behaviour, !*nodefrag, *packetCapture, mainPacketInputChan)
+	packetSourceManager, err = source.NewPacketSourceManager(*procfs, *fname, *iface, *servicemesh, targettedPods, behaviour, !*nodefrag, *packetCapture, mainPacketInputChan)
 	return err
 }
 
-func initializePassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) (*tcpAssembler, error) {
+func initializeWorker(opts *Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) (*tcpAssembler, error) {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
-	diagnose.InitializeTapperInternalStats()
+	diagnose.InitializeWorkerInternalStats()
 
 	mainPacketInputChan = make(chan source.TcpPacketInfo)
 
@@ -243,7 +243,7 @@ func initializePassiveTapper(opts *TapOpts, outputItems chan *api.OutputChannelI
 	return NewTcpAssembler(outputItems, streamsMap, opts)
 }
 
-func startPassiveTapper(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
+func startAssembler(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 	go streamsMap.CloseTimedoutTcpStreamChannels()
 
 	diagnose.AppStats.SetStartTime(time.Now())
@@ -261,7 +261,7 @@ func startPassiveTapper(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 
 	assembler.processPackets(*hexdumppkt, mainPacketInputChan)
 
-	if diagnose.TapErrors.OutputLevel >= 2 {
+	if diagnose.ErrorsMap.OutputLevel >= 2 {
 		assembler.dumpStreamPool()
 	}
 
@@ -272,11 +272,11 @@ func startPassiveTapper(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 	assembler.waitAndDump()
 
 	diagnose.InternalStats.PrintStatsSummary()
-	diagnose.TapErrors.PrintSummary()
+	diagnose.ErrorsMap.PrintSummary()
 	log.Printf("AppStats: %v", diagnose.AppStats)
 }
 
-func startTlsTapper(extension *api.Extension, outputItems chan *api.OutputChannelItem,
+func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem,
 	options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) *tlstapper.TlsTapper {
 	tls := tlstapper.TlsTapper{}
 	chunksBufferSize := os.Getpagesize() * 100
@@ -287,7 +287,7 @@ func startTlsTapper(extension *api.Extension, outputItems chan *api.OutputChanne
 		return nil
 	}
 
-	if err := tlstapper.UpdateTapTargets(&tls, &tapTargets, *procfs); err != nil {
+	if err := tlstapper.UpdateTargets(&tls, &targettedPods, *procfs); err != nil {
 		tlstapper.LogError(err)
 		return nil
 	}
