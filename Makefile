@@ -7,6 +7,9 @@ else
 	BPF_ARCH_SUFFIX=x86
 endif
 
+build:
+	go build -ldflags="-extldflags=-static -s -w" -o worker .
+
 bpf:
 	BPF_TARGET="$(BPF_TARGET)" BPF_CFLAGS="-O2 -g -D__TARGET_ARCH_$(BPF_ARCH_SUFFIX)" go generate tlstapper/tls_tapper.go
 
