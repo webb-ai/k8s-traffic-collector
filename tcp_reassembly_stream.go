@@ -132,7 +132,7 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 		if len(data) > 2+int(dnsSize) {
 			sg.KeepFrom(2 + int(dnsSize))
 		}
-	} else if t.tcpStream.GetIsTapTarget() {
+	} else if t.tcpStream.GetIsTargetted() {
 		if length > 0 {
 			// This is where we pass the reassembled information onwards
 			// This channel is read by an tcpReader object
@@ -148,7 +148,7 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 }
 
 func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
-	if t.tcpStream.GetIsTapTarget() && !t.tcpStream.GetIsClosed() {
+	if t.tcpStream.GetIsTargetted() && !t.tcpStream.GetIsClosed() {
 		t.tcpStream.close()
 	}
 

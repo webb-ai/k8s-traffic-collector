@@ -81,7 +81,7 @@ func pipeTapChannelToSocket(connection *websocket.Conn, messageDataChannel <-cha
 	}
 
 	for messageData := range messageDataChannel {
-		marshaledData, err := models.CreateWebsocketTappedEntryMessage(messageData)
+		marshaledData, err := models.CreateWebsocketWorkerEntryMessage(messageData)
 		if err != nil {
 			log.Printf("error converting message to json %v, err: %s, (%v,%+v)", messageData, err, err, err)
 			continue
@@ -142,21 +142,21 @@ func handleIncomingMessageAsTapper(socketConnection *websocket.Conn) {
 				log.Printf("Could not unmarshal websocket message %v", err)
 			} else {
 				switch socketMessageBase.MessageType {
-				case models.WebSocketMessageTypeTapConfig:
-					var tapConfigMessage *models.WebSocketTapConfigMessage
+				case models.WebSocketMessageTypeWorkerConfig:
+					var tapConfigMessage *models.WebSocketWorkerConfigMessage
 					if err := json.Unmarshal(message, &tapConfigMessage); err != nil {
 						log.Printf("received unknown message from socket connection: %s, err: %s, (%v,%+v)", string(message), err, err, err)
 					} else {
-						UpdateTapTargets(tapConfigMessage.TapTargets)
+						UpdateTapTargets(tapConfigMessage.TargettedPods)
 					}
-				case models.WebSocketMessageTypeUpdateTappedPods:
-					var tappedPodsMessage models.WebSocketTappedPodsMessage
+				case models.WebSocketMessageTypeUpdateTargettedPods:
+					var tappedPodsMessage models.WebSocketTargettedPodsMessage
 					if err := json.Unmarshal(message, &tappedPodsMessage); err != nil {
 						log.Printf("Could not unmarshal message of message type %s %v", socketMessageBase.MessageType, err)
 						return
 					}
 					nodeName := os.Getenv(NodeNameEnvVar)
-					UpdateTapTargets(tappedPodsMessage.NodeToTappedPodMap[nodeName])
+					UpdateTapTargets(tappedPodsMessage.NodeToTargettedPodsMap[nodeName])
 				default:
 					log.Printf("Received socket message of type %s for which no handlers are defined", socketMessageBase.MessageType)
 				}

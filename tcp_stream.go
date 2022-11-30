@@ -100,7 +100,7 @@ func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
 	return t.reqResMatchers
 }
 
-func (t *tcpStream) GetIsTapTarget() bool {
+func (t *tcpStream) GetIsTargetted() bool {
 	return t.isTapTarget
 }
 

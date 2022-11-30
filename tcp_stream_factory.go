@@ -62,7 +62,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 	connectionId := getConnectionId(srcIp, srcPort, dstIp, dstPort)
 	stream := NewTcpStream(isTapTarget, factory.streamsMap, getPacketOrigin(ac), connectionId, factory.streamsCallbacks)
 	reassemblyStream := NewTcpReassemblyStream(fmt.Sprintf("%s:%s", net, transport), tcpLayer, fsmOptions, stream)
-	if stream.GetIsTapTarget() {
+	if stream.GetIsTargetted() {
 		stream.setId(factory.streamsMap.NextId())
 		for _, extension := range extensions {
 			counterPair := &api.CounterPair{

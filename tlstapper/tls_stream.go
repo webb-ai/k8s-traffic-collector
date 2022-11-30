@@ -19,7 +19,7 @@ func (t *tlsStream) GetReqResMatchers() []api.RequestResponseMatcher {
 	return []api.RequestResponseMatcher{t.reader.reqResMatcher}
 }
 
-func (t *tlsStream) GetIsTapTarget() bool {
+func (t *tlsStream) GetIsTargetted() bool {
 	return true
 }
 
