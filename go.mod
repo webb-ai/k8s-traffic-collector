@@ -12,6 +12,7 @@ require (
 	github.com/knightsc/gapstone v0.0.0-20191231144527-6fa5afaf11a9
 	github.com/kubeshark/base v0.1.3
 	github.com/moby/moby v20.10.17+incompatible
+	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/struCoder/pidusage v0.2.1
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
@@ -37,7 +38,6 @@ require (
 	github.com/ohler55/ojg v1.14.5 // indirect
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
 	github.com/pierrec/lz4/v4 v4.1.15 // indirect
-	github.com/rs/zerolog v1.28.0 // indirect
 	github.com/segmentio/kafka-go v0.4.38 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
