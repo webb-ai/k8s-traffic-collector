@@ -5,55 +5,50 @@ go 1.17
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/cilium/ebpf v0.9.0
-	github.com/fatih/camelcase v1.0.0
 	github.com/go-errors/errors v1.4.2
 	github.com/google/gopacket v1.1.19
-	github.com/google/martian v2.1.0+incompatible
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/knightsc/gapstone v0.0.0-20191231144527-6fa5afaf11a9
-	github.com/mertyildiran/gqlparser/v2 v2.4.6
+	github.com/kubeshark/base v0.1.1
 	github.com/moby/moby v20.10.17+incompatible
-	github.com/ohler55/ojg v1.12.12
-	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	github.com/segmentio/kafka-go v0.4.27
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/stretchr/testify v1.7.0
 	github.com/struCoder/pidusage v0.2.1
-	github.com/up9inc/basenine/client/go v0.0.0-20220612112747-3b28eeac9c51
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
-	golang.org/x/text v0.3.7
+	golang.org/x/net v0.2.0
 	k8s.io/api v0.23.3
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/go-logr/logr v1.2.2 // indirect
+	github.com/fatih/camelcase v1.0.0 // indirect
+	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/go-cmp v0.5.7 // indirect
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/martian v2.1.0+incompatible // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.14.2 // indirect
+	github.com/klauspost/compress v1.15.9 // indirect
+	github.com/mertyildiran/gqlparser/v2 v2.4.6 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/ohler55/ojg v1.14.5 // indirect
+	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
+	github.com/segmentio/kafka-go v0.4.38 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
+	github.com/up9inc/basenine/client/go v0.0.0-20220612112747-3b28eeac9c51 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/sys v0.0.0-20220207234003-57398862261d // indirect
+	golang.org/x/sys v0.2.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 	gotest.tools/v3 v3.3.0 // indirect
 	k8s.io/apimachinery v0.23.3 // indirect
 	k8s.io/klog/v2 v2.40.1 // indirect
 	k8s.io/utils v0.0.0-20220127004650-9b3446523e65 // indirect
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )

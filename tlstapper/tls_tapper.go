@@ -7,7 +7,7 @@ import (
 
 	"github.com/cilium/ebpf/rlimit"
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/moby/moby/pkg/parsers/kernel"
 )
 

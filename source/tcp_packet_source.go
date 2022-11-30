@@ -8,7 +8,7 @@ import (
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/ip4defrag"
 	"github.com/google/gopacket/layers"
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
 )
 

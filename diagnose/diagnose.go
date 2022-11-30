@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 )
 
 var AppStats = api.AppStats{}

@@ -3,11 +3,11 @@ package main
 import (
 	"sort"
 
-	"github.com/kubeshark/worker/api"
-	amqpExt "github.com/kubeshark/worker/extensions/amqp"
-	httpExt "github.com/kubeshark/worker/extensions/http"
-	kafkaExt "github.com/kubeshark/worker/extensions/kafka"
-	redisExt "github.com/kubeshark/worker/extensions/redis"
+	"github.com/kubeshark/base/pkg/api"
+	amqpExt "github.com/kubeshark/base/pkg/extensions/amqp"
+	httpExt "github.com/kubeshark/base/pkg/extensions/http"
+	kafkaExt "github.com/kubeshark/base/pkg/extensions/kafka"
+	redisExt "github.com/kubeshark/base/pkg/extensions/redis"
 )
 
 var (

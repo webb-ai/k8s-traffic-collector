@@ -5,7 +5,7 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/vishvananda/netns"
 )
 

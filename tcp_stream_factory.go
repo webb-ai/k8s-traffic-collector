@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/google/gopacket"

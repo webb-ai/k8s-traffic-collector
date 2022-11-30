@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/tlstapper"

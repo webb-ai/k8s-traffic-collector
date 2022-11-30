@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/kubeshark/worker/api"
-	"github.com/kubeshark/worker/models"
+	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/base/pkg/models"
 )
 
 var apiServerAddress = flag.String("api-server-address", "", "Address of kubeshark API server")
