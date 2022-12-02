@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/knightsc/gapstone v0.0.0-20191231144527-6fa5afaf11a9
-	github.com/kubeshark/base v0.1.3
+	github.com/kubeshark/base v0.1.4
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
