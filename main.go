@@ -53,7 +53,7 @@ var hubWsAddress = flag.String("hub-ws-address", "ws://localhost:8898/wsWorker",
 const (
 	HostModeEnvVar             = "HOST_MODE"
 	NodeNameEnvVar             = "NODE_NAME"
-	socketConnectionRetries    = 3
+	socketConnectionRetries    = 30
 	socketConnectionRetryDelay = time.Second * 2
 	socketHandshakeTimeout     = time.Second * 2
 )
