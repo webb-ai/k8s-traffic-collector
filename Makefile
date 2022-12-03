@@ -25,8 +25,11 @@ bpf: ## Compile the object files for eBPF
 lint: ## Lint the source code.
 	golangci-lint run
 
-run: ## Run the program. Requires Hub being available on port 8898
-	sudo ./worker --hub-ws-address ws://localhost:8898/wsWorker -i any -debug
+setcap:
+	sudo setcap cap_net_raw,cap_net_admin,cap_sys_admin,cap_sys_ptrace,cap_sys_resource=eip ./worker
+
+run: setcap ## Run the program. Requires Hub being available on port 8898
+	./worker --hub-ws-address ws://localhost:8898/wsWorker -i any -debug
 
 docker-repo:
 	export DOCKER_REPO='kubeshark/worker'
