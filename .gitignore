@@ -28,3 +28,9 @@ go.work
 
 # The executable
 worker
+
+# PCAP files
+*.pcap*
+
+# Python scripts for testing
+*.py

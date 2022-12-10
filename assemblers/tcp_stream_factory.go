@@ -1,15 +1,18 @@
-package main
+package assemblers
 
 import (
 	"fmt"
 	"sync"
 
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/base/pkg/extensions"
+	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/misc"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers" // pulls in all layers decoders
-	"github.com/google/gopacket/reassembly"
+	"github.com/kubeshark/gopacket"
+	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
+	"github.com/kubeshark/gopacket/reassembly"
 	"github.com/rs/zerolog/log"
 )
 
@@ -19,15 +22,16 @@ import (
  * Generates a new tcp stream for each new tcp connection. Closes the stream when the connection closes.
  */
 type tcpStreamFactory struct {
-	wg               sync.WaitGroup
-	emitter          api.Emitter
-	streamsMap       api.TcpStreamMap
-	ownIps           []string
-	opts             *Opts
-	streamsCallbacks tcpStreamCallbacks
+	pcapId        string
+	wg            sync.WaitGroup
+	identifyMode  bool
+	outputChannel chan *api.OutputChannelItem
+	streamsMap    api.TcpStreamMap
+	ownIps        []string
+	opts          *misc.Opts
 }
 
-func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts *Opts, streamsCallbacks tcpStreamCallbacks) *tcpStreamFactory {
+func NewTcpStreamFactory(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *misc.Opts) *tcpStreamFactory {
 	var ownIps []string
 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
@@ -39,17 +43,18 @@ func NewTcpStreamFactory(emitter api.Emitter, streamsMap api.TcpStreamMap, opts 
 	}
 
 	return &tcpStreamFactory{
-		emitter:          emitter,
-		streamsMap:       streamsMap,
-		ownIps:           ownIps,
-		opts:             opts,
-		streamsCallbacks: streamsCallbacks,
+		pcapId:        pcapId,
+		identifyMode:  identifyMode,
+		outputChannel: outputChannel,
+		streamsMap:    streamsMap,
+		ownIps:        ownIps,
+		opts:          opts,
 	}
 }
 
 func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *layers.TCP, ac reassembly.AssemblerContext) reassembly.Stream {
 	fsmOptions := reassembly.TCPSimpleFSMOptions{
-		SupportMissingEstablishment: *allowmissinginit,
+		SupportMissingEstablishment: true,
 	}
 	srcIp := net.Src().String()
 	dstIp := net.Dst().String()
@@ -58,12 +63,16 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 
 	props := factory.getStreamProps(srcIp, srcPort, dstIp, dstPort)
 	isTargetted := props.isTargetted
-	connectionId := getConnectionId(srcIp, srcPort, dstIp, dstPort)
-	stream := NewTcpStream(isTargetted, factory.streamsMap, getPacketOrigin(ac), connectionId, factory.streamsCallbacks)
+	stream := NewTcpStream(factory.pcapId, factory.identifyMode, isTargetted, factory.streamsMap, getPacketOrigin(ac))
+	var emitter api.Emitter = &api.Emitting{
+		AppStats:      &diagnose.AppStats,
+		Stream:        stream,
+		OutputChannel: factory.outputChannel,
+	}
 	reassemblyStream := NewTcpReassemblyStream(fmt.Sprintf("%s:%s", net, transport), tcpLayer, fsmOptions, stream)
 	if stream.GetIsTargetted() {
 		stream.setId(factory.streamsMap.NextId())
-		for _, extension := range extensions {
+		for _, extension := range extensions.Extensions {
 			counterPair := &api.CounterPair{
 				Request:  0,
 				Response: 0,
@@ -85,7 +94,7 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 			stream,
 			true,
 			props.isOutgoing,
-			factory.emitter,
+			emitter,
 		)
 
 		stream.server = NewTcpReader(
@@ -99,14 +108,14 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 			stream,
 			false,
 			props.isOutgoing,
-			factory.emitter,
+			emitter,
 		)
 
 		factory.streamsMap.Store(stream.getId(), stream)
 
 		factory.wg.Add(2)
-		go stream.client.run(filteringOptions, &factory.wg)
-		go stream.server.run(filteringOptions, &factory.wg)
+		go stream.client.run(misc.FilteringOptions, &factory.wg)
+		go stream.server.run(misc.FilteringOptions, &factory.wg)
 	}
 	return reassemblyStream
 }
@@ -126,13 +135,13 @@ func inArrayPod(pods []v1.Pod, address string) bool {
 
 func (factory *tcpStreamFactory) getStreamProps(srcIP string, srcPort string, dstIP string, dstPort string) *streamProps {
 	if factory.opts.HostMode {
-		if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
+		if inArrayPod(misc.TargettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
 			return &streamProps{isTargetted: true, isOutgoing: false}
-		} else if inArrayPod(targettedPods, dstIP) {
+		} else if inArrayPod(misc.TargettedPods, dstIP) {
 			return &streamProps{isTargetted: true, isOutgoing: false}
-		} else if inArrayPod(targettedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
+		} else if inArrayPod(misc.TargettedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
 			return &streamProps{isTargetted: true, isOutgoing: true}
-		} else if inArrayPod(targettedPods, srcIP) {
+		} else if inArrayPod(misc.TargettedPods, srcIP) {
 			return &streamProps{isTargetted: true, isOutgoing: true}
 		}
 		return &streamProps{isTargetted: false, isOutgoing: false}

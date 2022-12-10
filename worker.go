@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"flag"
 	"fmt"
 	"os"
 	"runtime"
@@ -11,7 +10,9 @@ import (
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/tracer"
 	"github.com/rs/zerolog/log"
@@ -22,25 +23,12 @@ import (
 
 const cleanPeriod = time.Second * 10
 
-type Opts struct {
-	HostMode               bool
-	IgnoredPorts           []uint16
-	maxLiveStreams         int
-	staleConnectionTimeout time.Duration
-}
-
-var extensions []*api.Extension                     // global
-var filteringOptions *api.TrafficFilteringOptions   // global
-var targettedPods []v1.Pod                          // global
 var packetSourceManager *source.PacketSourceManager // global
 var mainPacketInputChan chan source.TcpPacketInfo   // global
 var tracerInstance *tracer.Tracer                   // global
 
-func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensionsRef []*api.Extension, options *api.TrafficFilteringOptions) {
-	extensions = extensionsRef
-	filteringOptions = options
-
-	streamsMap := NewTcpStreamMap()
+func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, options *api.TrafficFilteringOptions) {
+	misc.FilteringOptions = options
 
 	if *tls {
 		for _, e := range extensions {
@@ -51,26 +39,22 @@ func startWorker(opts *Opts, outputItems chan *api.OutputChannelItem, extensions
 		}
 	}
 
-	if GetMemoryProfilingEnabled() {
-		diagnose.StartMemoryProfiler(os.Getenv(MemoryProfilingDumpPath), os.Getenv(MemoryProfilingTimeIntervalSeconds))
+	if assemblers.GetMemoryProfilingEnabled() {
+		diagnose.StartMemoryProfiler(
+			os.Getenv(assemblers.MemoryProfilingDumpPath),
+			os.Getenv(assemblers.MemoryProfilingTimeIntervalSeconds))
 	}
 
-	assembler, err := initializeWorker(opts, outputItems, streamsMap)
-
-	if err != nil {
-		log.Error().Err(err).Msg("Coudln't initialize the worker!")
-		return
-	}
-
+	assembler := initializeWorker(opts, outputItems, streamsMap)
 	go startAssembler(streamsMap, assembler)
 }
 
 func UpdateTargets(newTargets []v1.Pod) {
 	success := true
 
-	targettedPods = newTargets
+	misc.TargettedPods = newTargets
 
-	packetSourceManager.UpdatePods(newTargets, !*nodefrag, mainPacketInputChan)
+	packetSourceManager.UpdatePods(newTargets, mainPacketInputChan)
 
 	if tracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
 		if err := tracer.UpdateTargets(tracerInstance, &newTargets, *procfs); err != nil {
@@ -84,7 +68,7 @@ func UpdateTargets(newTargets []v1.Pod) {
 
 func printNewTargets(success bool) {
 	printStr := ""
-	for _, pod := range targettedPods {
+	for _, pod := range misc.TargettedPods {
 		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
 	}
 	printStr = strings.TrimRight(printStr, ", ")
@@ -96,7 +80,7 @@ func printNewTargets(success bool) {
 	}
 }
 
-func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
+func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 	statsPeriod := time.Second * time.Duration(*statsevery)
 	ticker := time.NewTicker(statsPeriod)
 
@@ -154,8 +138,8 @@ func printPeriodicStats(cleaner *Cleaner, assembler *tcpAssembler) {
 		log.Info().
 			Msg(fmt.Sprintf(
 				"Cleaner - flushed connections: %d, closed connections: %d, deleted messages: %d",
-				assemblerStats.flushedConnections,
-				assemblerStats.closedConnections,
+				assemblerStats.FlushedConnections,
+				assemblerStats.ClosedConnections,
 				cleanStats.deleted,
 			))
 		currentAppStats := diagnose.AppStats.DumpStats()
@@ -172,27 +156,12 @@ func initializePacketSources() error {
 		packetSourceManager.Close()
 	}
 
-	var bpffilter string
-	if len(flag.Args()) > 0 {
-		bpffilter = strings.Join(flag.Args(), " ")
-	}
-
-	behaviour := source.TcpPacketSourceBehaviour{
-		SnapLength:   *snaplen,
-		TargetSizeMb: *targetSizeMb,
-		Promisc:      *promisc,
-		Tstype:       *tstype,
-		DecoderName:  *decoder,
-		Lazy:         *lazy,
-		BpfFilter:    bpffilter,
-	}
-
 	var err error
-	packetSourceManager, err = source.NewPacketSourceManager(*procfs, *fname, *iface, *servicemesh, targettedPods, behaviour, !*nodefrag, *packetCapture, mainPacketInputChan)
+	packetSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargettedPods, *packetCapture, mainPacketInputChan)
 	return err
 }
 
-func initializeWorker(opts *Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) (*tcpAssembler, error) {
+func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *assemblers.TcpAssembler {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 	diagnose.InitializeWorkerInternalStats()
 
@@ -203,13 +172,12 @@ func initializeWorker(opts *Opts, outputItems chan *api.OutputChannelItem, strea
 	}
 
 	opts.IgnoredPorts = append(opts.IgnoredPorts, buildIgnoredPortsList(*ignoredPorts)...)
-	opts.maxLiveStreams = *maxLiveStreams
-	opts.staleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
+	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
-	return NewTcpAssembler(outputItems, streamsMap, opts)
+	return assemblers.NewTcpAssembler("", true, outputItems, streamsMap, opts)
 }
 
-func startAssembler(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
+func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssembler) {
 	go streamsMap.CloseTimedoutTcpStreamChannels()
 
 	diagnose.AppStats.SetStartTime(time.Now())
@@ -225,17 +193,17 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *tcpAssembler) {
 
 	go printPeriodicStats(&cleaner, assembler)
 
-	assembler.processPackets(*hexdumppkt, mainPacketInputChan)
+	assembler.ProcessPackets(mainPacketInputChan)
 
 	if diagnose.ErrorsMap.OutputLevel >= 2 {
-		assembler.dumpStreamPool()
+		assembler.DumpStreamPool()
 	}
 
 	if err := diagnose.DumpMemoryProfile(*memprofile); err != nil {
 		log.Error().Err(err).Msg("Couldn't dump memory profile!")
 	}
 
-	assembler.waitAndDump()
+	assembler.WaitAndDump()
 
 	diagnose.InternalStats.PrintStatsSummary()
 	diagnose.ErrorsMap.PrintSummary()
@@ -253,7 +221,7 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 		return nil
 	}
 
-	if err := tracer.UpdateTargets(&tls, &targettedPods, *procfs); err != nil {
+	if err := tracer.UpdateTargets(&tls, &misc.TargettedPods, *procfs); err != nil {
 		tracer.LogError(err)
 		return nil
 	}

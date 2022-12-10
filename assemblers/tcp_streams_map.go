@@ -1,14 +1,19 @@
-package main
+package assemblers
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"runtime"
 	_debug "runtime/debug"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,9 +22,42 @@ type tcpStreamMap struct {
 	streamId int64
 }
 
-func NewTcpStreamMap() api.TcpStreamMap {
+func getIdFromPcapFiles() int64 {
+	pcapFiles, err := os.ReadDir(misc.GetDataDir())
+	if err != nil {
+		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
+		return 0
+	}
+
+	if len(pcapFiles) == 0 {
+		var id int64 = 0
+		log.Info().Int("id", int(id)).Msg("No PCAP files are found! Starting from zero:")
+		return id
+	}
+
+	filename := pcapFiles[len(pcapFiles)-1].Name()
+	segments := strings.Split(filename[:len(filename)-len(filepath.Ext(filename))], "_")
+	segment := strings.TrimLeft(segments[len(segments)-1], "0")
+
+	id, err := strconv.ParseInt(segment, 0, 10)
+	if err != nil {
+		log.Error().Err(err).Str("segment", segment).Msg("Can't parse the segment:")
+		return 0
+	}
+
+	log.Info().Int("id", int(id)).Msg("Continuing from stream ID:")
+
+	return id
+}
+
+func NewTcpStreamMap(cont bool) api.TcpStreamMap {
+	var streamId int64
+	if cont {
+		streamId = getIdFromPcapFiles()
+	}
 	return &tcpStreamMap{
-		streams: &sync.Map{},
+		streams:  &sync.Map{},
+		streamId: streamId,
 	}
 }
 

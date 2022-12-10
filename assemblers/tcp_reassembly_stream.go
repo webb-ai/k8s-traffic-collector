@@ -1,21 +1,25 @@
-package main
+package assemblers
 
 import (
 	"encoding/binary"
 
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers" // pulls in all layers decoders
-	"github.com/google/gopacket/reassembly"
+	"github.com/kubeshark/gopacket"
+	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
+	"github.com/kubeshark/gopacket/reassembly"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/rs/zerolog/log"
 )
 
 type tcpReassemblyStream struct {
-	ident      string
-	tcpState   *reassembly.TCPSimpleFSM
-	fsmerr     bool
-	optchecker reassembly.TCPOptionCheck
-	isDNS      bool
-	tcpStream  *tcpStream
+	ident           string
+	tcpState        *reassembly.TCPSimpleFSM
+	fsmerr          bool
+	optchecker      reassembly.TCPOptionCheck
+	isDNS           bool
+	tcpStream       *tcpStream
+	notignorefsmerr bool
+	optcheck        bool
+	checksum        bool
 }
 
 func NewTcpReassemblyStream(ident string, tcp *layers.TCP, fsmOptions reassembly.TCPSimpleFSMOptions, stream *tcpStream) reassembly.Stream {
@@ -37,7 +41,7 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 			t.fsmerr = true
 			diagnose.InternalStats.RejectConnFsm++
 		}
-		if !*ignorefsmerr {
+		if t.notignorefsmerr {
 			return false
 		}
 	}
@@ -46,13 +50,13 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 	if err != nil {
 		diagnose.ErrorsMap.SilentError("OptionChecker-rejection", "%s: Packet rejected by OptionChecker: %s", t.ident, err)
 		diagnose.InternalStats.RejectOpt++
-		if !*nooptcheck {
+		if t.optcheck {
 			return false
 		}
 	}
 	// Checksum
 	accept := true
-	if *checksum {
+	if t.checksum {
 		c, err := tcp.ComputeChecksum()
 		if err != nil {
 			diagnose.ErrorsMap.SilentError("ChecksumCompute", "%s: Got error computing checksum: %s", t.ident, err)
@@ -137,11 +141,11 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 			// This is where we pass the reassembled information onwards
 			// This channel is read by an tcpReader object
 			diagnose.AppStats.IncReassembledTcpPayloadsCount()
-			timestamp := ac.GetCaptureInfo().Timestamp
+			ci := ac.GetCaptureInfo()
 			if dir == reassembly.TCPDirClientToServer {
-				t.tcpStream.client.sendMsgIfNotClosed(NewTcpReaderDataMsg(data, timestamp))
+				t.tcpStream.client.sendMsgIfNotClosed(NewTcpReaderDataMsg(data, ci))
 			} else {
-				t.tcpStream.server.sendMsgIfNotClosed(NewTcpReaderDataMsg(data, timestamp))
+				t.tcpStream.server.sendMsgIfNotClosed(NewTcpReaderDataMsg(data, ci))
 			}
 		}
 	}
@@ -153,4 +157,17 @@ func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext)
 	}
 
 	return true
+}
+
+func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
+	if t.tcpStream.GetIsIdentifyMode() {
+		outgoingPacket := packet.Data()
+
+		info := packet.Metadata().CaptureInfo
+		info.Length = len(outgoingPacket)
+		info.CaptureLength = len(outgoingPacket)
+		if err := t.tcpStream.pcapWriter.WritePacket(info, outgoingPacket); err != nil {
+			log.Error().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
+		}
+	}
 }
