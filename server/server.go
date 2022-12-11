@@ -28,7 +28,7 @@ func Build(opts *misc.Opts, procfs string) *gin.Engine {
 	routes.WebSocketRoutes(ginApp, opts)
 	routes.ItemRoutes(ginApp, opts)
 	routes.PodsRoutes(ginApp, procfs)
-	routes.PcapRoutes(ginApp)
+	routes.PcapsRoutes(ginApp)
 
 	return ginApp
 }
