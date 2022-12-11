@@ -2,6 +2,7 @@ package assemblers
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,10 +24,20 @@ type tcpStreamMap struct {
 }
 
 func getIdFromPcapFiles() int64 {
-	pcapFiles, err := os.ReadDir(misc.GetDataDir())
+	files, err := os.ReadDir(misc.GetDataDir())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 		return 0
+	}
+
+	var pcapFiles []fs.DirEntry
+	for _, file := range files {
+		ext := filepath.Ext(file.Name())
+		if ext != ".pcap" && ext != ".pcaptmp" {
+			continue
+		}
+
+		pcapFiles = append(pcapFiles, file)
 	}
 
 	if len(pcapFiles) == 0 {
@@ -39,7 +50,7 @@ func getIdFromPcapFiles() int64 {
 	segments := strings.Split(filename[:len(filename)-len(filepath.Ext(filename))], "_")
 	segment := strings.TrimLeft(segments[len(segments)-1], "0")
 
-	id, err := strconv.ParseInt(segment, 0, 10)
+	id, err := strconv.ParseInt(segment, 0, 64)
 	if err != nil {
 		log.Error().Err(err).Str("segment", segment).Msg("Can't parse the segment:")
 		return 0

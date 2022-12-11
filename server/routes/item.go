@@ -42,7 +42,7 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 		return
 	}
 	id := idIndex[0]
-	index, err := strconv.ParseInt(idIndex[1], 0, 10)
+	index, err := strconv.ParseInt(idIndex[1], 0, 64)
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Str("index", idIndex[1]).Msg("Failed parsing index!")
 		handleError(c, err)
