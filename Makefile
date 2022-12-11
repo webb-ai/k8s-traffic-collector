@@ -37,6 +37,9 @@ docker: ## Build the Docker image.
 docker-push: ## Push the Docker image into Docker Hub.
 	docker push ${DOCKER_REPO}:${DOCKER_TAG}
 
+docker-dev-build: ## Build the dev Docker image. (pulls less, faster)
+	docker build -f Dockerfile.dev . -t ${DOCKER_REPO}:${DOCKER_TAG} --build-arg TARGETARCH=amd64
+
 docker-latest: ## Build and push the Docker image with 'latest' tag
 	export DOCKER_REPO='kubeshark/worker' && \
 	export DOCKER_TAG='latest' && \
@@ -52,7 +55,7 @@ docker-canary: ## Build and push the Docker image with 'canary' tag
 docker-dev: ## Build and push the Docker image with 'dev' tag
 	export DOCKER_REPO='kubeshark/worker' && \
 	export DOCKER_TAG='dev' && \
-	${MAKE} docker && \
+	${MAKE} docker-dev-build && \
 	${MAKE} docker-push
 
 docker-canary-retag-dev-do:
