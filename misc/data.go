@@ -15,6 +15,7 @@ func InitDataDir() {
 	body, err := os.ReadFile("/etc/machine-id")
 	if err != nil {
 		log.Error().Err(err).Msg("Unable to get the machine ID:")
+		return
 	}
 	machineId := strings.TrimSpace(string(body))
 	log.Info().Str("id", machineId).Msg("Machine ID is:")
