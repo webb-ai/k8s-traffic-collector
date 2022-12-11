@@ -169,12 +169,12 @@ func (resolver *Resolver) saveResolvedName(key string, resolved string, namespac
 	if eventType == watch.Deleted {
 		resolver.nameMap.Remove(resolved)
 		resolver.nameMap.Remove(key)
-		log.Info().Msg(fmt.Sprintf("Setting %s=nil", key))
+		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
 	} else {
 
 		resolver.nameMap.Set(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		resolver.nameMap.Set(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		log.Info().Msg(fmt.Sprintf("Setting %s=%s", key, resolved))
+		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
 	}
 }
 

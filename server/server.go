@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Build(opts *misc.Opts) *gin.Engine {
+func Build(opts *misc.Opts, procfs string) *gin.Engine {
 	ginApp := gin.Default()
 
 	ginApp.GET("/", func(c *gin.Context) {
@@ -27,6 +27,7 @@ func Build(opts *misc.Opts) *gin.Engine {
 
 	routes.WebSocketRoutes(ginApp, opts)
 	routes.ItemRoutes(ginApp, opts)
+	routes.PodsRoutes(ginApp, procfs)
 
 	return ginApp
 }

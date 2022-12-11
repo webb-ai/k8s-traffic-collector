@@ -160,7 +160,7 @@ func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext)
 }
 
 func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
-	if t.tcpStream.GetIsIdentifyMode() {
+	if t.tcpStream.GetIsTargetted() && t.tcpStream.GetIsIdentifyMode() {
 		outgoingPacket := packet.Data()
 
 		info := packet.Metadata().CaptureInfo

@@ -14,18 +14,14 @@ import (
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
+	"github.com/kubeshark/worker/target"
 	"github.com/kubeshark/worker/tracer"
 	"github.com/rs/zerolog/log"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/struCoder/pidusage"
-	v1 "k8s.io/api/core/v1"
 )
 
 const cleanPeriod = time.Second * 10
-
-var packetSourceManager *source.PacketSourceManager // global
-var mainPacketInputChan chan source.TcpPacketInfo   // global
-var tracerInstance *tracer.Tracer                   // global
 
 func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, options *api.TrafficFilteringOptions) {
 	misc.FilteringOptions = options
@@ -33,7 +29,7 @@ func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan 
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				tracerInstance = startTracer(e, outputItems, options, streamsMap)
+				target.TracerInstance = startTracer(e, outputItems, options, streamsMap)
 				break
 			}
 		}
@@ -47,37 +43,6 @@ func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan 
 
 	assembler := initializeWorker(opts, outputItems, streamsMap)
 	go startAssembler(streamsMap, assembler)
-}
-
-func UpdateTargets(newTargets []v1.Pod) {
-	success := true
-
-	misc.TargettedPods = newTargets
-
-	packetSourceManager.UpdatePods(newTargets, mainPacketInputChan)
-
-	if tracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
-		if err := tracer.UpdateTargets(tracerInstance, &newTargets, *procfs); err != nil {
-			tracer.LogError(err)
-			success = false
-		}
-	}
-
-	printNewTargets(success)
-}
-
-func printNewTargets(success bool) {
-	printStr := ""
-	for _, pod := range misc.TargettedPods {
-		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
-	}
-	printStr = strings.TrimRight(printStr, ", ")
-
-	if success {
-		log.Info().Msg(fmt.Sprintf("Now targetting: %s", printStr))
-	} else {
-		log.Error().Msg(fmt.Sprintf("Failed to start targetting: %s", printStr))
-	}
 }
 
 func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
@@ -147,17 +112,17 @@ func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 		log.Info().Msg(fmt.Sprintf("App stats - %v", string(appStatsJSON)))
 
 		// At the moment
-		log.Info().Msg(fmt.Sprintf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), packetSourceManager.Stats()))
+		log.Info().Msg(fmt.Sprintf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), target.PacketSourceManager.Stats()))
 	}
 }
 
 func initializePacketSources() error {
-	if packetSourceManager != nil {
-		packetSourceManager.Close()
+	if target.PacketSourceManager != nil {
+		target.PacketSourceManager.Close()
 	}
 
 	var err error
-	packetSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargettedPods, *packetCapture, mainPacketInputChan)
+	target.PacketSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargettedPods, *packetCapture, target.MainPacketInputChan)
 	return err
 }
 
@@ -165,7 +130,7 @@ func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, 
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 	diagnose.InitializeWorkerInternalStats()
 
-	mainPacketInputChan = make(chan source.TcpPacketInfo)
+	target.MainPacketInputChan = make(chan source.TcpPacketInfo)
 
 	if err := initializePacketSources(); err != nil {
 		log.Fatal().Err(err).Send()
@@ -193,7 +158,7 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 
 	go printPeriodicStats(&cleaner, assembler)
 
-	assembler.ProcessPackets(mainPacketInputChan)
+	assembler.ProcessPackets(target.MainPacketInputChan)
 
 	if diagnose.ErrorsMap.OutputLevel >= 2 {
 		assembler.DumpStreamPool()

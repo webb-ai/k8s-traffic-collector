@@ -72,7 +72,7 @@ func run() {
 	filteringOptions := getTrafficFilteringOptions()
 	startWorker(opts, streamsMap, filteredOutputItemsChannel, extensions.Extensions, filteringOptions)
 
-	ginApp := server.Build(opts)
+	ginApp := server.Build(opts, *procfs)
 	server.Start(ginApp, *port)
 }
 
