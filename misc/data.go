@@ -13,13 +13,12 @@ var dataDir = "data"
 
 func InitDataDir() {
 	body, err := os.ReadFile("/etc/machine-id")
-	if err != nil {
-		log.Error().Err(err).Msg("Unable to get the machine ID:")
-		return
+	newDataDir := dataDir
+	if err == nil {
+		machineId := strings.TrimSpace(string(body))
+		log.Info().Str("id", machineId).Msg("Machine ID is:")
+		newDataDir = fmt.Sprintf("%s/%s", dataDir, machineId)
 	}
-	machineId := strings.TrimSpace(string(body))
-	log.Info().Str("id", machineId).Msg("Machine ID is:")
-	newDataDir := fmt.Sprintf("%s/%s", dataDir, machineId)
 	err = os.MkdirAll(newDataDir, os.ModePerm)
 	if err != nil {
 		log.Error().Err(err).Str("data-dir", newDataDir).Msg("Unable to create the new data directory:")
@@ -30,7 +29,7 @@ func InitDataDir() {
 }
 
 func GetDataDir() string {
-	return fmt.Sprintf("./%s", dataDir)
+	return dataDir
 }
 
 func GetPcapPath(id string) string {
