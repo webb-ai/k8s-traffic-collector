@@ -31,11 +31,35 @@ setcap:
 run: setcap ## Run the program. Requires Hub being available on port 8898
 	./worker -i any -port 8897 -debug
 
-docker-repo:
-	export DOCKER_REPO='kubeshark/worker'
-
 docker: ## Build the Docker image.
-	docker build . -t ${DOCKER_REPO}:latest --build-arg BUILDARCH=amd64 --build-arg TARGETARCH=amd64
+	docker build . -t ${DOCKER_REPO}:${DOCKER_TAG} --build-arg BUILDARCH=amd64 --build-arg TARGETARCH=amd64
 
 docker-push: ## Push the Docker image into Docker Hub.
-	docker build . -t ${DOCKER_REPO}:latest
+	docker push ${DOCKER_REPO}:${DOCKER_TAG}
+
+docker-latest: ## Build and push the Docker image with 'latest' tag
+	export DOCKER_REPO='kubeshark/worker' && \
+	export DOCKER_TAG='latest' && \
+	${MAKE} docker && \
+	${MAKE} docker-push
+
+docker-canary: ## Build and push the Docker image with 'canary' tag
+	export DOCKER_REPO='kubeshark/worker' && \
+	export DOCKER_TAG='canary' && \
+	${MAKE} docker && \
+	${MAKE} docker-push
+
+docker-dev: ## Build and push the Docker image with 'dev' tag
+	export DOCKER_REPO='kubeshark/worker' && \
+	export DOCKER_TAG='dev' && \
+	${MAKE} docker && \
+	${MAKE} docker-push
+
+docker-canary-retag-dev-do:
+	docker pull ${DOCKER_REPO}:canary && \
+	docker image tag ${DOCKER_REPO}:canary ${DOCKER_REPO}:dev && \
+	docker push ${DOCKER_REPO}:dev
+
+docker-canary-retag-dev: ## Pull the canary release and push it as dev
+	export DOCKER_REPO='kubeshark/worker' && \
+	${MAKE} docker-canary-retag-dev-do
