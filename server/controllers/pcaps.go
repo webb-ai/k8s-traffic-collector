@@ -61,7 +61,7 @@ func GetMerge(c *gin.Context) {
 		return
 	}
 
-	attachmentName := fmt.Sprintf("worker_%d.pcap", time.Now().UnixNano())
+	attachmentName := fmt.Sprintf("%d.pcap", time.Now().UnixNano())
 
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
