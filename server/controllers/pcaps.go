@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -73,15 +72,7 @@ func GetMerge(c *gin.Context) {
 }
 
 func GetReplay(c *gin.Context) {
-	_id := c.Param("id")
-	idIndex := strings.Split(_id, "-")
-	if len(idIndex) < 2 {
-		msg := "Malformed ID!"
-		log.Error().Str("id", _id).Msg(msg)
-		misc.HandleError(c, fmt.Errorf(msg))
-		return
-	}
-	id := idIndex[0]
+	id := c.Param("id")
 
 	filepath := misc.GetPcapPath(id)
 	err := replay.Replay(filepath, replay.DefaultRouteInterface(""))
