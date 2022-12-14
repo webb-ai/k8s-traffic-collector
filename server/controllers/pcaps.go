@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/mergecap"
+	"github.com/kubeshark/worker/misc/replay"
 	"github.com/rs/zerolog/log"
 )
 
@@ -68,4 +70,28 @@ func GetMerge(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename="+attachmentName)
 	c.Header("Content-Type", "application/octet-stream")
 	c.File(outFile.Name())
+}
+
+func GetReplay(c *gin.Context) {
+	_id := c.Param("id")
+	idIndex := strings.Split(_id, "-")
+	if len(idIndex) < 2 {
+		msg := "Malformed ID!"
+		log.Error().Str("id", _id).Msg(msg)
+		misc.HandleError(c, fmt.Errorf(msg))
+		return
+	}
+	id := idIndex[0]
+
+	filepath := misc.GetPcapPath(id)
+	err := replay.Replay(filepath, replay.DefaultRouteInterface(""))
+	if err != nil {
+		log.Error().Str("path", filepath).Err(err).Msg("Couldn't replay the PCAP:")
+		c.JSON(http.StatusInternalServerError, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": http.StatusOK,
+	})
 }

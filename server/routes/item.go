@@ -25,27 +25,20 @@ func ItemRoutes(ginApp *gin.Engine, opts *misc.Opts) {
 	})
 }
 
-func handleError(c *gin.Context, err error) {
-	_ = c.Error(err)
-	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-		"msg": err.Error(),
-	})
-}
-
 func getItem(c *gin.Context, opts *misc.Opts) {
 	_id := c.Param("id")
 	idIndex := strings.Split(_id, "-")
 	if len(idIndex) < 2 {
 		msg := "Malformed ID!"
 		log.Error().Str("id", _id).Msg(msg)
-		handleError(c, fmt.Errorf(msg))
+		misc.HandleError(c, fmt.Errorf(msg))
 		return
 	}
 	id := idIndex[0]
 	index, err := strconv.ParseInt(idIndex[1], 0, 64)
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Str("index", idIndex[1]).Msg("Failed parsing index!")
-		handleError(c, err)
+		misc.HandleError(c, err)
 		return
 	}
 
@@ -58,7 +51,7 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap", api.Pcap)
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Msg("Failed to create TCP packet source!")
-		handleError(c, err)
+		misc.HandleError(c, err)
 		return
 	}
 	go s.ReadPackets(packets)
@@ -92,7 +85,7 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 		err = json.Unmarshal(data, &finalItem)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed unmarshalling item:")
-			handleError(c, err)
+			misc.HandleError(c, err)
 			break
 		}
 
@@ -151,5 +144,5 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 		return
 	}
 
-	handleError(c, err)
+	misc.HandleError(c, err)
 }
