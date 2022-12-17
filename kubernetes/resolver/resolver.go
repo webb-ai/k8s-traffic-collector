@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
@@ -20,13 +21,14 @@ const (
 )
 
 type Resolver struct {
-	clientConfig *restclient.Config
-	clientSet    *kubernetes.Clientset
-	nameMap      *sync.Map
-	serviceMap   *sync.Map
-	isStarted    bool
-	errOut       chan error
-	namespace    string
+	clientConfig   *restclient.Config
+	clientSet      *kubernetes.Clientset
+	nameMap        *sync.Map
+	serviceMap     *sync.Map
+	nameMapHistory *sync.Map
+	isStarted      bool
+	errOut         chan error
+	namespace      string
 }
 
 type ResolvedObjectInfo struct {
@@ -44,16 +46,36 @@ func (resolver *Resolver) Start(ctx context.Context) {
 	}
 }
 
-func (resolver *Resolver) Resolve(name string) *ResolvedObjectInfo {
-	resolvedName, isFound := resolver.nameMap.Load(name)
+func (resolver *Resolver) Resolve(name string, timestamp int64) *ResolvedObjectInfo {
+	resolvedName, isFound := resolver.getMap(timestamp)[name]
 	if !isFound {
 		return nil
 	}
-	return resolvedName.(*ResolvedObjectInfo)
+	return resolvedName
 }
 
-func (resolver *Resolver) GetMap() *sync.Map {
-	return resolver.nameMap
+func (resolver *Resolver) getMap(timestamp int64) map[string]*ResolvedObjectInfo {
+	nameMap := make(map[string]*ResolvedObjectInfo)
+	resolver.nameMapHistory.Range(func(k, v interface{}) bool {
+		t := k.(int64)
+		if t > timestamp {
+			return true
+		}
+		nameMap = v.(map[string]*ResolvedObjectInfo)
+		return true
+	})
+	return nameMap
+}
+
+func (resolver *Resolver) updateNameResolutionHistory() {
+	nameMap := make(map[string]*ResolvedObjectInfo)
+	resolver.nameMap.Range(func(k, v interface{}) bool {
+		key := k.(string)
+		nameMap[key] = v.(*ResolvedObjectInfo)
+		return true
+	})
+	resolver.nameMapHistory.Store(time.Now().Unix(), nameMap)
+	log.Info().Msg("Updated the name resolution history.")
 }
 
 func (resolver *Resolver) CheckIsServiceIP(address string) bool {
@@ -176,6 +198,8 @@ func (resolver *Resolver) saveResolvedName(key string, resolved string, namespac
 		resolver.nameMap.Store(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
 	}
+
+	resolver.updateNameResolutionHistory()
 }
 
 func (resolver *Resolver) saveServiceIP(key string, resolved string, namespace string, eventType watch.EventType) {
@@ -183,6 +207,9 @@ func (resolver *Resolver) saveServiceIP(key string, resolved string, namespace s
 		resolver.serviceMap.Delete(key)
 	} else {
 		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
+		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
+
+		resolver.updateNameResolutionHistory()
 	}
 }
 

@@ -16,5 +16,13 @@ func NewFromInCluster(errOut chan error, namespace string) (*Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Resolver{clientConfig: config, clientSet: clientSet, nameMap: &sync.Map{}, serviceMap: &sync.Map{}, errOut: errOut, namespace: namespace}, nil
+	return &Resolver{
+		clientConfig:   config,
+		clientSet:      clientSet,
+		nameMap:        &sync.Map{},
+		serviceMap:     &sync.Map{},
+		nameMapHistory: &sync.Map{},
+		errOut:         errOut,
+		namespace:      namespace,
+	}, nil
 }

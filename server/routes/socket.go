@@ -195,7 +195,7 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 func itemToEntry(item *api.OutputChannelItem) *api.Entry {
 	extension := extensions.ExtensionsMap[item.Protocol.Name]
 
-	resolvedSource, resolvedDestination, namespace := resolveIP(item.ConnectionInfo)
+	resolvedSource, resolvedDestination, namespace := resolveIP(item.ConnectionInfo, item.Timestamp)
 
 	if namespace == "" && item.Namespace != api.UnknownNamespace {
 		namespace = item.Namespace
@@ -210,10 +210,10 @@ func summarizeEntry(entry *api.Entry) *api.BaseEntry {
 	return extension.Dissector.Summarize(entry)
 }
 
-func resolveIP(connectionInfo *api.ConnectionInfo) (resolvedSource string, resolvedDestination string, namespace string) {
+func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSource string, resolvedDestination string, namespace string) {
 	if resolver.K8sResolver != nil {
 		unresolvedSource := connectionInfo.ClientIP
-		resolvedSourceObject := resolver.K8sResolver.Resolve(unresolvedSource)
+		resolvedSourceObject := resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
 		if resolvedSourceObject == nil {
 			log.Debug().Str("source", unresolvedSource).Msg("Cannot find resolved name!")
 			if os.Getenv("SKIP_NOT_RESOLVED_SOURCE") == "1" {
@@ -225,7 +225,7 @@ func resolveIP(connectionInfo *api.ConnectionInfo) (resolvedSource string, resol
 		}
 
 		unresolvedDestination := fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
-		resolvedDestinationObject := resolver.K8sResolver.Resolve(unresolvedDestination)
+		resolvedDestinationObject := resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
 		if resolvedDestinationObject == nil {
 			log.Debug().Str("destination", unresolvedDestination).Msg("Cannot find resolved name!")
 			if os.Getenv("SKIP_NOT_RESOLVED_DEST") == "1" {
