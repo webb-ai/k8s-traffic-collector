@@ -16,7 +16,6 @@ require (
 	github.com/kubeshark/gopacket v1.1.21
 	github.com/mdlayher/netlink v1.7.1
 	github.com/moby/moby v20.10.17+incompatible
-	github.com/orcaman/concurrent-map v1.0.0
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/struCoder/pidusage v0.2.1

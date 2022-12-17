@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 
-	cmap "github.com/orcaman/concurrent-map"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,8 +22,8 @@ const (
 type Resolver struct {
 	clientConfig *restclient.Config
 	clientSet    *kubernetes.Clientset
-	nameMap      cmap.ConcurrentMap
-	serviceMap   cmap.ConcurrentMap
+	nameMap      *sync.Map
+	serviceMap   *sync.Map
 	isStarted    bool
 	errOut       chan error
 	namespace    string
@@ -45,19 +45,19 @@ func (resolver *Resolver) Start(ctx context.Context) {
 }
 
 func (resolver *Resolver) Resolve(name string) *ResolvedObjectInfo {
-	resolvedName, isFound := resolver.nameMap.Get(name)
+	resolvedName, isFound := resolver.nameMap.Load(name)
 	if !isFound {
 		return nil
 	}
 	return resolvedName.(*ResolvedObjectInfo)
 }
 
-func (resolver *Resolver) GetMap() cmap.ConcurrentMap {
+func (resolver *Resolver) GetMap() *sync.Map {
 	return resolver.nameMap
 }
 
 func (resolver *Resolver) CheckIsServiceIP(address string) bool {
-	_, isFound := resolver.serviceMap.Get(address)
+	_, isFound := resolver.serviceMap.Load(address)
 	return isFound
 }
 
@@ -167,22 +167,22 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 
 func (resolver *Resolver) saveResolvedName(key string, resolved string, namespace string, eventType watch.EventType) {
 	if eventType == watch.Deleted {
-		resolver.nameMap.Remove(resolved)
-		resolver.nameMap.Remove(key)
+		resolver.nameMap.Delete(resolved)
+		resolver.nameMap.Delete(key)
 		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
 	} else {
 
-		resolver.nameMap.Set(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		resolver.nameMap.Set(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
+		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
+		resolver.nameMap.Store(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
 	}
 }
 
 func (resolver *Resolver) saveServiceIP(key string, resolved string, namespace string, eventType watch.EventType) {
 	if eventType == watch.Deleted {
-		resolver.serviceMap.Remove(key)
+		resolver.serviceMap.Delete(key)
 	} else {
-		resolver.nameMap.Set(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
+		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 	}
 }
 
