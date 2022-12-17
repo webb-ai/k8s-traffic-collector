@@ -75,6 +75,8 @@ RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 ARG TARGETARCH=amd64
 FROM ${TARGETARCH}/busybox:latest
 
+ENV GIN_MODE=release
+
 WORKDIR /app/data/
 WORKDIR /app
 
