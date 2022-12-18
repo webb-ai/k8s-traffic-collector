@@ -24,7 +24,7 @@ type tcpStreamMap struct {
 }
 
 func getIdFromPcapFiles() int64 {
-	files, err := os.ReadDir(misc.GetDataDir())
+	files, err := os.ReadDir(misc.GetPcapsDir())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 		return 0

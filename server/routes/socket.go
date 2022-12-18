@@ -46,7 +46,7 @@ func websocketHandler(c *gin.Context, opts *misc.Opts) {
 	}
 	defer ws.Close()
 
-	pcapFiles, err := os.ReadDir(misc.GetDataDir())
+	pcapFiles, err := os.ReadDir(misc.GetPcapsDir())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 	}
@@ -91,7 +91,7 @@ func websocketHandler(c *gin.Context, opts *misc.Opts) {
 
 	}()
 
-	err = watcher.Add(misc.GetDataDir())
+	err = watcher.Add(misc.GetPcapsDir())
 	if err != nil {
 		log.Fatal().Err(err).Msg("Add failed:")
 	}

@@ -2,11 +2,14 @@ package resolver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +43,9 @@ func (resolver *Resolver) Start(ctx context.Context) {
 	if !resolver.isStarted {
 		resolver.isStarted = true
 
+		resolver.restoreNameResolutionHistory()
+
+		go resolver.dumpNameResolutionHistoryEveryNSeconds(10)
 		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchServices)
 		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchEndpoints)
 		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchPods)
@@ -76,6 +82,52 @@ func (resolver *Resolver) updateNameResolutionHistory() {
 	})
 	resolver.nameMapHistory.Store(time.Now().Unix(), nameMap)
 	log.Info().Msg("Updated the name resolution history.")
+}
+
+func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration) {
+	for range time.Tick(time.Second * n) {
+		err := resolver.dumpNameResolutionHistory()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed dumping the name resolution history:")
+		}
+	}
+}
+
+func (resolver *Resolver) dumpNameResolutionHistory() error {
+	m := make(map[int64]interface{})
+	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
+		m[key.(int64)] = value
+		return true
+	})
+
+	b, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(misc.GetNameResolutionHistoryPath(), b, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (resolver *Resolver) restoreNameResolutionHistory() {
+	content, err := os.ReadFile(misc.GetNameResolutionHistoryPath())
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed reading the name resolution history dump:")
+		return
+	}
+
+	m := make(map[int64]interface{})
+	err = json.Unmarshal(content, &m)
+
+	for k, v := range m {
+		resolver.nameMapHistory.Store(k, v)
+	}
+
+	log.Info().Int("count", len(m)).Msg("Restored the name resolution history")
 }
 
 func (resolver *Resolver) CheckIsServiceIP(address string) bool {

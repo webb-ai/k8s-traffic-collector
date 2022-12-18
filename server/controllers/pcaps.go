@@ -15,8 +15,8 @@ import (
 )
 
 func GetTotalTcpStreams(c *gin.Context) {
-	dataDir := misc.GetDataDir()
-	pcapFiles, err := os.ReadDir(dataDir)
+	pcapsDir := misc.GetPcapsDir()
+	pcapFiles, err := os.ReadDir(pcapsDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 		c.JSON(http.StatusInternalServerError, err)
@@ -38,15 +38,15 @@ func GetTotalTcpStreams(c *gin.Context) {
 }
 
 func GetMerge(c *gin.Context) {
-	dataDir := misc.GetDataDir()
-	pcapFiles, err := os.ReadDir(dataDir)
+	pcapsDir := misc.GetPcapsDir()
+	pcapFiles, err := os.ReadDir(pcapsDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 
-	outFile, err := os.CreateTemp(dataDir, "mergecap")
+	outFile, err := os.CreateTemp(pcapsDir, "mergecap")
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to create the out file for PCAP merger!")
 		c.JSON(http.StatusInternalServerError, err)

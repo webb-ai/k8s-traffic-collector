@@ -19,6 +19,7 @@ func InitDataDir() {
 		log.Info().Str("id", machineId).Msg("Machine ID is:")
 		newDataDir = fmt.Sprintf("%s/%s", dataDir, machineId)
 	}
+
 	err = os.MkdirAll(newDataDir, os.ModePerm)
 	if err != nil {
 		log.Error().Err(err).Str("data-dir", newDataDir).Msg("Unable to create the new data directory:")
@@ -26,18 +27,28 @@ func InitDataDir() {
 		dataDir = newDataDir
 		log.Info().Str("data-dir", dataDir).Msg("Set the data directory to:")
 	}
+
+	pcapsDir := GetPcapsDir()
+	err = os.MkdirAll(pcapsDir, os.ModePerm)
+	if err != nil {
+		log.Error().Err(err).Str("pcaps-dir", pcapsDir).Msg("Unable to create the new pcaps directory:")
+	}
 }
 
 func GetDataDir() string {
 	return dataDir
 }
 
+func GetPcapsDir() string {
+	return fmt.Sprintf("%s/%s", GetDataDir(), "pcaps")
+}
+
 func GetPcapPath(id string) string {
-	return fmt.Sprintf("%s/%s", GetDataDir(), id)
+	return fmt.Sprintf("%s/%s", GetPcapsDir(), id)
 }
 
 func BuildPcapPath(id int64) string {
-	return fmt.Sprintf("%s/tcp_stream_%09d.pcap", GetDataDir(), id)
+	return fmt.Sprintf("%s/tcp_stream_%09d.pcap", GetPcapsDir(), id)
 }
 
 func BuildTmpPcapPath(id int64) string {
@@ -45,7 +56,7 @@ func BuildTmpPcapPath(id int64) string {
 }
 
 func CleanUpTmpPcaps() error {
-	pcapFiles, err := os.ReadDir(GetDataDir())
+	pcapFiles, err := os.ReadDir(GetPcapsDir())
 	if err != nil {
 		return err
 	}
@@ -60,4 +71,8 @@ func CleanUpTmpPcaps() error {
 	}
 
 	return nil
+}
+
+func GetNameResolutionHistoryPath() string {
+	return fmt.Sprintf("%s/%s", GetDataDir(), "name_resolution_history.json")
 }

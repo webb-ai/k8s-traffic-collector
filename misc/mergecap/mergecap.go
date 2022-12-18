@@ -90,7 +90,7 @@ func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, minTimeHeap *minheap.PacketH
 		}
 
 		// Read the first packet and push it to the heap
-		inputFile, err := os.Open(fmt.Sprintf("%s/%s", misc.GetDataDir(), pcap.Name()))
+		inputFile, err := os.Open(fmt.Sprintf("%s/%s", misc.GetPcapsDir(), pcap.Name()))
 		if err != nil {
 			log.Error().Err(err).Str("pcap", pcap.Name()).Msg("(Mergecap) Skipping PCAP file:")
 			continue
