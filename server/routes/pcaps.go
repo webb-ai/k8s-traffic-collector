@@ -11,4 +11,5 @@ func PcapsRoutes(ginApp *gin.Engine) {
 	routeGroup.GET("/total-tcp-streams", controllers.GetTotalTcpStreams)
 	routeGroup.GET("/merge", controllers.GetMerge)
 	routeGroup.GET("/replay/:id", controllers.GetReplay)
+	routeGroup.GET("/name-resolution-history", controllers.GetNameResolutionHistory)
 }

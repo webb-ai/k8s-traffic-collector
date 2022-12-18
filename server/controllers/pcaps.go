@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/mergecap"
 	"github.com/kubeshark/worker/misc/replay"
@@ -62,7 +63,7 @@ func GetMerge(c *gin.Context) {
 		return
 	}
 
-	attachmentName := fmt.Sprintf("%d.pcap", time.Now().UnixNano())
+	attachmentName := fmt.Sprintf("%d.pcap", time.Now().Unix())
 
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
@@ -85,4 +86,10 @@ func GetReplay(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status": http.StatusOK,
 	})
+}
+
+func GetNameResolutionHistory(c *gin.Context) {
+	res := resolver.K8sResolver
+	m := res.GetDumpNameResolutionHistoryMap()
+	c.JSON(http.StatusOK, m)
 }
