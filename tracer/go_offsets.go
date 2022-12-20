@@ -10,8 +10,8 @@ import (
 	"runtime"
 
 	"github.com/Masterminds/semver"
-	"github.com/cilium/ebpf/link"
 	"github.com/knightsc/gapstone"
+	"github.com/kubeshark/ebpf/link"
 	"github.com/rs/zerolog/log"
 )
 
@@ -45,8 +45,8 @@ const (
 	goReadSymbol                = "crypto/tls.(*Conn).Read"
 )
 
-func findGoOffsets(filePath string) (goOffsets, error) {
-	offsets, goidOffset, gStructOffset, err := getOffsets(filePath)
+func findGoOffsets(fpath string) (goOffsets, error) {
+	offsets, goidOffset, gStructOffset, err := getOffsets(fpath)
 	if err != nil {
 		return goOffsets{}, err
 	}
@@ -58,7 +58,7 @@ func findGoOffsets(filePath string) (goOffsets, error) {
 	goVersionOffset, err := getOffset(offsets, goVersionSymbol)
 	if err == nil {
 		// TODO: Replace this logic with https://pkg.go.dev/debug/buildinfo#ReadFile once we upgrade to 1.18
-		passed, goVersion, err = checkGoVersion(filePath, goVersionOffset)
+		passed, goVersion, err = checkGoVersion(fpath, goVersionOffset)
 		if err != nil {
 			return goOffsets{}, fmt.Errorf("Checking Go version: %s", err)
 		}
@@ -88,21 +88,6 @@ func findGoOffsets(filePath string) (goOffsets, error) {
 	}, nil
 }
 
-func getSymbol(exe *elf.File, name string) *elf.Symbol {
-	symbols, err := exe.Symbols()
-	if err != nil {
-		return nil
-	}
-
-	for _, symbol := range symbols {
-		if symbol.Name == name {
-			s := symbol
-			return &s
-		}
-	}
-	return nil
-}
-
 func getGStructOffset(exe *elf.File) (gStructOffset uint64, err error) {
 	// This is a bit arcane. Essentially:
 	// - If the program is pure Go, it can do whatever it wants, and puts the G
@@ -123,9 +108,10 @@ func getGStructOffset(exe *elf.File) (gStructOffset uint64, err error) {
 		}
 	}
 
+	var tlsg *elf.Symbol
 	switch exe.Machine {
 	case elf.EM_X86_64, elf.EM_386:
-		tlsg := getSymbol(exe, "runtime.tlsg")
+		tlsg, _ = getSymbol(exe, "runtime.tlsg")
 		if tlsg == nil || tls == nil {
 			gStructOffset = ^uint64(PtrSize) + 1 //-ptrSize
 			return
@@ -142,7 +128,7 @@ func getGStructOffset(exe *elf.File) (gStructOffset uint64, err error) {
 		gStructOffset = ^(memsz) + 1 + tlsg.Value // -tls.Memsz + tlsg.Value
 
 	case elf.EM_AARCH64:
-		tlsg := getSymbol(exe, "runtime.tls_g")
+		tlsg, _ = getSymbol(exe, "runtime.tls_g")
 		if tlsg == nil || tls == nil {
 			gStructOffset = 2 * uint64(PtrSize)
 			return
@@ -213,7 +199,7 @@ func getGoidOffset(elfFile *elf.File) (goidOffset uint64, gStructOffset uint64, 
 	return
 }
 
-func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffset uint64, gStructOffset uint64, err error) {
+func getOffsets(fpath string) (offsets map[string]*goExtendedOffset, goidOffset uint64, gStructOffset uint64, err error) {
 	var engine gapstone.Engine
 	switch runtime.GOARCH {
 	case "amd64":
@@ -236,7 +222,7 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 	engineMajor, engineMinor := engine.Version()
 	log.Info().Msg(fmt.Sprintf(
 		"Disassembling %s with Capstone %d.%d (arch: %d, mode: %d)",
-		filePath,
+		fpath,
 		engineMajor,
 		engineMinor,
 		engine.Arch(),
@@ -245,7 +231,7 @@ func getOffsets(filePath string) (offsets map[string]*goExtendedOffset, goidOffs
 
 	offsets = make(map[string]*goExtendedOffset)
 	var fd *os.File
-	fd, err = os.Open(filePath)
+	fd, err = os.Open(fpath)
 	if err != nil {
 		return
 	}
@@ -348,8 +334,8 @@ func getOffset(offsets map[string]*goExtendedOffset, symbol string) (*goExtended
 	return nil, fmt.Errorf("symbol %s: %w", symbol, link.ErrNoSymbol)
 }
 
-func checkGoVersion(filePath string, offset *goExtendedOffset) (bool, string, error) {
-	fd, err := os.Open(filePath)
+func checkGoVersion(fpath string, offset *goExtendedOffset) (bool, string, error) {
+	fd, err := os.Open(fpath)
 	if err != nil {
 		return false, "", err
 	}

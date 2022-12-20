@@ -1,8 +1,8 @@
 package tracer
 
 import (
-	"github.com/cilium/ebpf/link"
 	"github.com/go-errors/errors"
+	"github.com/kubeshark/ebpf/link"
 )
 
 type goHooks struct {
@@ -12,14 +12,14 @@ type goHooks struct {
 	goReadExProbes  []link.Link
 }
 
-func (s *goHooks) installUprobes(bpfObjects *tracerObjects, filePath string) error {
-	ex, err := link.OpenExecutable(filePath)
+func (s *goHooks) installUprobes(bpfObjects *tracerObjects, fpath string) error {
+	ex, err := link.OpenExecutable(fpath)
 
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
 
-	offsets, err := findGoOffsets(filePath)
+	offsets, err := findGoOffsets(fpath)
 
 	if err != nil {
 		return errors.Wrap(err, 0)

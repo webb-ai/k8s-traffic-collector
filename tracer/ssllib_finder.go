@@ -17,7 +17,7 @@ func findSsllib(procfs string, pid uint32) (string, error) {
 		return "", errors.Wrap(err, 0)
 	}
 
-	log.Debug().Msg(fmt.Sprintf("Binary file for %v = %v", pid, binary))
+	log.Debug().Int("pid", int(pid)).Str("binary", binary).Msg("Binary that uses libssl:")
 
 	if strings.HasSuffix(binary, "/node") {
 		return findLibraryByPid(procfs, pid, binary)
@@ -44,13 +44,13 @@ func findLibraryByPid(procfs string, pid uint32, libraryName string) (string, er
 			continue
 		}
 
-		filepath := parts[5]
+		fpath := parts[5]
 
-		if libraryName != "" && !strings.Contains(filepath, libraryName) {
+		if libraryName != "" && !strings.Contains(fpath, libraryName) {
 			continue
 		}
 
-		fullpath := fmt.Sprintf("%v/%v/root/%v", procfs, pid, filepath)
+		fullpath := fmt.Sprintf("%v/%v/root%v", procfs, pid, fpath)
 
 		if _, err := os.Stat(fullpath); os.IsNotExist(err) {
 			continue
