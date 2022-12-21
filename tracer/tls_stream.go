@@ -22,6 +22,7 @@ type tlsLayers struct {
 }
 
 func (l *tlsLayers) swap() {
+	l.ethernet.SrcMAC, l.ethernet.DstMAC = l.ethernet.DstMAC, l.ethernet.SrcMAC
 	l.ipv4.SrcIP, l.ipv4.DstIP = l.ipv4.DstIP, l.ipv4.SrcIP
 	l.tcp.SrcPort, l.tcp.DstPort = l.tcp.DstPort, l.tcp.SrcPort
 }
@@ -278,8 +279,8 @@ func (t *tlsStream) setLayers(data []byte, reader *tlsReader) {
 }
 
 func (t *tlsStream) getEthernet() *layers.Ethernet {
-	srcMac, _ := net.ParseMAC("00:00:5e:00:53:01")
-	dstMac, _ := net.ParseMAC("00:00:5e:00:53:02")
+	srcMac, _ := net.ParseMAC("00:00:00:00:00:01")
+	dstMac, _ := net.ParseMAC("00:00:00:00:00:02")
 	res := &layers.Ethernet{
 		SrcMAC:       srcMac,
 		DstMAC:       dstMac,
