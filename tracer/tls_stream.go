@@ -225,6 +225,7 @@ func (t *tlsStream) writePacket(firstLayerType gopacket.LayerType, l ...gopacket
 	info := packet.Metadata().CaptureInfo
 	info.Length = len(outgoingPacket)
 	info.CaptureLength = len(outgoingPacket)
+	info.Timestamp = info.Timestamp.UTC()
 
 	if t.pcapWriter == nil {
 		log.Debug().Msg("PCAP writer for this TLS stream does not exist (too many open files)!")

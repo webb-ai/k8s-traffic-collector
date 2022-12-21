@@ -103,20 +103,11 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 			break
 		}
 
-		var truth bool
 		var record string
-		truth, record, err = kfl.Apply(entryMarshaled, query)
+		_, record, err = kfl.Apply(entryMarshaled, query)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed applying query:")
 			break
-		}
-
-		if !truth {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"query":   query,
-				"message": "Query evaluates to false for this item.",
-			})
-			return
 		}
 
 		var alteredEntry *api.Entry

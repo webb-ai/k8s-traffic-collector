@@ -136,6 +136,14 @@ func processPackets(id string, outputChannel chan *api.OutputChannelItem, opts *
 }
 
 func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *websocket.Conn, query string, quit chan bool) {
+	var counter uint64
+	expr, prop, err := kfl.PrepareQuery(query)
+	if err != nil {
+		log.Error().Err(err).Send()
+		quit <- true
+		return
+	}
+
 	for item := range outputChannel {
 		// TODO: The previously bad design forces us to Marshal and Unmarshal
 		data, err := json.Marshal(item)
@@ -160,7 +168,12 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			continue
 		}
 
-		truth, record, err := kfl.Apply(entryMarshaled, query)
+		if prop.Limit > 0 && counter >= prop.Limit {
+			quit <- true
+			return
+		}
+
+		truth, record, err := kfl.Eval(expr, string(entryMarshaled))
 		if err != nil {
 			log.Error().Err(err).Msg("Failed applying query:")
 			continue
@@ -191,6 +204,8 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			quit <- true
 			return
 		}
+
+		counter++
 	}
 }
 

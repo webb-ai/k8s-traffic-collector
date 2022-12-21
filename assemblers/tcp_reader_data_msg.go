@@ -21,7 +21,7 @@ func (dataMsg *tcpReaderDataMsg) GetBytes() []byte {
 }
 
 func (dataMsg *tcpReaderDataMsg) GetTimestamp() time.Time {
-	return dataMsg.ci.Timestamp
+	return dataMsg.ci.Timestamp.UTC()
 }
 
 func (dataMsg *tcpReaderDataMsg) GetCaptureInfo() gopacket.CaptureInfo {
