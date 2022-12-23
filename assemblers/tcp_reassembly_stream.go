@@ -7,6 +7,7 @@ import (
 	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
 	"github.com/kubeshark/gopacket/reassembly"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/misc/ethernet"
 	"github.com/rs/zerolog/log"
 )
 
@@ -161,20 +162,78 @@ func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext)
 
 func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
 	if t.tcpStream.GetIsTargetted() && t.tcpStream.GetIsIdentifyMode() {
-		outgoingPacket := packet.Data()
+		t.writeWithEthernetLayer(packet)
+	}
+}
 
-		info := packet.Metadata().CaptureInfo
-		info.Length = len(outgoingPacket)
-		info.CaptureLength = len(outgoingPacket)
-		info.Timestamp = info.Timestamp.UTC()
+func (t *tcpReassemblyStream) writeWithEthernetLayer(packet gopacket.Packet) {
+	// Get Linux SLL layer
+	linuxSLLLayer := packet.Layer(layers.LayerTypeLinuxSLL)
+	if linuxSLLLayer == nil {
+		return
+	}
 
-		if t.tcpStream.pcapWriter == nil {
-			log.Debug().Msg("PCAP writer for this TCP stream does not exist (too many open files)!")
-			return
-		}
+	linuxSLL := linuxSLLLayer.(*layers.LinuxSLL)
 
-		if err := t.tcpStream.pcapWriter.WritePacket(info, outgoingPacket); err != nil {
-			log.Error().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
-		}
+	// Ethernet layer
+	serializableLayers := []gopacket.SerializableLayer{ethernet.NewEthernetLayer(linuxSLL.EthernetType)}
+
+	// IPv4 layer
+	ipv4Layer := packet.Layer(layers.LayerTypeIPv4)
+	if ipv4Layer != nil {
+		serializableLayers = append(serializableLayers, ipv4Layer.(*layers.IPv4))
+	}
+
+	// IPv6 layer
+	ipv6Layer := packet.Layer(layers.LayerTypeIPv6)
+	if ipv4Layer == nil && ipv6Layer != nil {
+		serializableLayers = append(serializableLayers, ipv6Layer.(*layers.IPv6))
+	}
+
+	if ipv4Layer == nil && ipv6Layer == nil {
+		return
+	}
+
+	// TCP layer
+	tcpLayer := packet.Layer(layers.LayerTypeTCP)
+	if tcpLayer == nil {
+		return
+	}
+	serializableLayers = append(serializableLayers, tcpLayer.(*layers.TCP))
+
+	// Payload
+	applicationLayer := packet.ApplicationLayer()
+	if applicationLayer != nil {
+		serializableLayers = append(serializableLayers, gopacket.Payload(applicationLayer.Payload()))
+	}
+
+	buf := gopacket.NewSerializeBuffer()
+	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: false}
+	err := gopacket.SerializeLayers(buf, opts, serializableLayers...)
+	if err != nil {
+		log.Error().Err(err).Msg("Did an oopsy serializing packet:")
+		return
+	}
+
+	newPacket := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeEthernet, gopacket.Lazy)
+
+	t.writePacket(newPacket)
+}
+
+func (t *tcpReassemblyStream) writePacket(packet gopacket.Packet) {
+	outgoingPacket := packet.Data()
+
+	info := packet.Metadata().CaptureInfo
+	info.Length = len(outgoingPacket)
+	info.CaptureLength = len(outgoingPacket)
+	info.Timestamp = info.Timestamp.UTC()
+
+	if t.tcpStream.pcapWriter == nil {
+		log.Debug().Msg("PCAP writer for this TCP stream does not exist (too many open files)!")
+		return
+	}
+
+	if err := t.tcpStream.pcapWriter.WritePacket(info, outgoingPacket); err != nil {
+		log.Error().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
 	}
 }

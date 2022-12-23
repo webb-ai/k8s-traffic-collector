@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/misc/ethernet"
 	"github.com/rs/zerolog/log"
 )
 
@@ -217,6 +218,7 @@ func (t *tlsStream) writePacket(firstLayerType gopacket.LayerType, l ...gopacket
 	err := gopacket.SerializeLayers(buf, opts, l...)
 	if err != nil {
 		log.Error().Err(err).Msg("Did an oopsy serializing packet:")
+		return
 	}
 
 	packet := gopacket.NewPacket(buf.Bytes(), firstLayerType, gopacket.Lazy)
@@ -263,34 +265,23 @@ func (t *tlsStream) doTcpSeqAckWalk(isClient bool, sentLen uint32) {
 func (t *tlsStream) setLayers(data []byte, reader *tlsReader) {
 	if t.layers == nil {
 		t.layers = &tlsLayers{
-			ethernet: t.getEthernet(),
-			ipv4:     t.getIPv4(reader),
-			tcp:      t.getTCP(reader),
+			ethernet: ethernet.NewEthernetLayer(layers.EthernetTypeIPv4),
+			ipv4:     t.newIPv4Layer(reader),
+			tcp:      t.newTCPLayer(reader),
 		}
 		t.doTcpHandshake()
 	} else {
-		ipv4 := t.getIPv4(reader)
+		ipv4 := t.newIPv4Layer(reader)
 		t.layers.ipv4.SrcIP = ipv4.SrcIP
 		t.layers.ipv4.DstIP = ipv4.DstIP
 
-		tcp := t.getTCP(reader)
+		tcp := t.newTCPLayer(reader)
 		t.layers.tcp.SrcPort = tcp.SrcPort
 		t.layers.tcp.DstPort = tcp.DstPort
 	}
 }
 
-func (t *tlsStream) getEthernet() *layers.Ethernet {
-	srcMac, _ := net.ParseMAC("00:00:00:00:00:01")
-	dstMac, _ := net.ParseMAC("00:00:00:00:00:02")
-	res := &layers.Ethernet{
-		SrcMAC:       srcMac,
-		DstMAC:       dstMac,
-		EthernetType: layers.EthernetTypeIPv4,
-	}
-	return res
-}
-
-func (t *tlsStream) getIPv4(reader *tlsReader) *layers.IPv4 {
+func (t *tlsStream) newIPv4Layer(reader *tlsReader) *layers.IPv4 {
 	srcIP, _, err := net.ParseCIDR(reader.tcpID.SrcIP + "/24")
 	if err != nil {
 		panic(err)
@@ -309,7 +300,7 @@ func (t *tlsStream) getIPv4(reader *tlsReader) *layers.IPv4 {
 	return res
 }
 
-func (t *tlsStream) getTCP(reader *tlsReader) *layers.TCP {
+func (t *tlsStream) newTCPLayer(reader *tlsReader) *layers.TCP {
 	srcPort, err := strconv.ParseUint(reader.tcpID.SrcPort, 10, 64)
 	if err != nil {
 		panic(err)

@@ -120,26 +120,26 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo) {
 		}
 
 		// defrag the IPv4 packet if required
-		if ip4Layer := packet.Layer(layers.LayerTypeIPv4); ip4Layer != nil {
-			ip4 := ip4Layer.(*layers.IPv4)
-			l := ip4.Length
-			newip4, err := source.defragger.DefragIPv4(ip4)
+		if ipv4layer := packet.Layer(layers.LayerTypeIPv4); ipv4layer != nil {
+			ipv4 := ipv4layer.(*layers.IPv4)
+			l := ipv4.Length
+			newipv4, err := source.defragger.DefragIPv4(ipv4)
 			if err != nil {
 				log.Debug().Err(err).Msg("While de-fragmenting!")
 				continue
-			} else if newip4 == nil {
+			} else if newipv4 == nil {
 				log.Debug().Msg("Fragment...")
 				continue // packet fragment, we don't have whole packet yet.
 			}
-			if newip4.Length != l {
+			if newipv4.Length != l {
 				diagnose.InternalStats.Ipdefrag++
-				log.Debug().Int("layer-type", int(newip4.NextLayerType())).Msg("Decoding re-assembled packet:")
+				log.Debug().Int("layer-type", int(newipv4.NextLayerType())).Msg("Decoding re-assembled packet:")
 				pb, ok := packet.(gopacket.PacketBuilder)
 				if !ok {
 					log.Debug().Msg("Not a PacketBuilder")
 				}
-				nextDecoder := newip4.NextLayerType()
-				_ = nextDecoder.Decode(newip4.Payload, pb)
+				nextDecoder := newipv4.NextLayerType()
+				_ = nextDecoder.Decode(newipv4.Payload, pb)
 			}
 		}
 

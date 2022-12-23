@@ -61,7 +61,7 @@ func (t *tcpStream) createPcapWriter() {
 			log.Error().Err(err).Msg("Couldn't create PCAP:")
 		} else {
 			t.pcapWriter = pcapgo.NewWriter(t.pcap)
-			err = t.pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeLinuxSLL)
+			err = t.pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeEthernet)
 			if err != nil {
 				log.Error().Err(err).Msg("While writing the PCAP header:")
 			}
