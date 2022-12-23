@@ -13,7 +13,9 @@ import (
 var delayGrace = 100 * time.Microsecond
 
 func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte) error {
+	defer close(packets)
 	var last time.Time
+
 	for {
 		data, ci, err := reader.ReadPacketData()
 
@@ -33,11 +35,12 @@ func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte) error {
 		}
 		packets <- data
 	}
+
 	return nil
 }
 
-func Replay(filepath string, iface string) error {
-	f, err := os.Open(filepath)
+func Replay(pcapPath string, iface string) error {
+	f, err := os.Open(pcapPath)
 	if err != nil {
 		return err
 	}
@@ -50,11 +53,6 @@ func Replay(filepath string, iface string) error {
 		return err
 	}
 
-	err = sendPerPacket(reader, packets)
-	if err != nil {
-		return err
-	}
-
 	writer, err := pcap.OpenLive(iface, 65536, true, pcap.BlockForever)
 	if err != nil {
 		return err
@@ -62,32 +60,18 @@ func Replay(filepath string, iface string) error {
 	defer writer.Close()
 
 	go func() {
-		defer close(packets)
-
-		var counter uint64
-		ticker := time.NewTicker(5 * time.Second)
-		start := time.Now()
-
-	loop:
-		for {
-			select {
-			case <-ticker.C:
-				log.Debug().
-					Int("count", int(counter)).
-					Int("pps", int(float64(counter)/time.Since(start).Seconds())).
-					Msg("Packets written:")
-			case packet, ok := <-packets:
-				if !ok {
-					break loop
-				}
-				if err := writer.WritePacketData(packet); err != nil {
-					log.Error().Err(err).Msg("Replay write packet error:")
-					break loop
-				}
-				counter++
+		for packet := range packets {
+			if err := writer.WritePacketData(packet); err != nil {
+				log.Error().Err(err).Msg("Replay write packet error:")
+				break
 			}
 		}
 	}()
+
+	err = sendPerPacket(reader, packets)
+	if err != nil {
+		log.Error().Err(err).Msg("Replay send packet error:")
+	}
 
 	return nil
 }
