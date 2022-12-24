@@ -6,7 +6,7 @@ ENV CGO_ENABLED=1 GOOS=linux
 RUN apk add --no-cache \
     libpcap-dev \
     g++ \
-	curl \
+    curl \
     build-base \
     binutils-gold \
     bash \
