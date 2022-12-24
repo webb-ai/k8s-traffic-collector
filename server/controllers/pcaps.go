@@ -38,6 +38,16 @@ func GetTotalTcpStreams(c *gin.Context) {
 	})
 }
 
+func GetDownloadPcap(c *gin.Context) {
+	id := c.Param("id")
+
+	c.Header("Content-Description", "File Transfer")
+	c.Header("Content-Transfer-Encoding", "binary")
+	c.Header("Content-Disposition", "attachment; filename="+id)
+	c.Header("Content-Type", "application/octet-stream")
+	c.File(misc.GetPcapPath(id))
+}
+
 func GetMerge(c *gin.Context) {
 	pcapsDir := misc.GetPcapsDir()
 	pcapFiles, err := os.ReadDir(pcapsDir)
