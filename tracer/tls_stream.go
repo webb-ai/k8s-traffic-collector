@@ -1,7 +1,6 @@
 package tracer
 
 import (
-	"fmt"
 	"net"
 	"os"
 	"strconv"
@@ -135,7 +134,11 @@ func (t *tlsStream) SetAsEmittable() {
 }
 
 func (t *tlsStream) GetPcapId() string {
-	return fmt.Sprintf("%s-%d", t.pcapId, t.itemCount)
+	return t.pcapId
+}
+
+func (t *tlsStream) GetIndex() int64 {
+	return t.itemCount
 }
 
 func (t *tlsStream) GetIsIdentifyMode() bool {

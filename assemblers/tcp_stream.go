@@ -1,7 +1,6 @@
 package assemblers
 
 import (
-	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -145,7 +144,11 @@ func (t *tcpStream) SetAsEmittable() {
 }
 
 func (t *tcpStream) GetPcapId() string {
-	return fmt.Sprintf("%s-%d", t.pcapId, t.itemCount)
+	return t.pcapId
+}
+
+func (t *tcpStream) GetIndex() int64 {
+	return t.itemCount
 }
 
 func (t *tcpStream) GetIsIdentifyMode() bool {

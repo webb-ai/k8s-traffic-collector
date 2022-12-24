@@ -43,6 +43,7 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 	}
 
 	query := c.Query("q")
+	worker := c.Query("worker")
 
 	outputChannel := make(chan *api.OutputChannelItem)
 
@@ -90,8 +91,10 @@ func getItem(c *gin.Context, opts *misc.Opts) {
 		}
 
 		entry := itemToEntry(finalItem)
-		entry.Id = id
-		entry.Tls = misc.IsTls(entry.Id)
+		entry.Worker = worker
+		entry.Node = misc.RemovePortFromWorkerHost(worker)
+		entry.BuildId()
+		entry.Tls = misc.IsTls(entry.Stream)
 
 		protocol := extensions.ProtocolsMap[entry.Protocol.ToString()]
 		extension := extensions.ExtensionsMap[entry.Protocol.Name]

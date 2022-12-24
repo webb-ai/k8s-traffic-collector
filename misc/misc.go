@@ -1,10 +1,12 @@
 package misc
 
 import (
+	"net"
 	"sync"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
+	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -23,4 +25,14 @@ var AlivePcaps *sync.Map
 
 func InitAlivePcapsMap() {
 	AlivePcaps = &sync.Map{}
+}
+
+func RemovePortFromWorkerHost(workerHost string) string {
+	host, _, err := net.SplitHostPort(workerHost)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return workerHost
+	}
+
+	return host
 }
