@@ -17,7 +17,9 @@ import (
 )
 
 func Build(opts *misc.Opts, procfs string) *gin.Engine {
-	ginApp := gin.Default()
+	ginApp := gin.New()
+	ginApp.Use(middlewares.DefaultStructuredLogger())
+	ginApp.Use(gin.Recovery())
 
 	ginApp.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "It's running.")
