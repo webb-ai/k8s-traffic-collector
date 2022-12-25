@@ -211,7 +211,7 @@ func (t *tcpReassemblyStream) writeWithEthernetLayer(packet gopacket.Packet) {
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: false}
 	err := gopacket.SerializeLayers(buf, opts, serializableLayers...)
 	if err != nil {
-		log.Error().Err(err).Msg("Did an oopsy serializing packet:")
+		log.Error().Err(err).Msg("Error serializing packet:")
 		return
 	}
 
@@ -234,6 +234,6 @@ func (t *tcpReassemblyStream) writePacket(packet gopacket.Packet) {
 	}
 
 	if err := t.tcpStream.pcapWriter.WritePacket(info, outgoingPacket); err != nil {
-		log.Error().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
+		log.Debug().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
 	}
 }

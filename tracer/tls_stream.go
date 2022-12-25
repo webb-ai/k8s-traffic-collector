@@ -220,7 +220,7 @@ func (t *tlsStream) writePacket(firstLayerType gopacket.LayerType, l ...gopacket
 	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: false}
 	err := gopacket.SerializeLayers(buf, opts, l...)
 	if err != nil {
-		log.Error().Err(err).Msg("Did an oopsy serializing packet:")
+		log.Error().Err(err).Msg("Error serializing packet:")
 		return
 	}
 
@@ -239,7 +239,7 @@ func (t *tlsStream) writePacket(firstLayerType gopacket.LayerType, l ...gopacket
 
 	err = t.pcapWriter.WritePacket(info, outgoingPacket)
 	if err != nil {
-		log.Error().Err(err).Msg("Did an oopsy writing PCAP:")
+		log.Error().Err(err).Msg("Error writing PCAP:")
 	}
 }
 
