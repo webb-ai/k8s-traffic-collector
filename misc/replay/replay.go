@@ -11,7 +11,6 @@ import (
 )
 
 func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte, delayGrace time.Duration) error {
-	defer close(packets)
 	var last time.Time
 
 	for {
@@ -45,6 +44,7 @@ func Replay(pcapPath string, iface string, count uint64, delay uint64) error {
 	defer f.Close()
 
 	packets := make(chan []byte)
+	defer close(packets)
 
 	reader, err := pcapgo.NewReader(f)
 	if err != nil {
@@ -67,6 +67,7 @@ func Replay(pcapPath string, iface string, count uint64, delay uint64) error {
 	}()
 
 	for count > 0 {
+		log.Debug().Int("countdown", int(count)).Str("pcap", pcapPath).Msg("Replaying PCAP:")
 		count--
 		err = sendPerPacket(reader, packets, time.Duration(delay)*time.Microsecond)
 		if err != nil {
