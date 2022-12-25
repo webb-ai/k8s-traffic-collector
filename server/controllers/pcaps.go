@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -85,8 +86,18 @@ func GetMerge(c *gin.Context) {
 func GetReplay(c *gin.Context) {
 	id := c.Param("id")
 
+	count, err := strconv.ParseUint(c.Query("count"), 0, 64)
+	if err != nil {
+		count = 1
+	}
+
+	delay, err := strconv.ParseUint(c.Query("delay"), 0, 64)
+	if err != nil {
+		delay = 1
+	}
+
 	pcapPath := misc.GetPcapPath(id)
-	err := replay.Replay(pcapPath, replay.DefaultRouteInterface(""))
+	err = replay.Replay(pcapPath, replay.DefaultRouteInterface(""), count, delay)
 	if err != nil {
 		log.Error().Str("path", pcapPath).Err(err).Msg("Couldn't replay the PCAP:")
 		c.JSON(http.StatusInternalServerError, err)

@@ -10,9 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var delayGrace = 100 * time.Microsecond
-
-func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte) error {
+func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte, delayGrace time.Duration) error {
 	defer close(packets)
 	var last time.Time
 
@@ -39,7 +37,7 @@ func sendPerPacket(reader *pcapgo.Reader, packets chan<- []byte) error {
 	return nil
 }
 
-func Replay(pcapPath string, iface string) error {
+func Replay(pcapPath string, iface string, count uint64, delay uint64) error {
 	f, err := os.Open(pcapPath)
 	if err != nil {
 		return err
@@ -68,9 +66,13 @@ func Replay(pcapPath string, iface string) error {
 		}
 	}()
 
-	err = sendPerPacket(reader, packets)
-	if err != nil {
-		log.Error().Err(err).Msg("Replay send packet error:")
+	for count > 0 {
+		count--
+		err = sendPerPacket(reader, packets, time.Duration(delay)*time.Microsecond)
+		if err != nil {
+			log.Error().Err(err).Msg("Replay send packet error:")
+			break
+		}
 	}
 
 	return nil
