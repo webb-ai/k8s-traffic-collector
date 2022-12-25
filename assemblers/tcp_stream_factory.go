@@ -23,7 +23,6 @@ import (
  */
 type tcpStreamFactory struct {
 	pcapId        string
-	wg            sync.WaitGroup
 	identifyMode  bool
 	outputChannel chan *api.OutputChannelItem
 	streamsMap    api.TcpStreamMap
@@ -113,15 +112,18 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 
 		factory.streamsMap.Store(stream.getId(), stream)
 
-		factory.wg.Add(2)
-		go stream.client.run(misc.FilteringOptions, &factory.wg)
-		go stream.server.run(misc.FilteringOptions, &factory.wg)
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go stream.client.run(misc.FilteringOptions, &wg)
+		go stream.server.run(misc.FilteringOptions, &wg)
+		go factory.waitGoRoutines(stream, &wg)
 	}
 	return reassemblyStream
 }
 
-func (factory *tcpStreamFactory) WaitGoRoutines() {
-	factory.wg.Wait()
+func (factory *tcpStreamFactory) waitGoRoutines(stream *tcpStream, wg *sync.WaitGroup) {
+	wg.Wait()
+	stream.handlePcapDissectionResult()
 }
 
 func inArrayPod(pods []v1.Pod, address string) bool {

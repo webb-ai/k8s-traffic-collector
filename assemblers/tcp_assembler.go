@@ -132,7 +132,6 @@ func (a *TcpAssembler) DumpStreamPool() {
 }
 
 func (a *TcpAssembler) WaitAndDump() {
-	a.streamFactory.WaitGoRoutines()
 	log.Debug().Msg(a.Dump())
 }
 

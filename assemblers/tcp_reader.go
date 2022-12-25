@@ -60,8 +60,6 @@ func (reader *tcpReader) run(options *api.TrafficFilteringOptions, wg *sync.Wait
 		}
 		reader.rewind()
 	}
-
-	reader.parent.handlePcapDissectionResult()
 }
 
 func (reader *tcpReader) close() {
