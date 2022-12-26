@@ -36,6 +36,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 
 	query := c.Query("q")
 	worker := c.Query("worker")
+	node := c.Query("node")
 
 	outputChannel := make(chan *api.OutputChannelItem)
 
@@ -84,7 +85,8 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 
 		entry := itemToEntry(finalItem)
 		entry.Worker = worker
-		entry.Node = misc.RemovePortFromWorkerHost(worker)
+		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
+		entry.Node.Name = node
 		entry.BuildId()
 		entry.Tls = misc.IsTls(entry.Stream)
 

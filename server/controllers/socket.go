@@ -47,7 +47,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 
 	quit := make(chan bool)
 	outputChannel := make(chan *api.OutputChannelItem)
-	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("q"), quit)
+	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("node"), c.Query("q"), quit)
 
 	for _, pcap := range pcapFiles {
 		handlePcapFile(pcap.Name(), outputChannel, opts)
@@ -129,7 +129,7 @@ func processPackets(id string, outputChannel chan *api.OutputChannelItem, opts *
 	s.Close()
 }
 
-func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *websocket.Conn, worker string, query string, quit chan bool) {
+func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *websocket.Conn, worker string, node string, query string, quit chan bool) {
 	var counter uint64
 	expr, prop, err := kfl.PrepareQuery(query)
 	if err != nil {
@@ -154,7 +154,8 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 
 		entry := itemToEntry(finalItem)
 		entry.Worker = worker
-		entry.Node = misc.RemovePortFromWorkerHost(worker)
+		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
+		entry.Node.Name = node
 		entry.BuildId()
 		entry.Tls = misc.IsTls(entry.Stream)
 
