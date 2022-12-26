@@ -59,15 +59,8 @@ func run() {
 
 	filteredOutputItemsChannel := make(chan *api.OutputChannelItem)
 
-	filteringOptions := getTrafficFilteringOptions()
-	startWorker(opts, streamsMap, filteredOutputItemsChannel, extensions.Extensions, filteringOptions)
+	startWorker(opts, streamsMap, filteredOutputItemsChannel, extensions.Extensions)
 
 	ginApp := server.Build(opts, *procfs)
 	server.Start(ginApp, *port)
-}
-
-func getTrafficFilteringOptions() *api.TrafficFilteringOptions {
-	return &api.TrafficFilteringOptions{
-		IgnoredUserAgents: []string{},
-	}
 }

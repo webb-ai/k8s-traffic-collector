@@ -21,13 +21,11 @@ import (
 
 const cleanPeriod = time.Second * 10
 
-func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, options *api.TrafficFilteringOptions) {
-	misc.FilteringOptions = options
-
+func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension) {
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				target.TracerInstance = startTracer(e, outputItems, options, streamsMap)
+				target.TracerInstance = startTracer(e, outputItems, streamsMap)
 				break
 			}
 		}
@@ -172,8 +170,7 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 	log.Info().Interface("AppStats", diagnose.AppStats).Send()
 }
 
-func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem,
-	options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) *tracer.Tracer {
+func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *tracer.Tracer {
 	tls := tracer.Tracer{}
 	chunksBufferSize := os.Getpagesize() * 100
 	logBufferSize := os.Getpagesize()
@@ -207,7 +204,7 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 	}
 
 	go tls.PollForLogging()
-	go tls.Poll(outputItems, options, streamsMap)
+	go tls.Poll(outputItems, streamsMap)
 
 	return &tls
 }

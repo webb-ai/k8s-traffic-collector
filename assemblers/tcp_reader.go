@@ -47,14 +47,14 @@ func NewTcpReader(ident string, tcpId *api.TcpID, parent *tcpStream, isClient bo
 	}
 }
 
-func (reader *tcpReader) run(options *api.TrafficFilteringOptions, wg *sync.WaitGroup) {
+func (reader *tcpReader) run(wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	for i, extension := range extensions.Extensions {
 		reader.reqResMatcher = reader.parent.reqResMatchers[i]
 		reader.counterPair = reader.parent.counterPairs[i]
 		b := bufio.NewReader(reader)
-		extension.Dissector.Dissect(b, reader, options) //nolint
+		extension.Dissector.Dissect(b, reader) //nolint
 		if reader.isProtocolIdentified() {
 			break
 		}

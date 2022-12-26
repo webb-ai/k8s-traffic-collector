@@ -88,7 +88,6 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 		entry.BuildId()
 		entry.Tls = misc.IsTls(entry.Stream)
 
-		protocol := extensions.ProtocolsMap[entry.Protocol.ToString()]
 		extension := extensions.ExtensionsMap[entry.Protocol.Name]
 
 		var entryMarshaled []byte
@@ -121,7 +120,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 		}
 
 		entryWrapped := &api.EntryWrapper{
-			Protocol:       *protocol,
+			Protocol:       entry.Protocol,
 			Representation: string(representation),
 			Data:           entry,
 			Base:           base,

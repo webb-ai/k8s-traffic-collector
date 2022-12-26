@@ -114,8 +114,8 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go stream.client.run(misc.FilteringOptions, &wg)
-		go stream.server.run(misc.FilteringOptions, &wg)
+		go stream.client.run(&wg)
+		go stream.server.run(&wg)
 		go factory.waitGoRoutines(stream, &wg)
 	}
 	return reassemblyStream

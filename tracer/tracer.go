@@ -86,8 +86,8 @@ func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, ex
 	return t.poller.init(&t.bpfObjects, chunksBufferSize)
 }
 
-func (t *Tracer) Poll(outputItems chan *api.OutputChannelItem, options *api.TrafficFilteringOptions, streamsMap api.TcpStreamMap) {
-	t.poller.poll(outputItems, options, streamsMap)
+func (t *Tracer) Poll(outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) {
+	t.poller.poll(outputItems, streamsMap)
 }
 
 func (t *Tracer) PollForLogging() {

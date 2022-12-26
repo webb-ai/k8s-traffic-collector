@@ -47,10 +47,10 @@ func NewTlsReader(tcpID *api.TcpID, parent *tlsStream, isClient bool,
 	}
 }
 
-func (r *tlsReader) run(options *api.TrafficFilteringOptions) {
+func (r *tlsReader) run() {
 	b := bufio.NewReader(r)
 
-	err := r.extension.Dissector.Dissect(b, r, options)
+	err := r.extension.Dissector.Dissect(b, r)
 
 	if err != nil {
 		log.Warn().Err(err).Interface("tcp-id", r.GetTcpID()).Msg("While dissecting TLS")
