@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"runtime"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -212,20 +210,4 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 	go tls.Poll(outputItems, options, streamsMap)
 
 	return &tls
-}
-
-func buildIgnoredPortsList(ignoredPorts string) []uint16 {
-	tmp := strings.Split(ignoredPorts, ",")
-	result := make([]uint16, len(tmp))
-
-	for i, raw := range tmp {
-		v, err := strconv.Atoi(raw)
-		if err != nil {
-			continue
-		}
-
-		result[i] = uint16(v)
-	}
-
-	return result
 }
