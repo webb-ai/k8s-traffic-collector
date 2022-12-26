@@ -55,7 +55,7 @@ ARG BUILDARCH=amd64
 ARG TARGETARCH=amd64
 FROM builder-from-${BUILDARCH}-to-${TARGETARCH} AS builder
 
-WORKDIR /app/build
+WORKDIR /app
 
 COPY go.mod .
 COPY go.sum .
@@ -63,11 +63,11 @@ RUN go mod download
 
 COPY . .
 
-WORKDIR /app/build/tracer
+WORKDIR /app/tracer
 RUN rm *_bpfel_*
 RUN GOARCH=${BUILDARCH} go generate tracer.go
 
-WORKDIR /app/build
+WORKDIR /app
 
 RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 
@@ -80,6 +80,6 @@ ENV GIN_MODE=release
 WORKDIR /app/data/
 WORKDIR /app
 
-COPY --from=builder ["/app/build/worker", "."]
+COPY --from=builder ["/app/worker", "."]
 
 ENTRYPOINT ["/app/worker"]
