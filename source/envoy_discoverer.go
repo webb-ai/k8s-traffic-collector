@@ -20,8 +20,7 @@ func discoverRelevantEnvoyPids(procfs string, pods []v1.Pod) ([]string, error) {
 		return result, err
 	}
 
-	log.Info().Msg(fmt.Sprintf("Starting envoy auto discoverer %v %v - scanning %v potential pids",
-		procfs, pods, len(pids)))
+	log.Info().Str("procfs", procfs).Int("pids", len(pids)).Msg("Starting Envoy auto discoverer:")
 
 	for _, pid := range pids {
 		if !pid.IsDir() {
@@ -37,7 +36,7 @@ func discoverRelevantEnvoyPids(procfs string, pods []v1.Pod) ([]string, error) {
 		}
 	}
 
-	log.Info().Msg(fmt.Sprintf("Found %v relevant envoy processes - %v", len(result), result))
+	log.Info().Msg(fmt.Sprintf("Found %v relevant Envoy processes - %v", len(result), result))
 
 	return result, nil
 }
@@ -66,11 +65,11 @@ func checkEnvoyPid(procfs string, pid string, pods []v1.Pod) bool {
 	}
 
 	if podIp == "" {
-		log.Debug().Msg(fmt.Sprintf("Found an envoy process without INSTANCE_IP variable %v\n", pid))
+		log.Debug().Msg(fmt.Sprintf("Found an Envoy process without INSTANCE_IP variable %v\n", pid))
 		return false
 	}
 
-	log.Info().Msg(fmt.Sprintf("Found envoy pid %v with cluster ip %v", pid, podIp))
+	log.Info().Msg(fmt.Sprintf("Found Envoy pid %v with cluster ip %v", pid, podIp))
 
 	for _, pod := range pods {
 		if pod.Status.PodIP == podIp {

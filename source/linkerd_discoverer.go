@@ -20,8 +20,7 @@ func discoverRelevantLinkerdPids(procfs string, pods []v1.Pod) ([]string, error)
 		return result, err
 	}
 
-	log.Info().Msg(fmt.Sprintf("Starting linkerd auto discoverer %v %v - scanning %v potential pids",
-		procfs, pods, len(pids)))
+	log.Info().Str("procfs", procfs).Int("pids", len(pids)).Msg("Starting Linkerd auto discoverer:")
 
 	for _, pid := range pids {
 		if !pid.IsDir() {
@@ -37,7 +36,7 @@ func discoverRelevantLinkerdPids(procfs string, pods []v1.Pod) ([]string, error)
 		}
 	}
 
-	log.Info().Msg(fmt.Sprintf("Found %v relevant linkerd processes - %v", len(result), result))
+	log.Info().Msg(fmt.Sprintf("Found %v relevant Linkerd processes - %v", len(result), result))
 
 	return result, nil
 }
@@ -66,11 +65,11 @@ func checkLinkerdPid(procfs string, pid string, pods []v1.Pod) bool {
 	}
 
 	if podName == "" {
-		log.Debug().Msg(fmt.Sprintf("Found a linkerd process without _pod_name variable %v\n", pid))
+		log.Debug().Msg(fmt.Sprintf("Found a Linkerd process without _pod_name variable %v\n", pid))
 		return false
 	}
 
-	log.Info().Msg(fmt.Sprintf("Found linkerd pid %v with pod name %v", pid, podName))
+	log.Info().Msg(fmt.Sprintf("Found Linkerd pid %v with pod name %v", pid, podName))
 
 	for _, pod := range pods {
 		if pod.Name == podName {

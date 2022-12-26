@@ -49,8 +49,7 @@ func findContainerPids(procfs string, containerIds map[string]v1.Pod) (map[uint3
 		return result, err
 	}
 
-	log.Info().Msg(fmt.Sprintf("Starting TLS auto discoverer %v %v - scanning %v potential pids",
-		procfs, containerIds, len(pids)))
+	log.Info().Str("procfs", procfs).Int("pids", len(pids)).Msg("Starting TLS auto discoverer:")
 
 	for _, pid := range pids {
 		if !pid.IsDir() {
