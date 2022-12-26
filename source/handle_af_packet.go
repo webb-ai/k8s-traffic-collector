@@ -66,6 +66,9 @@ func (h *afPacketHandle) LinkType() layers.LinkType {
 func (h *afPacketHandle) Stats() (packetsReceived uint, packetsDropped uint, err error) {
 	var stats afpacket.SocketStatsV3
 	_, stats, err = h.capture.SocketStats()
+	if err != nil {
+		return
+	}
 	packetsReceived = stats.Packets()
 	packetsDropped = stats.Drops()
 	return

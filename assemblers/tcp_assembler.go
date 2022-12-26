@@ -32,7 +32,6 @@ type TcpAssembler struct {
 	*reassembly.Assembler
 	streamPool             *reassembly.StreamPool
 	streamFactory          *tcpStreamFactory
-	ignoredPorts           []uint16
 	staleConnectionTimeout time.Duration
 	stats                  AssemblerStats
 }
@@ -49,7 +48,6 @@ func (c *context) GetCaptureInfo() gopacket.CaptureInfo {
 
 func NewTcpAssembler(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *misc.Opts) *TcpAssembler {
 	a := &TcpAssembler{
-		ignoredPorts:           opts.IgnoredPorts,
 		staleConnectionTimeout: opts.StaleConnectionTimeout,
 		stats:                  AssemblerStats{},
 	}
@@ -115,10 +113,6 @@ func (a *TcpAssembler) ProcessPacket(packetInfo source.TcpPacketInfo, dumpPacket
 
 func (a *TcpAssembler) processTcpPacket(packet gopacket.Packet, tcp *layers.TCP) {
 	diagnose.AppStats.IncTcpPacketsCount()
-	if a.shouldIgnorePort(uint16(tcp.DstPort)) || a.shouldIgnorePort(uint16(tcp.SrcPort)) {
-		diagnose.AppStats.IncIgnoredPacketsCount()
-		return
-	}
 
 	c := context{
 		CaptureInfo: packet.Metadata().CaptureInfo,
@@ -133,16 +127,6 @@ func (a *TcpAssembler) DumpStreamPool() {
 
 func (a *TcpAssembler) WaitAndDump() {
 	log.Debug().Msg(a.Dump())
-}
-
-func (a *TcpAssembler) shouldIgnorePort(port uint16) bool {
-	for _, p := range a.ignoredPorts {
-		if port == p {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (a *TcpAssembler) periodicClean() {

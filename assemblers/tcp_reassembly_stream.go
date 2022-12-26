@@ -167,16 +167,25 @@ func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
 }
 
 func (t *tcpReassemblyStream) writeWithEthernetLayer(packet gopacket.Packet) {
+	var serializableLayers []gopacket.SerializableLayer
+
 	// Get Linux SLL layer
 	linuxSLLLayer := packet.Layer(layers.LayerTypeLinuxSLL)
 	if linuxSLLLayer == nil {
-		return
+		// If Linux SLL layer is not present then it means we're reading a PCAP file
+		ethernetLayer := packet.Layer(layers.LayerTypeEthernet)
+		if ethernetLayer == nil {
+			// Ignore the packets that neither Linux SLL nor Ethernet layer
+			return
+		}
+
+		// Ethernet layer
+		serializableLayers = []gopacket.SerializableLayer{ethernetLayer.(*layers.Ethernet)}
+	} else {
+		linuxSLL := linuxSLLLayer.(*layers.LinuxSLL)
+		// Ethernet layer
+		serializableLayers = []gopacket.SerializableLayer{ethernet.NewEthernetLayer(linuxSLL.EthernetType)}
 	}
-
-	linuxSLL := linuxSLLLayer.(*layers.LinuxSLL)
-
-	// Ethernet layer
-	serializableLayers := []gopacket.SerializableLayer{ethernet.NewEthernetLayer(linuxSLL.EthernetType)}
 
 	// IPv4 layer
 	ipv4Layer := packet.Layer(layers.LayerTypeIPv4)

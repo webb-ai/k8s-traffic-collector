@@ -11,8 +11,7 @@ import (
 )
 
 type Opts struct {
-	HostMode               bool
-	IgnoredPorts           []uint16
+	ClusterMode            bool
 	StaleConnectionTimeout time.Duration
 }
 

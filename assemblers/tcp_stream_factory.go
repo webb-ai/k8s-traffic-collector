@@ -136,7 +136,7 @@ func inArrayPod(pods []v1.Pod, address string) bool {
 }
 
 func (factory *tcpStreamFactory) getStreamProps(srcIP string, srcPort string, dstIP string, dstPort string) *streamProps {
-	if factory.opts.HostMode {
+	if factory.opts.ClusterMode {
 		if inArrayPod(misc.TargettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
 			return &streamProps{isTargetted: true, isOutgoing: false}
 		} else if inArrayPod(misc.TargettedPods, dstIP) {

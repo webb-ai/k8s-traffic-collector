@@ -122,7 +122,7 @@ func initializePacketSources() error {
 	}
 
 	var err error
-	target.PacketSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargettedPods, *packetCapture, target.MainPacketInputChan)
+	target.PacketSourceManager, err = source.NewPacketSourceManager(*procfs, *fname, *iface, *servicemesh, misc.TargettedPods, *packetCapture, target.MainPacketInputChan)
 	return err
 }
 
@@ -136,7 +136,6 @@ func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, 
 		log.Fatal().Err(err).Send()
 	}
 
-	opts.IgnoredPorts = append(opts.IgnoredPorts, buildIgnoredPortsList(*ignoredPorts)...)
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
 	return assemblers.NewTcpAssembler("", true, outputItems, streamsMap, opts)
