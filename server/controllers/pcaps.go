@@ -49,7 +49,18 @@ func GetDownloadPcap(c *gin.Context) {
 	c.File(misc.GetPcapPath(id))
 }
 
-func GetMerge(c *gin.Context) {
+type postMergeRequest struct {
+	Query string   `json:"query"`
+	Pcaps []string `json:"pcaps"`
+}
+
+func PostMerge(c *gin.Context) {
+	var req postMergeRequest
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+
 	pcapsDir := misc.GetPcapsDir()
 	pcapFiles, err := os.ReadDir(pcapsDir)
 	if err != nil {
@@ -67,7 +78,7 @@ func GetMerge(c *gin.Context) {
 	defer outFile.Close()
 	defer os.Remove(outFile.Name())
 
-	err = mergecap.Mergecap(pcapFiles, outFile)
+	err = mergecap.Mergecap(pcapFiles, req.Query, req.Pcaps, outFile)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to merge the PCAP files!")
 		c.JSON(http.StatusInternalServerError, err)

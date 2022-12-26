@@ -23,12 +23,12 @@ const maxSnaplen uint32 = 262144
 // It helps us find bad/corrupted packets with weird timestamps.
 var previousTimestamp int64
 
-func Mergecap(pcapFiles []fs.DirEntry, outFile *os.File) error {
+func Mergecap(pcapFiles []fs.DirEntry, query string, selectedPcaps []string, outFile *os.File) error {
 	// Init a minimum heap by packet timestamp
 	minTimeHeap := minheap.PacketHeap{}
 	heap.Init(&minTimeHeap)
 
-	linkType := initHeapWithPcapFiles(pcapFiles, &minTimeHeap)
+	linkType := initHeapWithPcapFiles(pcapFiles, query, selectedPcaps, &minTimeHeap)
 
 	// Init the output file
 	bufferedFileWriter := bufio.NewWriter(outFile)
@@ -80,12 +80,16 @@ func Mergecap(pcapFiles []fs.DirEntry, outFile *os.File) error {
 // initHeapWithPcapFiles inits minTimeHeap with one packet from each source file.
 // It also returns the output LinkType, which is decided by the LinkTypes of all of the
 // input files.
-func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, minTimeHeap *minheap.PacketHeap) layers.LinkType {
+func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, query string, selectedPcaps []string, minTimeHeap *minheap.PacketHeap) layers.LinkType {
 	var totalInputSizeBytes int64
 	var linkType layers.LinkType
 
 	for _, pcap := range pcapFiles {
 		if filepath.Ext(pcap.Name()) != ".pcap" {
+			continue
+		}
+
+		if query != "" && !misc.Contains(selectedPcaps, pcap.Name()) {
 			continue
 		}
 
