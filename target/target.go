@@ -21,7 +21,9 @@ func UpdatePods(pods []v1.Pod, procfs string) {
 
 	misc.TargettedPods = pods
 
-	PacketSourceManager.UpdatePods(pods, MainPacketInputChan)
+	if PacketSourceManager != nil {
+		PacketSourceManager.UpdatePods(pods, MainPacketInputChan)
+	}
 
 	if TracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
 		if err := tracer.UpdateTargets(TracerInstance, &pods, procfs); err != nil {

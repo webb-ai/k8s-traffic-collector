@@ -9,6 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const NameResolutionHistoryFilename string = "name_resolution_history.json"
+
 var dataDir = "data"
 
 func InitDataDir() {
@@ -82,7 +84,7 @@ func CleanUpTmpPcaps() error {
 }
 
 func GetNameResolutionHistoryPath() string {
-	return fmt.Sprintf("%s/%s", GetDataDir(), "name_resolution_history.json")
+	return fmt.Sprintf("%s/%s", GetDataDir(), NameResolutionHistoryFilename)
 }
 
 func IsTls(id string) bool {

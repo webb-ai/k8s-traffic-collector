@@ -3,19 +3,25 @@ package resolver
 import (
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
-func NewFromInCluster(errOut chan error, namespace string) (*Resolver, error) {
+func NewFromInCluster(errOut chan error, namespace string) *Resolver {
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		log.Warn().Err(err).Send()
 	}
-	clientSet, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
+
+	var clientSet *kubernetes.Clientset
+	if config != nil {
+		clientSet, err = kubernetes.NewForConfig(config)
+		if err != nil {
+			log.Warn().Err(err).Send()
+		}
 	}
+
 	return &Resolver{
 		clientConfig:   config,
 		clientSet:      clientSet,
@@ -24,5 +30,5 @@ func NewFromInCluster(errOut chan error, namespace string) (*Resolver, error) {
 		nameMapHistory: &sync.Map{},
 		errOut:         errOut,
 		namespace:      namespace,
-	}, nil
+	}
 }

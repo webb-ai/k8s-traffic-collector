@@ -39,16 +39,18 @@ type ResolvedObjectInfo struct {
 	Namespace   string
 }
 
-func (resolver *Resolver) Start(ctx context.Context) {
+func (resolver *Resolver) Start(ctx context.Context, nameResolutionHistoryPath string, clusterMode bool) {
 	if !resolver.isStarted {
 		resolver.isStarted = true
 
-		resolver.restoreNameResolutionHistory()
+		resolver.RestoreNameResolutionHistory(nameResolutionHistoryPath)
 
-		go resolver.dumpNameResolutionHistoryEveryNSeconds(10)
-		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchServices)
-		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchEndpoints)
-		go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchPods)
+		if clusterMode {
+			go resolver.dumpNameResolutionHistoryEveryNSeconds(3)
+			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchServices)
+			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchEndpoints)
+			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchPods)
+		}
 	}
 }
 
@@ -85,11 +87,9 @@ func (resolver *Resolver) updateNameResolutionHistory() {
 }
 
 func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration) {
+	resolver.dumpNameResolutionHistoryWrapper()
 	for range time.Tick(time.Second * n) {
-		err := resolver.dumpNameResolutionHistory()
-		if err != nil {
-			log.Error().Err(err).Msg("Failed dumping the name resolution history:")
-		}
+		resolver.dumpNameResolutionHistoryWrapper()
 	}
 }
 
@@ -101,6 +101,13 @@ func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]interface{
 	})
 
 	return m
+}
+
+func (resolver *Resolver) dumpNameResolutionHistoryWrapper() {
+	err := resolver.dumpNameResolutionHistory()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed dumping the name resolution history:")
+	}
 }
 
 func (resolver *Resolver) dumpNameResolutionHistory() error {
@@ -119,17 +126,17 @@ func (resolver *Resolver) dumpNameResolutionHistory() error {
 	return nil
 }
 
-func (resolver *Resolver) restoreNameResolutionHistory() {
-	content, err := os.ReadFile(misc.GetNameResolutionHistoryPath())
+func (resolver *Resolver) RestoreNameResolutionHistory(nameResolutionHistoryPath string) {
+	content, err := os.ReadFile(nameResolutionHistoryPath)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed reading the name resolution history dump:")
+		log.Warn().Str("path", nameResolutionHistoryPath).Err(err).Msg("Failed reading the name resolution history dump:")
 		return
 	}
 
 	m := make(map[int64]interface{})
 	err = json.Unmarshal(content, &m)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed unmarshalling the name resolution history dump:")
+		log.Warn().Str("path", nameResolutionHistoryPath).Err(err).Msg("Failed unmarshalling the name resolution history dump:")
 		return
 	}
 
@@ -137,7 +144,7 @@ func (resolver *Resolver) restoreNameResolutionHistory() {
 		resolver.nameMapHistory.Store(k, v)
 	}
 
-	log.Info().Int("count", len(m)).Msg("Restored the name resolution history")
+	log.Info().Str("path", nameResolutionHistoryPath).Int("count", len(m)).Msg("Restored the name resolution history")
 }
 
 func (resolver *Resolver) CheckIsServiceIP(address string) bool {

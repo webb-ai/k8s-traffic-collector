@@ -13,13 +13,14 @@ import (
 	"github.com/kubeshark/worker/server"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"k8s.io/client-go/rest"
 )
 
 var port = flag.Int("port", 80, "Port number of the HTTP server")
 
 // capture
 var iface = flag.String("i", "en0", "Interface to read packets from")
-var fname = flag.String("r", "", "Filename to read from, overrides -i")
+var folder = flag.String("f", "", "Folder that contains a PCAP snapshot")
 var staleTimeoutSeconds = flag.Int("staletimout", 120, "Max time in seconds to keep connections which don't transmit data")
 var servicemesh = flag.Bool("servicemesh", false, "Record decrypted traffic if the cluster is configured with a service mesh and with mtls")
 var tls = flag.Bool("tls", false, "Enable TLS tracing")
@@ -52,14 +53,21 @@ func main() {
 func run() {
 	log.Info().Msg("Starting worker...")
 
+	_, err := rest.InClusterConfig()
 	opts := &misc.Opts{
-		ClusterMode: resolver.StartResolving(""),
+		ClusterMode: err == nil,
 	}
 	streamsMap := assemblers.NewTcpStreamMap(true)
 
-	filteredOutputItemsChannel := make(chan *api.OutputChannelItem)
+	outputItems := make(chan *api.OutputChannelItem)
 
-	startWorker(opts, streamsMap, filteredOutputItemsChannel, extensions.Extensions)
+	resolver.StartResolving("", misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
+
+	if *folder != "" {
+		startImporter(*folder, opts, streamsMap, outputItems)
+	} else {
+		startWorker(opts, streamsMap, outputItems, extensions.Extensions)
+	}
 
 	ginApp := server.Build(opts, *procfs)
 	server.Start(ginApp, *port)

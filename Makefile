@@ -32,7 +32,7 @@ run: setcap ## Run the program. Requires Hub being available on port 8898
 	./worker -i any -port 8897 -debug
 
 run-pcap: setcap ## Run the program with a PCAP file. Requires Hub being available on port 8898
-	./worker -r example.pcap -port 8897 -debug
+	./worker -f ./import -port 8897 -debug
 
 run-tls: setcap ## Run the program with TLS capture enabled. Requires Hub being available on port 8898
 	KUBESHARK_GLOBAL_LIBSSL_PID=$(shell ps -ef | awk '$$8=="python3" && $$9=="tls.py" {print $$2}') \

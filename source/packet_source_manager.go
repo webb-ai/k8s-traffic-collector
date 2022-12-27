@@ -26,14 +26,13 @@ type PacketSourceManager struct {
 
 func NewPacketSourceManager(
 	procfs string,
-	filename string,
 	interfaceName string,
 	mtls bool,
 	pods []v1.Pod,
 	packetCapture string,
 	packets chan<- TcpPacketInfo,
 ) (*PacketSourceManager, error) {
-	hostSource, err := newHostPacketSource(filename, interfaceName, packetCapture)
+	hostSource, err := NewHostPacketSource("", interfaceName, packetCapture)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +54,7 @@ func NewPacketSourceManager(
 	return sourceManager, nil
 }
 
-func newHostPacketSource(filename string, interfaceName string, packetCapture string) (*TcpPacketSource, error) {
+func NewHostPacketSource(filename string, interfaceName string, packetCapture string) (*TcpPacketSource, error) {
 	var name string
 	if filename == "" {
 		name = fmt.Sprintf("host-%s", interfaceName)

@@ -8,15 +8,12 @@ import (
 
 var K8sResolver *Resolver
 
-func StartResolving(namespace string) bool {
+func StartResolving(namespace string, nameResolutionHistoryPath string, clusterMode bool) {
 	errOut := make(chan error, 100)
-	res, err := NewFromInCluster(errOut, namespace)
-	if err != nil {
-		log.Error().Err(err).Msg("While creating K8s resolver!")
-		return false
-	}
+	res := NewFromInCluster(errOut, namespace)
+
 	ctx := context.Background()
-	res.Start(ctx)
+	res.Start(ctx, nameResolutionHistoryPath, clusterMode)
 	go func() {
 		for {
 			err := <-errOut
@@ -25,5 +22,4 @@ func StartResolving(namespace string) bool {
 	}()
 
 	K8sResolver = res
-	return true
 }
