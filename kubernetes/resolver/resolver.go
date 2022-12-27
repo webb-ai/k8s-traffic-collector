@@ -93,10 +93,10 @@ func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration
 	}
 }
 
-func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]interface{} {
-	m := make(map[int64]interface{})
+func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]map[string]*ResolvedObjectInfo {
+	m := make(map[int64]map[string]*ResolvedObjectInfo)
 	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
-		m[key.(int64)] = value
+		m[key.(int64)] = value.(map[string]*ResolvedObjectInfo)
 		return true
 	})
 
@@ -133,7 +133,7 @@ func (resolver *Resolver) RestoreNameResolutionHistory(nameResolutionHistoryPath
 		return
 	}
 
-	m := make(map[int64]interface{})
+	m := make(map[int64]map[string]*ResolvedObjectInfo)
 	err = json.Unmarshal(content, &m)
 	if err != nil {
 		log.Warn().Str("path", nameResolutionHistoryPath).Err(err).Msg("Failed unmarshalling the name resolution history dump:")
