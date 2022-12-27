@@ -34,3 +34,6 @@ worker
 
 # Python scripts for testing
 *.py
+
+# Import directory
+import/

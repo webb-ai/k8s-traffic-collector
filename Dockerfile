@@ -77,6 +77,7 @@ FROM ${TARGETARCH}/busybox:latest
 
 ENV GIN_MODE=release
 
+WORKDIR /app/import/
 WORKDIR /app/data/
 WORKDIR /app
 
