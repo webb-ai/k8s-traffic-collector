@@ -22,6 +22,8 @@ import (
 const cleanPeriod = time.Second * 10
 
 func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension) {
+	go misc.LimitPcapsDirSize()
+
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
