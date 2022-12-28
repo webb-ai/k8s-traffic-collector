@@ -11,9 +11,11 @@ import (
 )
 
 const NameResolutionHistoryFilename string = "name_resolution_history.json"
+const mb int64 = 1024 * 1024
 
 var dataDir = "data"
-var pcapsDirSizeLimit int64 = 200 * 1024 * 1024
+var pcapsDirSizeLimit int64 = 200 * mb
+var pcapsDirSizeLimitInterval = 5 * time.Second
 
 func InitDataDir() {
 	body, err := os.ReadFile("/etc/machine-id")
@@ -94,6 +96,10 @@ func IsTls(id string) bool {
 }
 
 func limitPcapsDirSize() {
+	if pcapsDirSizeLimit < 0 {
+		return
+	}
+
 	var size int64
 	err := filepath.Walk(GetPcapsDir(), func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -112,6 +118,7 @@ func limitPcapsDirSize() {
 	log.Debug().Int("size", int(size)).Msg("PCAP directory:")
 
 	if size > pcapsDirSizeLimit {
+		pcapsDirSizeLimitInterval = pcapsDirSizeLimitInterval * time.Duration(50*mb/(size-pcapsDirSizeLimit))
 		err := filepath.Walk(GetPcapsDir(), func(pcapPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -143,7 +150,7 @@ func limitPcapsDirSize() {
 }
 
 func LimitPcapsDirSize() {
-	for range time.Tick(time.Millisecond * 500) {
+	for range time.Tick(pcapsDirSizeLimitInterval) {
 		limitPcapsDirSize()
 	}
 }
