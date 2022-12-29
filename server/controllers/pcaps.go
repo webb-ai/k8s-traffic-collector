@@ -104,11 +104,29 @@ func GetReplay(c *gin.Context) {
 
 	delay, err := strconv.ParseUint(c.Query("delay"), 0, 64)
 	if err != nil {
-		delay = 1
+		delay = 100
+	}
+
+	host := c.Query("host")
+	if host == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"host": host,
+			"msg":  "Destination host is empty. Set `host` query parameter.",
+		})
+		return
+	}
+
+	port := c.Query("port")
+	if port == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"port": port,
+			"msg":  "Destination port is empty. Set `port` query parameter.",
+		})
+		return
 	}
 
 	pcapPath := misc.GetPcapPath(id)
-	err = replay.Replay(pcapPath, replay.DefaultRouteInterface(""), count, delay)
+	err = replay.Replay(pcapPath, host, port, count, delay)
 	if err != nil {
 		log.Error().Str("path", pcapPath).Err(err).Msg("Couldn't replay the PCAP:")
 		c.JSON(http.StatusInternalServerError, err)
