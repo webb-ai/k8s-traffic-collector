@@ -95,6 +95,10 @@ func IsTls(id string) bool {
 	return strings.HasSuffix(id[:len(id)-len(filepath.Ext(id))], "_tls")
 }
 
+func SetPcapsDirSizeLimit(limit int64) {
+	pcapsDirSizeLimit = limit
+}
+
 func limitPcapsDirSize() {
 	if pcapsDirSizeLimit < 0 {
 		return

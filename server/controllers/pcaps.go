@@ -125,3 +125,21 @@ func GetNameResolutionHistory(c *gin.Context) {
 	m := res.GetDumpNameResolutionHistoryMap()
 	c.JSON(http.StatusOK, m)
 }
+
+type postStorageLimit struct {
+	Limit int64 `json:"limit"`
+}
+
+func PostStorageLimit(c *gin.Context) {
+	var req postStorageLimit
+	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	misc.SetPcapsDirSizeLimit(req.Limit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"limit": req.Limit,
+	})
+}
