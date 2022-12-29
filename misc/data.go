@@ -7,14 +7,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/go-units"
 	"github.com/rs/zerolog/log"
 )
 
 const NameResolutionHistoryFilename string = "name_resolution_history.json"
-const mb int64 = 1024 * 1024
 
 var dataDir = "data"
-var pcapsDirSizeLimit int64 = 200 * mb
+var pcapsDirSizeLimit int64 = 200 * units.MB
 var pcapsDirSizeLimitInterval = 5 * time.Second
 
 func InitDataDir() {
@@ -122,7 +122,7 @@ func limitPcapsDirSize() {
 	log.Debug().Int("size", int(size)).Msg("PCAP directory:")
 
 	if size > pcapsDirSizeLimit {
-		pcapsDirSizeLimitInterval = pcapsDirSizeLimitInterval * time.Duration(50*mb/(size-pcapsDirSizeLimit))
+		pcapsDirSizeLimitInterval = pcapsDirSizeLimitInterval * time.Duration(pcapsDirSizeLimit/(size-pcapsDirSizeLimit))
 		err := filepath.Walk(GetPcapsDir(), func(pcapPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

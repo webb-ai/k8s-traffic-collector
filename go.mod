@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/Masterminds/semver v1.5.0
+	github.com/docker/go-units v0.5.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-errors/errors v1.4.2
