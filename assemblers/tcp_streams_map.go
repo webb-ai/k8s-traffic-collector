@@ -96,7 +96,7 @@ func (streamMap *tcpStreamMap) CloseTimedoutTcpStreamChannels() {
 	closeTimedoutTcpChannelsIntervalMs := GetCloseTimedoutTcpChannelsInterval()
 	log.Info().
 		Msg(fmt.Sprintf(
-			"Using %d ms as the close timedout TCP stream channels interval",
+			"Using %d ms as the close timed out TCP stream channels interval",
 			closeTimedoutTcpChannelsIntervalMs/time.Millisecond,
 		))
 

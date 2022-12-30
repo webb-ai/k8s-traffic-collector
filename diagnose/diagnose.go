@@ -14,7 +14,9 @@ import (
 
 var AppStats = api.AppStats{}
 
-func StartMemoryProfiler(envDumpPath string, envTimeInterval string) {
+func StartMemoryProfiler(envDumpPath string, envTimeInterval string, memoryUsageTimeInterval string) {
+	go printMemUsage(memoryUsageTimeInterval)
+
 	dumpPath := "/app/pprof"
 	if envDumpPath != "" {
 		dumpPath = envDumpPath

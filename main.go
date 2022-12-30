@@ -8,6 +8,7 @@ import (
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/worker/assemblers"
+	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/server"
@@ -62,6 +63,13 @@ func run() {
 	outputItems := make(chan *api.OutputChannelItem)
 
 	resolver.StartResolving("", misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
+
+	if assemblers.GetMemoryProfilingEnabled() {
+		diagnose.StartMemoryProfiler(
+			os.Getenv(assemblers.MemoryProfilingDumpPath),
+			os.Getenv(assemblers.MemoryProfilingTimeIntervalSeconds),
+			os.Getenv(assemblers.MemoryUsageTimeIntervalMilliseconds))
+	}
 
 	if *folder != "" {
 		startImporter(*folder, opts, streamsMap, outputItems)

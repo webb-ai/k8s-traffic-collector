@@ -15,12 +15,6 @@ import (
 )
 
 func startImporter(folder string, opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem) {
-	if assemblers.GetMemoryProfilingEnabled() {
-		diagnose.StartMemoryProfiler(
-			os.Getenv(assemblers.MemoryProfilingDumpPath),
-			os.Getenv(assemblers.MemoryProfilingTimeIntervalSeconds))
-	}
-
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 	diagnose.InitializeWorkerInternalStats()
 

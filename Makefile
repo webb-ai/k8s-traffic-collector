@@ -39,7 +39,7 @@ run-tls: setcap ## Run the program with TLS capture enabled. Requires Hub being 
 		./worker -i any -port 8897 -debug -tls
 
 run-pprof: setcap ## Run the program. Requires Hub being available on port 8898
-	MEMORY_PROFILING_ENABLED=true MEMORY_PROFILING_DUMP_PATH=pprof MEMORY_PROFILING_TIME_INTERVAL=10 ./worker -i any -port 8897 -debug
+	MEMORY_PROFILING_ENABLED=true MEMORY_PROFILING_DUMP_PATH=pprof MEMORY_PROFILING_INTERVAL_SECONDS=10 ./worker -i any -port 8897 -debug
 
 open-pprof: ## Open the latest profile
 	go tool pprof -http :9999 -edgefraction 0 -nodefraction 0 -nodecount 100000 pprof/$(shell ls -t pprof | head -n1)

@@ -33,12 +33,6 @@ func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan 
 		}
 	}
 
-	if assemblers.GetMemoryProfilingEnabled() {
-		diagnose.StartMemoryProfiler(
-			os.Getenv(assemblers.MemoryProfilingDumpPath),
-			os.Getenv(assemblers.MemoryProfilingTimeIntervalSeconds))
-	}
-
 	assembler := initializeWorker(opts, outputItems, streamsMap)
 	go startAssembler(streamsMap, assembler)
 }
