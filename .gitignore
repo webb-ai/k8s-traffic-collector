@@ -37,3 +37,6 @@ worker
 
 # Import directory
 import/
+
+# Profiling directory
+pprof/

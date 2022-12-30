@@ -41,7 +41,7 @@ func GetMaxBufferedPagesPerConnection() int {
 }
 
 func GetMemoryProfilingEnabled() bool {
-	return os.Getenv(MemoryProfilingEnabledEnvVarName) == "1"
+	return os.Getenv(MemoryProfilingEnabledEnvVarName) != ""
 }
 
 func GetTcpChannelTimeoutMs() time.Duration {

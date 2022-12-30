@@ -230,7 +230,7 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		resolvedSourceObject := resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
 		if resolvedSourceObject == nil {
 			log.Debug().Str("source", unresolvedSource).Msg("Cannot find resolved name!")
-			if os.Getenv("SKIP_NOT_RESOLVED_SOURCE") == "1" {
+			if os.Getenv("SKIP_NOT_RESOLVED_SOURCE") != "" {
 				return
 			}
 		} else {
@@ -242,7 +242,7 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		resolvedDestinationObject := resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
 		if resolvedDestinationObject == nil {
 			log.Debug().Str("destination", unresolvedDestination).Msg("Cannot find resolved name!")
-			if os.Getenv("SKIP_NOT_RESOLVED_DEST") == "1" {
+			if os.Getenv("SKIP_NOT_RESOLVED_DEST") != "" {
 				return
 			}
 		} else {

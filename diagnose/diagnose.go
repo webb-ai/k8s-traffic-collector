@@ -37,7 +37,7 @@ func StartMemoryProfiler(envDumpPath string, envTimeInterval string) {
 		for {
 			t := time.Now()
 
-			filename := fmt.Sprintf("%s/%s__mem.prof", dumpPath, t.Format("15_04_05"))
+			filename := fmt.Sprintf("%s/%s__mem.prof", dumpPath, t.Format(time.RFC3339))
 
 			log.Info().Str("file", filename).Msg("Writing memory profile to:")
 
