@@ -19,7 +19,7 @@ var TracerInstance *tracer.Tracer                   // global
 func UpdatePods(pods []v1.Pod, procfs string) {
 	success := true
 
-	misc.TargettedPods = pods
+	misc.TargetedPods = pods
 
 	if PacketSourceManager != nil {
 		PacketSourceManager.UpdatePods(pods, MainPacketInputChan)
@@ -37,14 +37,14 @@ func UpdatePods(pods []v1.Pod, procfs string) {
 
 func printNewTargets(success bool) {
 	printStr := ""
-	for _, pod := range misc.TargettedPods {
+	for _, pod := range misc.TargetedPods {
 		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
 	}
 	printStr = strings.TrimRight(printStr, ", ")
 
 	if success {
-		log.Info().Msg(fmt.Sprintf("Now targetting: %s", printStr))
+		log.Info().Msg(fmt.Sprintf("Now targeting: %s", printStr))
 	} else {
-		log.Error().Msg(fmt.Sprintf("Failed to start targetting: %s", printStr))
+		log.Error().Msg(fmt.Sprintf("Failed to start targeting: %s", printStr))
 	}
 }

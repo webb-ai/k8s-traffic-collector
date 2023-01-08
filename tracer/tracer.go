@@ -204,7 +204,7 @@ func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string
 		return err
 	}
 
-	log.Info().Msg(fmt.Sprintf("Targetting TLS (pid: %v) (libssl: %v)", pid, sslLibrary))
+	log.Info().Msg(fmt.Sprintf("Targeting TLS (pid: %v) (libssl: %v)", pid, sslLibrary))
 
 	t.sslHooksStructs = append(t.sslHooksStructs, newSsl)
 
@@ -234,7 +234,7 @@ func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error 
 		return nil // hide the error on purpose, its OK for a process to be not a Go binary or stripped Go binary
 	}
 
-	log.Info().Msg(fmt.Sprintf("Targetting TLS (pid: %v) (Go: %v)", pid, exePath))
+	log.Info().Msg(fmt.Sprintf("Targeting TLS (pid: %v) (Go: %v)", pid, exePath))
 
 	t.goHooksStructs = append(t.goHooksStructs, hooks)
 

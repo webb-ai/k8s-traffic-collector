@@ -61,15 +61,15 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 	dstPort := transport.Dst().String()
 
 	props := factory.getStreamProps(srcIp, srcPort, dstIp, dstPort)
-	isTargetted := props.isTargetted
-	stream := NewTcpStream(factory.pcapId, factory.identifyMode, isTargetted, factory.streamsMap)
+	isTargeted := props.isTargeted
+	stream := NewTcpStream(factory.pcapId, factory.identifyMode, isTargeted, factory.streamsMap)
 	var emitter api.Emitter = &api.Emitting{
 		AppStats:      &diagnose.AppStats,
 		Stream:        stream,
 		OutputChannel: factory.outputChannel,
 	}
 	reassemblyStream := NewTcpReassemblyStream(fmt.Sprintf("%s:%s", net, transport), tcpLayer, fsmOptions, stream)
-	if stream.GetIsTargetted() {
+	if stream.GetIsTargeted() {
 		stream.setId(factory.streamsMap.NextId())
 		for _, extension := range extensions.Extensions {
 			counterPair := &api.CounterPair{
@@ -137,22 +137,22 @@ func inArrayPod(pods []v1.Pod, address string) bool {
 
 func (factory *tcpStreamFactory) getStreamProps(srcIP string, srcPort string, dstIP string, dstPort string) *streamProps {
 	if factory.opts.ClusterMode {
-		if inArrayPod(misc.TargettedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
-			return &streamProps{isTargetted: true, isOutgoing: false}
-		} else if inArrayPod(misc.TargettedPods, dstIP) {
-			return &streamProps{isTargetted: true, isOutgoing: false}
-		} else if inArrayPod(misc.TargettedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
-			return &streamProps{isTargetted: true, isOutgoing: true}
-		} else if inArrayPod(misc.TargettedPods, srcIP) {
-			return &streamProps{isTargetted: true, isOutgoing: true}
+		if inArrayPod(misc.TargetedPods, fmt.Sprintf("%s:%s", dstIP, dstPort)) {
+			return &streamProps{isTargeted: true, isOutgoing: false}
+		} else if inArrayPod(misc.TargetedPods, dstIP) {
+			return &streamProps{isTargeted: true, isOutgoing: false}
+		} else if inArrayPod(misc.TargetedPods, fmt.Sprintf("%s:%s", srcIP, srcPort)) {
+			return &streamProps{isTargeted: true, isOutgoing: true}
+		} else if inArrayPod(misc.TargetedPods, srcIP) {
+			return &streamProps{isTargeted: true, isOutgoing: true}
 		}
-		return &streamProps{isTargetted: false, isOutgoing: false}
+		return &streamProps{isTargeted: false, isOutgoing: false}
 	} else {
-		return &streamProps{isTargetted: true}
+		return &streamProps{isTargeted: true}
 	}
 }
 
 type streamProps struct {
-	isTargetted bool
-	isOutgoing  bool
+	isTargeted bool
+	isOutgoing bool
 }

@@ -14,7 +14,7 @@ type Opts struct {
 	StaleConnectionTimeout time.Duration
 }
 
-var TargettedPods []v1.Pod // global
+var TargetedPods []v1.Pod // global
 
 var Snaplen int = 65536
 

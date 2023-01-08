@@ -149,7 +149,7 @@ func (t *tlsStream) GetReqResMatchers() []api.RequestResponseMatcher {
 	return t.reqResMatchers
 }
 
-func (t *tlsStream) GetIsTargetted() bool {
+func (t *tlsStream) GetIsTargeted() bool {
 	return true
 }
 

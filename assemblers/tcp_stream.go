@@ -25,7 +25,7 @@ type tcpStream struct {
 	emittable      bool
 	isClosed       bool
 	protocol       *api.Protocol
-	isTargetted    bool
+	isTargeted     bool
 	client         *tcpReader
 	server         *tcpReader
 	counterPairs   []*api.CounterPair
@@ -37,11 +37,11 @@ type tcpStream struct {
 	sync.Mutex
 }
 
-func NewTcpStream(pcapId string, identifyMode bool, isTargetted bool, streamsMap api.TcpStreamMap) *tcpStream {
+func NewTcpStream(pcapId string, identifyMode bool, isTargeted bool, streamsMap api.TcpStreamMap) *tcpStream {
 	t := &tcpStream{
 		pcapId:       pcapId,
 		identifyMode: identifyMode,
-		isTargetted:  isTargetted,
+		isTargeted:   isTargeted,
 		streamsMap:   streamsMap,
 		createdAt:    time.Now(),
 	}
@@ -159,8 +159,8 @@ func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
 	return t.reqResMatchers
 }
 
-func (t *tcpStream) GetIsTargetted() bool {
-	return t.isTargetted
+func (t *tcpStream) GetIsTargeted() bool {
+	return t.isTargeted
 }
 
 func (t *tcpStream) GetIsClosed() bool {

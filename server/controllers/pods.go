@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-func PostSetTargetted(c *gin.Context, procfs string) {
+func PostSetTargeted(c *gin.Context, procfs string) {
 	var pods []v1.Pod
 	if err := c.Bind(&pods); err != nil {
 		c.JSON(http.StatusBadRequest, err)

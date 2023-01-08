@@ -114,7 +114,7 @@ func initializePacketSources() error {
 	}
 
 	var err error
-	target.PacketSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargettedPods, *packetCapture, target.MainPacketInputChan)
+	target.PacketSourceManager, err = source.NewPacketSourceManager(*procfs, *iface, *servicemesh, misc.TargetedPods, *packetCapture, target.MainPacketInputChan)
 	return err
 }
 
@@ -176,7 +176,7 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 		return nil
 	}
 
-	if err := tracer.UpdateTargets(&tls, &misc.TargettedPods, *procfs); err != nil {
+	if err := tracer.UpdateTargets(&tls, &misc.TargetedPods, *procfs); err != nil {
 		tracer.LogError(err)
 		return nil
 	}

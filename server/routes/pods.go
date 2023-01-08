@@ -8,7 +8,7 @@ import (
 func PodsRoutes(ginApp *gin.Engine, procfs string) {
 	routeGroup := ginApp.Group("/pods")
 
-	routeGroup.POST("/set-targetted", func(c *gin.Context) {
-		controllers.PostSetTargetted(c, procfs)
+	routeGroup.POST("/set-targeted", func(c *gin.Context) {
+		controllers.PostSetTargeted(c, procfs)
 	})
 }

@@ -137,7 +137,7 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 		if len(data) > 2+int(dnsSize) {
 			sg.KeepFrom(2 + int(dnsSize))
 		}
-	} else if t.tcpStream.GetIsTargetted() {
+	} else if t.tcpStream.GetIsTargeted() {
 		if length > 0 {
 			// This is where we pass the reassembled information onwards
 			// This channel is read by an tcpReader object
@@ -153,7 +153,7 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 }
 
 func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext) bool {
-	if t.tcpStream.GetIsTargetted() && !t.tcpStream.GetIsClosed() {
+	if t.tcpStream.GetIsTargeted() && !t.tcpStream.GetIsClosed() {
 		t.tcpStream.close()
 	}
 
@@ -161,7 +161,7 @@ func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext)
 }
 
 func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
-	if t.tcpStream.GetIsTargetted() && t.tcpStream.GetIsIdentifyMode() {
+	if t.tcpStream.GetIsTargeted() && t.tcpStream.GetIsIdentifyMode() {
 		t.writeWithEthernetLayer(packet)
 	}
 }
