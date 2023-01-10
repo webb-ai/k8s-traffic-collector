@@ -54,7 +54,7 @@ func GetPcapPath(id string) string {
 }
 
 func BuildPcapPath(id int64) string {
-	return fmt.Sprintf("%s/tcp_stream_%09d.pcap", GetPcapsDir(), id)
+	return fmt.Sprintf("%s/%012d.pcap", GetPcapsDir(), id)
 }
 
 func BuildTmpPcapPath(id int64) string {
@@ -62,11 +62,15 @@ func BuildTmpPcapPath(id int64) string {
 }
 
 func BuildTlsPcapPath(id int64) string {
-	return fmt.Sprintf("%s/tcp_stream_%09d_tls.pcap", GetPcapsDir(), id)
+	return fmt.Sprintf("%s/%012d_tls.pcap", GetPcapsDir(), id)
 }
 
 func BuildTlsTmpPcapPath(id int64) string {
 	return fmt.Sprintf("%stmp", BuildTlsPcapPath(id))
+}
+
+func BuildDnsPcapPath(id int64) string {
+	return fmt.Sprintf("%s/%012d_dns.pcap", GetPcapsDir(), id)
 }
 
 func CleanUpTmpPcaps() error {

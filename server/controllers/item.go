@@ -44,7 +44,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 	packets := make(chan source.TcpPacketInfo)
 	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
 	if err != nil {
-		log.Error().Err(err).Str("pcap", id).Msg("Failed to create TCP packet source!")
+		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")
 		c.JSON(http.StatusNotFound, nil)
 		return
 	}

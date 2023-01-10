@@ -103,7 +103,7 @@ func handlePcapFile(id string, outputChannel chan *api.OutputChannelItem, opts *
 	pcapPath := misc.GetPcapPath(id)
 	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
 	if err != nil {
-		log.Error().Err(err).Str("pcap", id).Msg("Failed to create TCP packet source!")
+		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")
 		return
 	}
 	go s.ReadPackets(packets)

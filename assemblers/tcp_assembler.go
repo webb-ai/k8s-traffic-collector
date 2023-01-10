@@ -32,6 +32,7 @@ type TcpAssembler struct {
 	*reassembly.Assembler
 	streamPool             *reassembly.StreamPool
 	streamFactory          *tcpStreamFactory
+	dnsFactory             *dnsFactory
 	staleConnectionTimeout time.Duration
 	stats                  AssemblerStats
 }
@@ -55,6 +56,8 @@ func NewTcpAssembler(pcapId string, identifyMode bool, outputChannel chan *api.O
 	a.streamFactory = NewTcpStreamFactory(pcapId, identifyMode, outputChannel, streamsMap, opts)
 	a.streamPool = reassembly.NewStreamPool(a.streamFactory)
 	a.Assembler = reassembly.NewAssembler(a.streamPool)
+
+	a.dnsFactory = NewDnsFactory(pcapId, identifyMode, outputChannel, streamsMap)
 
 	maxBufferedPagesTotal := GetMaxBufferedPagesPerConnection()
 	maxBufferedPagesPerConnection := GetMaxBufferedPagesTotal()
@@ -107,11 +110,16 @@ func (a *TcpAssembler) ProcessPacket(packetInfo source.TcpPacketInfo, dumpPacket
 
 	tcp := packet.Layer(layers.LayerTypeTCP)
 	if tcp != nil {
-		a.processTcpPacket(packet, tcp.(*layers.TCP))
+		a.processTCPPacket(packet, tcp.(*layers.TCP))
+	}
+
+	dns := packet.Layer(layers.LayerTypeDNS)
+	if dns != nil {
+		a.processDNSPacket(packet, dns.(*layers.DNS))
 	}
 }
 
-func (a *TcpAssembler) processTcpPacket(packet gopacket.Packet, tcp *layers.TCP) {
+func (a *TcpAssembler) processTCPPacket(packet gopacket.Packet, tcp *layers.TCP) {
 	diagnose.AppStats.IncTcpPacketsCount()
 
 	c := context{
@@ -119,6 +127,13 @@ func (a *TcpAssembler) processTcpPacket(packet gopacket.Packet, tcp *layers.TCP)
 	}
 	diagnose.InternalStats.Totalsz += len(tcp.Payload)
 	a.AssembleWithContext(packet, tcp, &c)
+}
+
+func (a *TcpAssembler) processDNSPacket(packet gopacket.Packet, dns *layers.DNS) {
+	diagnose.AppStats.IncDnsPacketsCount()
+
+	a.dnsFactory.writePacket(packet, dns.ID)
+	a.dnsFactory.emitItem(packet, dns)
 }
 
 func (a *TcpAssembler) DumpStreamPool() {
