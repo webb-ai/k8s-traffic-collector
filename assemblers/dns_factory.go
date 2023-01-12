@@ -149,10 +149,6 @@ func (factory *dnsFactory) writeWithEthernetLayer(packet gopacket.Packet, pcap *
 }
 
 func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
-	if factory.identifyMode {
-		return
-	}
-
 	connetionInfo := &api.ConnectionInfo{}
 
 	// IPv4 layer
@@ -217,5 +213,14 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		},
 	}
 
-	factory.outputChannel <- &item
+	if !factory.identifyMode {
+		factory.outputChannel <- &item
+	} else {
+		pcap := factory.pcapMap[dns.ID]
+		pcap.Close()
+
+		delete(factory.idMap, dns.ID)
+		delete(factory.pcapMap, dns.ID)
+		delete(factory.pcapWriterMap, dns.ID)
+	}
 }
