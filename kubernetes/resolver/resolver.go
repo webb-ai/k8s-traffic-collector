@@ -166,7 +166,7 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 			}
 			if event.Type == watch.Deleted {
 				pod := event.Object.(*corev1.Pod)
-				resolver.saveResolvedName(pod.Status.PodIP, "", pod.Namespace, event.Type)
+				resolver.SaveResolvedName(pod.Status.PodIP, "", pod.Namespace, event.Type)
 			}
 		case <-ctx.Done():
 			watcher.Stop()
@@ -201,10 +201,10 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 					}
 					if subset.Addresses != nil {
 						for _, address := range subset.Addresses {
-							resolver.saveResolvedName(address.IP, serviceHostname, endpoint.Namespace, event.Type)
+							resolver.SaveResolvedName(address.IP, serviceHostname, endpoint.Namespace, event.Type)
 							for _, port := range ports {
 								ipWithPort := fmt.Sprintf("%s:%d", address.IP, port)
-								resolver.saveResolvedName(ipWithPort, serviceHostname, endpoint.Namespace, event.Type)
+								resolver.SaveResolvedName(ipWithPort, serviceHostname, endpoint.Namespace, event.Type)
 							}
 						}
 					}
@@ -234,11 +234,11 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			service := event.Object.(*corev1.Service)
 			serviceHostname := fmt.Sprintf("%s.%s", service.Name, service.Namespace)
 			if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != kubClientNullString {
-				resolver.saveResolvedName(service.Spec.ClusterIP, serviceHostname, service.Namespace, event.Type)
+				resolver.SaveResolvedName(service.Spec.ClusterIP, serviceHostname, service.Namespace, event.Type)
 				if service.Spec.Ports != nil {
 					for _, port := range service.Spec.Ports {
 						if port.Port > 0 {
-							resolver.saveResolvedName(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), serviceHostname, service.Namespace, event.Type)
+							resolver.SaveResolvedName(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), serviceHostname, service.Namespace, event.Type)
 						}
 					}
 				}
@@ -246,7 +246,7 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			}
 			if service.Status.LoadBalancer.Ingress != nil {
 				for _, ingress := range service.Status.LoadBalancer.Ingress {
-					resolver.saveResolvedName(ingress.IP, serviceHostname, service.Namespace, event.Type)
+					resolver.SaveResolvedName(ingress.IP, serviceHostname, service.Namespace, event.Type)
 				}
 			}
 		case <-ctx.Done():
@@ -256,13 +256,12 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 	}
 }
 
-func (resolver *Resolver) saveResolvedName(key string, resolved string, namespace string, eventType watch.EventType) {
+func (resolver *Resolver) SaveResolvedName(key string, resolved string, namespace string, eventType watch.EventType) {
 	if eventType == watch.Deleted {
 		resolver.nameMap.Delete(resolved)
 		resolver.nameMap.Delete(key)
 		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
 	} else {
-
 		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		resolver.nameMap.Store(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))

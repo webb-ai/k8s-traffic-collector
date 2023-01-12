@@ -10,9 +10,11 @@ import (
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
+	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
 	"github.com/rs/zerolog/log"
+	"k8s.io/apimachinery/pkg/watch"
 )
 
 type dnsFactory struct {
@@ -216,6 +218,10 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 	if !factory.identifyMode {
 		factory.outputChannel <- &item
 	} else {
+		if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
+			resolver.K8sResolver.SaveResolvedName(dns.Answers[0].IP.String(), string(dns.Questions[0].Name), "", watch.Added)
+		}
+
 		pcap := factory.pcapMap[dns.ID]
 		pcap.Close()
 
