@@ -49,7 +49,7 @@ func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
 		if !ok {
 			id := factory.streamsMap.NextId()
 
-			pcapPath := misc.BuildDnsPcapPath(id)
+			pcapPath := misc.BuildUdpPcapPath(id)
 			log.Debug().Str("file", pcapPath).Msg("Dumping DNS stream:")
 
 			pcap, err = os.OpenFile(pcapPath, os.O_CREATE|os.O_WRONLY, 0644)

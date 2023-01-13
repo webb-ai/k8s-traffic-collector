@@ -5,6 +5,8 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kubeshark/gopacket"
@@ -14,6 +16,13 @@ import (
 )
 
 const ignoringPacketMsg string = "Ignoring packet:"
+
+type StreamType string
+
+const (
+	TCP StreamType = "tcp"
+	UDP StreamType = "udp"
+)
 
 func sendPerPacket(reader *pcapgo.Reader, packets chan<- gopacket.Packet, delayGrace time.Duration) error {
 	var last time.Time
@@ -57,9 +66,14 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 		return err
 	}
 
-	log.Debug().Str("host", host).Str("port", port).Msg("Establishing a new TCP connection...")
+	var streamType = TCP
+	if strings.HasSuffix(pcapPath[:len(pcapPath)-len(filepath.Ext(pcapPath))], "_udp") {
+		streamType = UDP
+	}
 
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%s", host, port))
+	log.Debug().Str("host", host).Str("port", port).Msg(fmt.Sprintf("Establishing a new %s connection...", strings.ToUpper(string(streamType))))
+
+	conn, err := net.Dial(string(streamType), fmt.Sprintf("%s:%s", host, port))
 	if err != nil {
 		return err
 	}
@@ -84,13 +98,32 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 				continue
 			}
 
-			// TCP layer
-			tcpLayer := packet.Layer(layers.LayerTypeTCP)
-			if tcpLayer == nil {
-				log.Debug().Str("reason", "Missing TCP layer").Msg(ignoringPacketMsg)
+			switch streamType {
+			case TCP:
+				// TCP layer
+				tcpLayer := packet.Layer(layers.LayerTypeTCP)
+				if tcpLayer == nil {
+					log.Debug().Str(
+						"reason",
+						fmt.Sprintf("Missing %s layer", strings.ToUpper(string(streamType))),
+					).Msg(ignoringPacketMsg)
+					continue
+				}
+				dstPort = fmt.Sprintf("%d", tcpLayer.(*layers.TCP).DstPort)
+			case UDP:
+				// UDP layer
+				udpLayer := packet.Layer(layers.LayerTypeUDP)
+				if udpLayer == nil {
+					log.Debug().Str(
+						"reason",
+						fmt.Sprintf("Missing %s layer", strings.ToUpper(string(streamType))),
+					).Msg(ignoringPacketMsg)
+					continue
+				}
+				dstPort = fmt.Sprintf("%d", udpLayer.(*layers.UDP).DstPort)
+			default:
 				continue
 			}
-			dstPort = fmt.Sprintf("%d", tcpLayer.(*layers.TCP).DstPort)
 
 			if dstHost != host || dstPort != port {
 				log.Debug().Str("dst-host", dstHost).Str("dst-port", dstPort).Msg(ignoringPacketMsg)
