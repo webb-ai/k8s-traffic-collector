@@ -230,9 +230,6 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		resolvedSourceObject := resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
 		if resolvedSourceObject == nil {
 			log.Debug().Str("source", unresolvedSource).Msg("Cannot find resolved name!")
-			if os.Getenv("SKIP_NOT_RESOLVED_SOURCE") != "" {
-				return
-			}
 		} else {
 			resolvedSource = resolvedSourceObject.FullAddress
 			namespace = resolvedSourceObject.Namespace
@@ -241,10 +238,12 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		unresolvedDestination := fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
 		resolvedDestinationObject := resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
 		if resolvedDestinationObject == nil {
+			unresolvedDestination = connectionInfo.ServerIP
+			resolvedDestinationObject = resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
+		}
+
+		if resolvedDestinationObject == nil {
 			log.Debug().Str("destination", unresolvedDestination).Msg("Cannot find resolved name!")
-			if os.Getenv("SKIP_NOT_RESOLVED_DEST") != "" {
-				return
-			}
 		} else {
 			resolvedDestination = resolvedDestinationObject.FullAddress
 			// Overwrite namespace (if it was set according to the source)
