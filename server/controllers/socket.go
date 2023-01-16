@@ -55,7 +55,8 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal().Err(err).Msg("NewWatcher failed:")
+		log.Error().Err(err).Msg("NewWatcher failed:")
+		return
 	}
 	defer watcher.Close()
 
@@ -77,7 +78,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 				if !ok {
 					return
 				}
-				log.Fatal().Err(err).Msg("Watcher error:")
+				log.Warn().Err(err).Msg("Watcher error:")
 			case <-quit:
 				return
 			}
@@ -87,7 +88,8 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 
 	err = watcher.Add(misc.GetPcapsDir())
 	if err != nil {
-		log.Fatal().Err(err).Msg("Add failed:")
+		log.Error().Err(err).Msg("Add failed:")
+		return
 	}
 	<-done
 }
