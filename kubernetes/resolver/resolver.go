@@ -83,7 +83,7 @@ func (resolver *Resolver) updateNameResolutionHistory() {
 		return true
 	})
 	resolver.nameMapHistory.Store(time.Now().Unix(), nameMap)
-	log.Info().Msg("Updated the name resolution history.")
+	log.Debug().Msg("Updated the name resolution history.")
 }
 
 func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration) {
@@ -260,11 +260,11 @@ func (resolver *Resolver) SaveResolvedName(key string, resolved string, namespac
 	if eventType == watch.Deleted {
 		resolver.nameMap.Delete(resolved)
 		resolver.nameMap.Delete(key)
-		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
+		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
 	} else {
 		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
 		resolver.nameMap.Store(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
+		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
 	}
 
 	resolver.updateNameResolutionHistory()
@@ -275,7 +275,7 @@ func (resolver *Resolver) saveServiceIP(key string, resolved string, namespace s
 		resolver.serviceMap.Delete(key)
 	} else {
 		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		log.Info().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
+		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
 
 		resolver.updateNameResolutionHistory()
 	}
