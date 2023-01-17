@@ -125,8 +125,14 @@ func GetReplay(c *gin.Context) {
 		return
 	}
 
+	concurrency := true
+	concurrent := c.Query("concurrent")
+	if concurrent == "" || concurrent == "false" {
+		concurrency = false
+	}
+
 	pcapPath := misc.GetPcapPath(id)
-	err = replay.Replay(pcapPath, host, port, count, delay)
+	err = replay.Replay(pcapPath, host, port, count, delay, concurrency)
 	if err != nil {
 		log.Error().Str("path", pcapPath).Err(err).Msg("Couldn't replay the PCAP:")
 		c.JSON(http.StatusInternalServerError, err)

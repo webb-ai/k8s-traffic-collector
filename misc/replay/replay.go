@@ -51,9 +51,10 @@ func sendPerPacket(reader *pcapgo.Reader, packets chan<- gopacket.Packet, delayG
 	return nil
 }
 
-func replay(pcapPath string, host string, port string, delay uint64) error {
+func replay(pcapPath string, host string, port string, delayGrace time.Duration) error {
 	f, err := os.Open(pcapPath)
 	if err != nil {
+		log.Error().Err(err).Send()
 		return err
 	}
 	defer f.Close()
@@ -63,6 +64,7 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 
 	reader, err := pcapgo.NewReader(f)
 	if err != nil {
+		log.Error().Err(err).Send()
 		return err
 	}
 
@@ -75,6 +77,7 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 
 	conn, err := net.Dial(string(streamType), fmt.Sprintf("%s:%s", host, port))
 	if err != nil {
+		log.Error().Err(err).Send()
 		return err
 	}
 
@@ -151,7 +154,7 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 		}
 	}()
 
-	err = sendPerPacket(reader, packets, time.Duration(delay)*time.Microsecond)
+	err = sendPerPacket(reader, packets, delayGrace)
 	if err != nil {
 		log.Error().Err(err).Msg("Replay send packet error:")
 		return err
@@ -160,14 +163,23 @@ func replay(pcapPath string, host string, port string, delay uint64) error {
 	return nil
 }
 
-func Replay(pcapPath string, host string, port string, count uint64, delay uint64) error {
+func Replay(pcapPath string, host string, port string, count uint64, delay uint64, concurrency bool) error {
+	delayGrace := time.Duration(delay) * time.Microsecond
 	for count > 0 {
 		log.Debug().Int("countdown", int(count)).Str("pcap", pcapPath).Msg("Replaying PCAP:")
 		count--
 
-		err := replay(pcapPath, host, port, delay)
-		if err != nil {
-			return err
+		if concurrency {
+			go replay(pcapPath, host, port, delayGrace) //nolint
+
+			if count > 0 {
+				time.Sleep(delayGrace)
+			}
+		} else {
+			err := replay(pcapPath, host, port, delayGrace)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
