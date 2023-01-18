@@ -101,7 +101,7 @@ func (source *TcpPacketSource) Stats() (packetsReceived uint, packetsDropped uin
 	return source.Handle.Stats()
 }
 
-func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo) {
+func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClose bool) {
 	log.Debug().Str("source", source.name).Msg("Start reading packets from:")
 
 	for {
@@ -109,8 +109,10 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo) {
 
 		if err == io.EOF {
 			log.Debug().Str("source", source.name).Msg("Got EOF while reading packets from:")
-			close(packets)
-			log.Debug().Str("source", source.name).Msg("Closed packet channel because of EOF.")
+			if !dontClose {
+				close(packets)
+				log.Debug().Str("source", source.name).Msg("Closed packet channel because of EOF.")
+			}
 			return
 		} else if err != nil {
 			if err.Error() != "Timeout Expired" {

@@ -48,7 +48,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 		c.JSON(http.StatusNotFound, nil)
 		return
 	}
-	go s.ReadPackets(packets)
+	go s.ReadPackets(packets, false)
 
 	assembler := assemblers.NewTcpAssembler(id, false, outputChannel, streamsMap, opts)
 	go func() {
