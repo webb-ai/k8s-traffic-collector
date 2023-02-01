@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,12 +11,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/kubeshark/base/pkg/api"
-	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/base/pkg/languages/kfl"
 	"github.com/kubeshark/worker/assemblers"
-	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
+	"github.com/kubeshark/worker/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -154,7 +152,7 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			continue
 		}
 
-		entry := itemToEntry(finalItem)
+		entry := utils.ItemToEntry(finalItem)
 		entry.Worker = worker
 		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
 		entry.Node.Name = node
@@ -189,7 +187,7 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			continue
 		}
 
-		baseEntry := summarizeEntry(alteredEntry)
+		baseEntry := utils.SummarizeEntry(alteredEntry)
 
 		summary, err := json.Marshal(baseEntry)
 		if err != nil {
@@ -206,54 +204,4 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 
 		counter++
 	}
-}
-
-func itemToEntry(item *api.OutputChannelItem) *api.Entry {
-	extension := extensions.ExtensionsMap[item.Protocol.Name]
-
-	resolvedSource, resolvedDestination, namespace := resolveIP(item.ConnectionInfo, item.Timestamp)
-
-	if namespace == "" && item.Namespace != api.UnknownNamespace {
-		namespace = item.Namespace
-	}
-
-	return extension.Dissector.Analyze(item, resolvedSource, resolvedDestination, namespace)
-}
-
-func summarizeEntry(entry *api.Entry) *api.BaseEntry {
-	extension := extensions.ExtensionsMap[entry.Protocol.Name]
-
-	return extension.Dissector.Summarize(entry)
-}
-
-func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSource string, resolvedDestination string, namespace string) {
-	if resolver.K8sResolver != nil {
-		unresolvedSource := connectionInfo.ClientIP
-		resolvedSourceObject := resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
-		if resolvedSourceObject == nil {
-			log.Debug().Str("source", unresolvedSource).Msg("Cannot find resolved name!")
-		} else {
-			resolvedSource = resolvedSourceObject.FullAddress
-			namespace = resolvedSourceObject.Namespace
-		}
-
-		unresolvedDestination := fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
-		resolvedDestinationObject := resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
-		if resolvedDestinationObject == nil {
-			unresolvedDestination = connectionInfo.ServerIP
-			resolvedDestinationObject = resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
-		}
-
-		if resolvedDestinationObject == nil {
-			log.Debug().Str("destination", unresolvedDestination).Msg("Cannot find resolved name!")
-		} else {
-			resolvedDestination = resolvedDestinationObject.FullAddress
-			// Overwrite namespace (if it was set according to the source)
-			// Only overwrite if non-empty
-			if resolvedDestinationObject.Namespace != "" {
-				namespace = resolvedDestinationObject.Namespace
-			}
-		}
-	}
-	return resolvedSource, resolvedDestination, namespace
 }

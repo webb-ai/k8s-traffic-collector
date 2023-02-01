@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/server"
+	"github.com/kubeshark/worker/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/rest"
@@ -75,8 +78,30 @@ func run() {
 		startImporter(*folder, opts, streamsMap, outputItems)
 	} else {
 		startWorker(opts, streamsMap, outputItems, extensions.Extensions)
+		go handleCapturedItems(outputItems)
 	}
 
 	ginApp := server.Build(opts, *procfs)
 	server.Start(ginApp, *port)
+}
+
+func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
+	for item := range outputItems {
+		// TODO: The previously bad design forces us to Marshal and Unmarshal
+		data, err := json.Marshal(item)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed marshalling item:")
+			continue
+		}
+		var finalItem *api.OutputChannelItem
+		err = json.Unmarshal(data, &finalItem)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed unmarshalling item:")
+			continue
+		}
+
+		entry := utils.ItemToEntry(finalItem)
+		// TODO: vm.Call("capturedItem", nil, Entry)
+		fmt.Printf("entry: %+v\n", entry)
+	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
+	"github.com/kubeshark/worker/utils"
 	"github.com/rs/zerolog/log"
 )
 
@@ -83,7 +84,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 			break
 		}
 
-		entry := itemToEntry(finalItem)
+		entry := utils.ItemToEntry(finalItem)
 		entry.Worker = worker
 		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
 		entry.Node.Name = node
