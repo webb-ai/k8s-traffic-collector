@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/server"
 	"github.com/kubeshark/worker/utils"
+	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/rest"
@@ -50,6 +50,7 @@ func main() {
 
 	misc.InitDataDir()
 	misc.InitAlivePcapsMap()
+	vm.Init()
 
 	run()
 }
@@ -101,7 +102,10 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		}
 
 		entry := utils.ItemToEntry(finalItem)
-		// TODO: vm.Call("capturedItem", nil, Entry)
-		fmt.Printf("entry: %+v\n", entry)
+		vm.Range(func(key, value interface{}) bool {
+			v := value.(*vm.VM)
+			v.Otto.Call("capturedItem", nil, entry)
+			return true
+		})
 	}
 }
