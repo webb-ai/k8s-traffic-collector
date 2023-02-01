@@ -31,6 +31,7 @@ func Build(opts *misc.Opts, procfs string) *gin.Engine {
 	routes.ItemRoutes(ginApp, opts)
 	routes.PodsRoutes(ginApp, procfs)
 	routes.PcapsRoutes(ginApp)
+	routes.ScriptsRoutes(ginApp)
 
 	return ginApp
 }

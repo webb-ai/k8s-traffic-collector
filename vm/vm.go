@@ -17,7 +17,7 @@ func Init() {
 	vms = &sync.Map{}
 }
 
-func CreateVM(code string) (*VM, error) {
+func Create(code string) (*VM, error) {
 	o := otto.New()
 	defineHelpers(o)
 	_, err := o.Run(code)
