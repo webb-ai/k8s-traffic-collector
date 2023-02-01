@@ -3,12 +3,13 @@ package vm
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/robertkrimen/otto"
 	"github.com/rs/zerolog/log"
 )
 
-func defineWebhookHelper(o *otto.Otto) {
+func defineWebhook(o *otto.Otto) {
 	err := o.Set("webhook", func(call otto.FunctionCall) otto.Value {
 		method := call.Argument(0).String()
 		url := call.Argument(1).String()
@@ -25,7 +26,7 @@ func defineWebhookHelper(o *otto.Otto) {
 			log.Error().Err(err).Send()
 		}
 
-		return otto.Value{}
+		return otto.UndefinedValue()
 	})
 
 	if err != nil {
@@ -33,6 +34,40 @@ func defineWebhookHelper(o *otto.Otto) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto) {
-	defineWebhookHelper(otto)
+func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
+	err := o.Set("console", map[string]interface{}{
+		"log": func(call otto.FunctionCall) otto.Value {
+			text := call.Argument(0).String()
+
+			logChannel <- &Log{
+				Script:    key,
+				Color:     "white",
+				Text:      text,
+				Timestamp: time.Now().Unix(),
+			}
+
+			return otto.UndefinedValue()
+		},
+		"error": func(call otto.FunctionCall) otto.Value {
+			text := call.Argument(0).String()
+
+			logChannel <- &Log{
+				Script:    key,
+				Color:     "red",
+				Text:      text,
+				Timestamp: time.Now().Unix(),
+			}
+
+			return otto.UndefinedValue()
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
+func defineHelpers(otto *otto.Otto, logChannel chan *Log, key int64) {
+	defineWebhook(otto)
+	defineConsole(otto, logChannel, key)
 }

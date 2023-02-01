@@ -13,10 +13,11 @@ import (
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/server/middlewares"
 	"github.com/kubeshark/worker/server/routes"
+	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
 
-func Build(opts *misc.Opts, procfs string) *gin.Engine {
+func Build(opts *misc.Opts, procfs string, logChannel chan *vm.Log) *gin.Engine {
 	ginApp := gin.New()
 	ginApp.Use(middlewares.DefaultStructuredLogger())
 	ginApp.Use(gin.Recovery())
@@ -31,7 +32,7 @@ func Build(opts *misc.Opts, procfs string) *gin.Engine {
 	routes.ItemRoutes(ginApp, opts)
 	routes.PodsRoutes(ginApp, procfs)
 	routes.PcapsRoutes(ginApp)
-	routes.ScriptsRoutes(ginApp)
+	routes.ScriptsRoutes(ginApp, logChannel)
 
 	return ginApp
 }
