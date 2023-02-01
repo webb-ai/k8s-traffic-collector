@@ -17,6 +17,7 @@ require (
 	github.com/kubeshark/gopacket v1.1.21
 	github.com/mdlayher/netlink v1.7.1
 	github.com/moby/moby v20.10.17+incompatible
+	github.com/robertkrimen/otto v0.2.1
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/struCoder/pidusage v0.2.1
@@ -75,6 +76,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/sourcemap.v1 v1.0.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.3.0 // indirect
