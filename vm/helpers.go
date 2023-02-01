@@ -41,7 +41,7 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 
 			logChannel <- &Log{
 				Script:    key,
-				Color:     "white",
+				Color:     "#ffffff",
 				Text:      text,
 				Timestamp: time.Now().Unix(),
 			}
@@ -53,7 +53,7 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 
 			logChannel <- &Log{
 				Script:    key,
-				Color:     "red",
+				Color:     "#ff0000",
 				Text:      text,
 				Timestamp: time.Now().Unix(),
 			}
