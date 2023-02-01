@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/go-errors/errors"
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/ebpf/rlimit"
+	"github.com/kubeshark/worker/api"
 	"github.com/moby/moby/pkg/parsers/kernel"
 	"github.com/rs/zerolog/log"
 )

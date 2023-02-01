@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/worker/api"
 	"github.com/rs/zerolog/log"
 )
 

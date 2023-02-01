@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/kubernetes/resolver"

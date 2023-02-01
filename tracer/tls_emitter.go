@@ -1,7 +1,7 @@
 package tracer
 
 import (
-	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/worker/api"
 )
 
 type tlsEmitter struct {

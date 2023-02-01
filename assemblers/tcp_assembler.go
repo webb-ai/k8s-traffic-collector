@@ -7,10 +7,10 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/reassembly"
+	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
