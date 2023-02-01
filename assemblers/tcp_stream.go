@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
-	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 )

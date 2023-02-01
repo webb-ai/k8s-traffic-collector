@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/gopacket/reassembly"
-	"github.com/kubeshark/worker/api"
 	"github.com/rs/zerolog/log"
 )
 

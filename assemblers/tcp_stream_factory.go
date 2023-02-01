@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kubeshark/worker/api"
+	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/worker/diagnose"
-	"github.com/kubeshark/worker/extensions"
 	"github.com/kubeshark/worker/misc"
 	v1 "k8s.io/api/core/v1"
 

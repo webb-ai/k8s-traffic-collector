@@ -8,10 +8,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/base/pkg/languages/kfl"
-	"github.com/kubeshark/worker/api"
 	"github.com/kubeshark/worker/assemblers"
-	"github.com/kubeshark/worker/extensions"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
 	"github.com/rs/zerolog/log"
