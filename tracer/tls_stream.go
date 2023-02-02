@@ -3,6 +3,7 @@ package tracer
 import (
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 
@@ -129,6 +130,7 @@ func (t *tlsStream) SetAsEmittable() {
 		if err != nil {
 			log.Error().Err(err).Str("pcap", tmpPcapPath).Msg("Couldn't rename the PCAP file:")
 		}
+		t.pcapId = filepath.Base(pcapPath)
 	}
 	t.emittable = true
 }

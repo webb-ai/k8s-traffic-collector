@@ -65,6 +65,8 @@ func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
 				}
 			}
 
+			factory.pcapId = pcapPath
+
 			factory.idMap[dnsID] = id
 			factory.pcapMap[dnsID] = pcap
 			factory.pcapWriterMap[dnsID] = pcapWriter

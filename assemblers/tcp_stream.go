@@ -2,6 +2,7 @@ package assemblers
 
 import (
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -139,6 +140,7 @@ func (t *tcpStream) SetAsEmittable() {
 		if err != nil {
 			log.Error().Err(err).Str("pcap", tmpPcapPath).Msg("Couldn't rename the PCAP file:")
 		}
+		t.pcapId = filepath.Base(pcapPath)
 	}
 	t.emittable = true
 }
