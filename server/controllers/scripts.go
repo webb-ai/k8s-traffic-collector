@@ -50,14 +50,6 @@ func DeleteScript(c *gin.Context) {
 		return
 	}
 
-	v, ok := vm.Get(i)
-	if !ok {
-		c.JSON(http.StatusNotFound, nil)
-		return
-	}
-
-	close(v.LogChannel)
-
 	vm.Delete(i)
 }
 
