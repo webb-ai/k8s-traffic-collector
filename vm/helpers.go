@@ -41,9 +41,9 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 
 			logChannel <- &Log{
 				Script:    key,
-				Color:     "#ffffff",
+				Suffix:    "",
 				Text:      text,
-				Timestamp: time.Now().Unix(),
+				Timestamp: time.Now(),
 			}
 
 			return otto.UndefinedValue()
@@ -53,9 +53,9 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 
 			logChannel <- &Log{
 				Script:    key,
-				Color:     "#ff0000",
+				Suffix:    ":ERROR",
 				Text:      text,
-				Timestamp: time.Now().Unix(),
+				Timestamp: time.Now(),
 			}
 
 			return otto.UndefinedValue()
