@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rs/zerolog/log"
 )
 
 type Log struct {
@@ -17,9 +18,12 @@ type Log struct {
 var LogSockets []*websocket.Conn
 
 func RecieveLogChannel(logChannel chan *Log) {
-	for log := range logChannel {
+	for l := range logChannel {
 		for _, ws := range LogSockets {
-			ws.WriteMessage(1, []byte(fmt.Sprintf("%d%s] %s", log.Script, log.Suffix, log.Text)))
+			err := ws.WriteMessage(1, []byte(fmt.Sprintf("%d%s] %s", l.Script, l.Suffix, l.Text)))
+			if err != nil {
+				log.Error().Err(err).Send()
+			}
 		}
 	}
 }

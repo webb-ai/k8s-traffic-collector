@@ -105,9 +105,13 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		}
 
 		entry := utils.ItemToEntry(finalItem)
+		hook := "capturedItem"
 		vm.Range(func(key, value interface{}) bool {
 			v := value.(*vm.VM)
-			v.Otto.Call("capturedItem", nil, entry)
+			_, err := v.Otto.Call(hook, nil, entry)
+			if err != nil {
+				log.Error().Err(err).Str("hook", hook).Msg("Failed calling:")
+			}
 			return true
 		})
 	}
