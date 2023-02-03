@@ -38,6 +38,9 @@ run-tls: setcap ## Run the program with TLS capture enabled. Requires Hub being 
 	KUBESHARK_GLOBAL_LIBSSL_PID=$(shell ps -ef | awk '$$8=="python3" && $$9=="tls.py" {print $$2}') \
 		./worker -i any -port 8897 -debug -tls
 
+test:
+	go test ./... -coverpkg=./... -race -coverprofile=coverage.out -covermode=atomic -v
+
 run-pprof: setcap ## Run the program. Requires Hub being available on port 8898
 	MEMORY_PROFILING_ENABLED=true MEMORY_PROFILING_DUMP_PATH=pprof MEMORY_PROFILING_INTERVAL_SECONDS=10 ./worker -i any -port 8897 -debug
 
