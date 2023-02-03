@@ -9,21 +9,31 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const HttpRequestTimeoutSecond = 5
+
 func defineWebhook(o *otto.Otto) {
 	err := o.Set("webhook", func(call otto.FunctionCall) otto.Value {
 		method := call.Argument(0).String()
 		url := call.Argument(1).String()
 		body := call.Argument(2).String()
 
-		client := &http.Client{}
+		client := &http.Client{
+			Transport: &http.Transport{
+				MaxConnsPerHost:   1,
+				DisableKeepAlives: true,
+			},
+			Timeout: time.Duration(HttpRequestTimeoutSecond) * time.Second,
+		}
 		req, err := http.NewRequest(method, url, strings.NewReader(body))
 		if err != nil {
 			log.Error().Err(err).Send()
+			return otto.UndefinedValue()
 		}
 
 		_, err = client.Do(req)
 		if err != nil {
 			log.Error().Err(err).Send()
+			return otto.UndefinedValue()
 		}
 
 		return otto.UndefinedValue()
