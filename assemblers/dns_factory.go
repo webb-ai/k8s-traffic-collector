@@ -25,9 +25,10 @@ type dnsFactory struct {
 	idMap         map[uint16]int64
 	pcapMap       map[uint16]*os.File
 	pcapWriterMap map[uint16]*pcapgo.Writer
+	opts          *misc.Opts
 }
 
-func NewDnsFactory(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *dnsFactory {
+func NewDnsFactory(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *misc.Opts) *dnsFactory {
 	return &dnsFactory{
 		pcapId:        pcapId,
 		identifyMode:  identifyMode,
@@ -36,6 +37,7 @@ func NewDnsFactory(pcapId string, identifyMode bool, outputChannel chan *api.Out
 		idMap:         make(map[uint16]int64),
 		pcapMap:       make(map[uint16]*os.File),
 		pcapWriterMap: make(map[uint16]*pcapgo.Writer),
+		opts:          opts,
 	}
 }
 
@@ -217,7 +219,23 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		},
 	}
 
+	isTargeted := !factory.opts.ClusterMode
+	if factory.opts.ClusterMode {
+		if inArrayPod(misc.TargetedPods, fmt.Sprintf("%s:%s", connetionInfo.ServerIP, connetionInfo.ServerPort)) {
+			isTargeted = true
+		} else if inArrayPod(misc.TargetedPods, connetionInfo.ServerIP) {
+			isTargeted = true
+		} else if inArrayPod(misc.TargetedPods, fmt.Sprintf("%s:%s", connetionInfo.ClientIP, connetionInfo.ClientPort)) {
+			isTargeted = true
+		} else if inArrayPod(misc.TargetedPods, connetionInfo.ClientIP) {
+			isTargeted = true
+		}
+	}
+
 	if !factory.identifyMode {
+		if !isTargeted {
+			return
+		}
 		factory.outputChannel <- &item
 	} else {
 		if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
@@ -230,5 +248,9 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		delete(factory.idMap, dns.ID)
 		delete(factory.pcapMap, dns.ID)
 		delete(factory.pcapWriterMap, dns.ID)
+
+		if !isTargeted {
+			os.Remove(misc.GetPcapPath(pcap.Name()))
+		}
 	}
 }

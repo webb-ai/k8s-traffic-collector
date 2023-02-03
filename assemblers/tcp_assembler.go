@@ -57,7 +57,7 @@ func NewTcpAssembler(pcapId string, identifyMode bool, outputChannel chan *api.O
 	a.streamPool = reassembly.NewStreamPool(a.streamFactory)
 	a.Assembler = reassembly.NewAssembler(a.streamPool)
 
-	a.dnsFactory = NewDnsFactory(pcapId, identifyMode, outputChannel, streamsMap)
+	a.dnsFactory = NewDnsFactory(pcapId, identifyMode, outputChannel, streamsMap, opts)
 
 	maxBufferedPagesTotal := GetMaxBufferedPagesPerConnection()
 	maxBufferedPagesPerConnection := GetMaxBufferedPagesTotal()
