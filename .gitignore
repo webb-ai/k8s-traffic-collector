@@ -40,3 +40,6 @@ import/
 
 # Profiling directory
 pprof/
+
+# Misc
+*.todo
