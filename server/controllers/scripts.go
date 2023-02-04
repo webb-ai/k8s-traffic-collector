@@ -10,8 +10,9 @@ import (
 )
 
 type Script struct {
-	Title string `json:"title"`
-	Code  string `json:"code"`
+	Title   string `json:"title"`
+	Code    string `json:"code"`
+	License bool   `json:"license"`
 }
 
 func PutScript(c *gin.Context, logChannel chan *vm.Log) {
@@ -28,7 +29,7 @@ func PutScript(c *gin.Context, logChannel chan *vm.Log) {
 		return
 	}
 
-	v, err := vm.Create(i, script.Code, logChannel)
+	v, err := vm.Create(i, script.Code, logChannel, script.License)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return

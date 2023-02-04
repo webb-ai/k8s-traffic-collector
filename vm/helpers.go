@@ -11,8 +11,15 @@ import (
 
 const HttpRequestTimeoutSecond = 5
 
-func defineWebhook(o *otto.Otto) {
-	err := o.Set("webhook", func(call otto.FunctionCall) otto.Value {
+func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, license bool) {
+	helperName := "webhook"
+	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
+		returnValue := otto.UndefinedValue()
+
+		if protectLicense(helperName, logChannel, scriptIndex, license) {
+			return returnValue
+		}
+
 		method := call.Argument(0).String()
 		url := call.Argument(1).String()
 		body := call.Argument(2).String()
@@ -27,16 +34,16 @@ func defineWebhook(o *otto.Otto) {
 		req, err := http.NewRequest(method, url, strings.NewReader(body))
 		if err != nil {
 			log.Error().Err(err).Send()
-			return otto.UndefinedValue()
+			return returnValue
 		}
 
 		_, err = client.Do(req)
 		if err != nil {
 			log.Error().Err(err).Send()
-			return otto.UndefinedValue()
+			return returnValue
 		}
 
-		return otto.UndefinedValue()
+		return returnValue
 	})
 
 	if err != nil {
@@ -44,13 +51,13 @@ func defineWebhook(o *otto.Otto) {
 	}
 }
 
-func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
+func defineConsole(o *otto.Otto, logChannel chan *Log, scriptIndex int64) {
 	err := o.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
 			text := call.Argument(0).String()
 
 			logChannel <- &Log{
-				Script:    key,
+				Script:    scriptIndex,
 				Suffix:    "",
 				Text:      text,
 				Timestamp: time.Now(),
@@ -62,7 +69,7 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 			text := call.Argument(0).String()
 
 			logChannel <- &Log{
-				Script:    key,
+				Script:    scriptIndex,
 				Suffix:    ":ERROR",
 				Text:      text,
 				Timestamp: time.Now(),
@@ -77,7 +84,7 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, key int64) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto, logChannel chan *Log, key int64) {
-	defineWebhook(otto)
-	defineConsole(otto, logChannel, key)
+func defineHelpers(otto *otto.Otto, logChannel chan *Log, scriptIndex int64, license bool) {
+	defineWebhook(otto, logChannel, scriptIndex, license)
+	defineConsole(otto, logChannel, scriptIndex)
 }

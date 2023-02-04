@@ -18,9 +18,9 @@ func Init() {
 	vms = &sync.Map{}
 }
 
-func Create(key int64, code string, logChannel chan *Log) (*VM, error) {
+func Create(key int64, code string, logChannel chan *Log, license bool) (*VM, error) {
 	o := otto.New()
-	defineHelpers(o, logChannel, key)
+	defineHelpers(o, logChannel, key, license)
 	_, err := o.Run(code)
 	if err != nil {
 		return nil, err

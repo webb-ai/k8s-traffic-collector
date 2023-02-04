@@ -14,7 +14,7 @@ function capturedItem(item) {
 `
 	logChannel := make(chan *Log)
 
-	v, err := Create(key, code, logChannel)
+	v, err := Create(key, code, logChannel, true)
 	if err != nil {
 		panic(err)
 	}
