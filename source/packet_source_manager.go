@@ -50,7 +50,7 @@ func NewPacketSourceManager(
 		packetCapture: packetCapture,
 	}
 
-	go hostSource.ReadPackets(packets, false)
+	go hostSource.ReadPackets(packets, false, true)
 	return sourceManager, nil
 }
 
@@ -95,7 +95,7 @@ func (m *PacketSourceManager) updateMtlsPods(procfs string, pods []v1.Pod,
 			source, err := newNetnsPacketSource(procfs, pid, interfaceName, packetCapture)
 
 			if err == nil {
-				go source.ReadPackets(packets, false)
+				go source.ReadPackets(packets, false, true)
 				m.sources[pid] = source
 			}
 		}

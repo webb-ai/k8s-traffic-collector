@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"time"
 
@@ -82,10 +83,10 @@ func run() {
 		go handleCapturedItems(outputItems)
 	}
 
-	logChannel := make(chan *vm.Log)
-	go vm.RecieveLogChannel(logChannel)
+	vm.LogChannel = make(chan *vm.Log)
+	go vm.RecieveLogChannel()
 
-	ginApp := server.Build(opts, *procfs, logChannel)
+	ginApp := server.Build(opts, *procfs)
 	server.Start(ginApp, *port)
 }
 
@@ -105,12 +106,14 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		}
 
 		entry := utils.ItemToEntry(finalItem)
+
+		// Hook: capturedItem, does not accept returns
 		hook := "capturedItem"
 		vm.Range(func(key, value interface{}) bool {
 			v := value.(*vm.VM)
 			_, err := v.Otto.Call(hook, nil, entry)
 			if err != nil {
-				log.Error().Err(err).Str("hook", hook).Msg("Failed calling:")
+				vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
 			}
 			return true
 		})

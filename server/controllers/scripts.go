@@ -15,7 +15,7 @@ type Script struct {
 	License bool   `json:"license"`
 }
 
-func PutScript(c *gin.Context, logChannel chan *vm.Log) {
+func PutScript(c *gin.Context) {
 	var script Script
 	if err := c.Bind(&script); err != nil {
 		c.JSON(http.StatusBadRequest, err)
@@ -29,7 +29,7 @@ func PutScript(c *gin.Context, logChannel chan *vm.Log) {
 		return
 	}
 
-	v, err := vm.Create(i, script.Code, logChannel, script.License)
+	v, err := vm.Create(i, script.Code, script.License)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, err)
 		return

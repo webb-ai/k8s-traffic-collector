@@ -9,27 +9,25 @@ import (
 var vms *sync.Map
 
 type VM struct {
-	Otto       *otto.Otto
-	Code       string
-	LogChannel chan *Log
+	Otto *otto.Otto
+	Code string
 }
 
 func Init() {
 	vms = &sync.Map{}
 }
 
-func Create(key int64, code string, logChannel chan *Log, license bool) (*VM, error) {
+func Create(key int64, code string, license bool) (*VM, error) {
 	o := otto.New()
-	defineHelpers(o, logChannel, key, license)
+	defineHelpers(o, key, license)
 	_, err := o.Run(code)
 	if err != nil {
 		return nil, err
 	}
 
 	return &VM{
-		Otto:       o,
-		Code:       code,
-		LogChannel: logChannel,
+		Otto: o,
+		Code: code,
 	}, nil
 }
 

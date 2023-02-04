@@ -9,6 +9,7 @@ import (
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
 
@@ -101,11 +102,41 @@ func (source *TcpPacketSource) Stats() (packetsReceived uint, packetsDropped uin
 	return source.Handle.Stats()
 }
 
-func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClose bool) {
+func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClose bool, masterCapture bool) {
 	log.Debug().Str("source", source.name).Msg("Start reading packets from:")
 
 	for {
 		packet, err := source.Handle.NextPacket()
+
+		if masterCapture {
+			// Hook: capturedPacket, accepts Object type returns
+			hook := "capturedPacket"
+			vm.Range(func(key, value interface{}) bool {
+				v := value.(*vm.VM)
+				info, err := BuildCustomPacketInfo(packet)
+				if err != nil {
+					log.Debug().Err(err).Send()
+				}
+
+				ottoValue, err := v.Otto.Call(hook, nil, info)
+				if err != nil {
+					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+					return true
+				}
+
+				if ottoValue.IsObject() {
+					newPacket, err := ottoValue.Export()
+					if err != nil {
+						vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+						return true
+					}
+
+					packet = newPacket.(gopacket.Packet)
+				}
+
+				return true
+			})
+		}
 
 		if err == io.EOF {
 			log.Debug().Str("source", source.name).Msg("Got EOF while reading packets from:")

@@ -16,9 +16,10 @@ type Log struct {
 }
 
 var LogSockets []*websocket.Conn
+var LogChannel chan *Log
 
-func RecieveLogChannel(logChannel chan *Log) {
-	for l := range logChannel {
+func RecieveLogChannel() {
+	for l := range LogChannel {
 		for _, ws := range LogSockets {
 			err := ws.WriteMessage(1, []byte(fmt.Sprintf("%d%s] %s", l.Script, l.Suffix, l.Text)))
 			if err != nil {
@@ -28,8 +29,8 @@ func RecieveLogChannel(logChannel chan *Log) {
 	}
 }
 
-func sendLog(logChannel chan *Log, scriptIndex int64, msg string) {
-	logChannel <- &Log{
+func SendLog(scriptIndex int64, msg string) {
+	LogChannel <- &Log{
 		Script:    scriptIndex,
 		Suffix:    "",
 		Text:      msg,
@@ -37,8 +38,8 @@ func sendLog(logChannel chan *Log, scriptIndex int64, msg string) {
 	}
 }
 
-func sendLogError(logChannel chan *Log, scriptIndex int64, msg string) {
-	logChannel <- &Log{
+func SendLogError(scriptIndex int64, msg string) {
+	LogChannel <- &Log{
 		Script:    scriptIndex,
 		Suffix:    ":ERROR",
 		Text:      msg,

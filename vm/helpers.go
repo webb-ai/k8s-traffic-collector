@@ -12,12 +12,12 @@ import (
 
 const HttpRequestTimeoutSecond = 5
 
-func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, license bool) {
+func defineWebhook(o *otto.Otto, scriptIndex int64, license bool) {
 	helperName := "webhook"
 	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
 		returnValue := otto.UndefinedValue()
 
-		if protectLicense(helperName, logChannel, scriptIndex, license) {
+		if protectLicense(helperName, scriptIndex, license) {
 			return returnValue
 		}
 
@@ -35,13 +35,13 @@ func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, licens
 		}
 		req, err := http.NewRequest(method, url, strings.NewReader(body))
 		if err != nil {
-			sendLogError(logChannel, scriptIndex, err.Error())
+			SendLogError(scriptIndex, err.Error())
 			return returnValue
 		}
 
 		_, err = client.Do(req)
 		if err != nil {
-			sendLogError(logChannel, scriptIndex, err.Error())
+			SendLogError(scriptIndex, err.Error())
 			return returnValue
 		}
 
@@ -49,19 +49,19 @@ func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, licens
 	})
 
 	if err != nil {
-		sendLogError(logChannel, scriptIndex, err.Error())
+		SendLogError(scriptIndex, err.Error())
 	}
 }
 
-func defineConsole(o *otto.Otto, logChannel chan *Log, scriptIndex int64) {
+func defineConsole(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
-			sendLog(logChannel, scriptIndex, call.Argument(0).String())
+			SendLog(scriptIndex, call.Argument(0).String())
 
 			return otto.UndefinedValue()
 		},
 		"error": func(call otto.FunctionCall) otto.Value {
-			sendLogError(logChannel, scriptIndex, call.Argument(0).String())
+			SendLogError(scriptIndex, call.Argument(0).String())
 
 			return otto.UndefinedValue()
 		},
@@ -72,7 +72,7 @@ func defineConsole(o *otto.Otto, logChannel chan *Log, scriptIndex int64) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto, logChannel chan *Log, scriptIndex int64, license bool) {
-	defineWebhook(otto, logChannel, scriptIndex, license)
-	defineConsole(otto, logChannel, scriptIndex)
+func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
+	defineWebhook(otto, scriptIndex, license)
+	defineConsole(otto, scriptIndex)
 }

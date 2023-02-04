@@ -3,14 +3,13 @@ package routes
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/kubeshark/worker/server/controllers"
-	"github.com/kubeshark/worker/vm"
 )
 
-func ScriptsRoutes(ginApp *gin.Engine, logChannel chan *vm.Log) {
+func ScriptsRoutes(ginApp *gin.Engine) {
 	routeGroup := ginApp.Group("/scripts")
 
 	routeGroup.PUT("/:key", func(c *gin.Context) {
-		controllers.PutScript(c, logChannel)
+		controllers.PutScript(c)
 	})
 	routeGroup.DELETE("/:key", controllers.DeleteScript)
 
