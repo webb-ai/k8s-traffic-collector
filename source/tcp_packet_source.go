@@ -109,7 +109,7 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 		packet, err := source.Handle.NextPacket()
 
 		if masterCapture {
-			// Hook: capturedPacket, accepts Object type returns
+			// Hook: capturedPacket, does not accept returns
 			hook := "capturedPacket"
 			vm.Range(func(key, value interface{}) bool {
 				v := value.(*vm.VM)
@@ -118,22 +118,10 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 					log.Debug().Err(err).Send()
 				}
 
-				ottoValue, err := v.Otto.Call(hook, nil, info)
+				_, err = v.Otto.Call(hook, nil, info)
 				if err != nil {
 					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-					return true
 				}
-
-				if ottoValue.IsObject() {
-					newPacket, err := ottoValue.Export()
-					if err != nil {
-						vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-						return true
-					}
-
-					packet = newPacket.(gopacket.Packet)
-				}
-
 				return true
 			})
 		}
