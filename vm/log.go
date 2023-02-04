@@ -27,3 +27,21 @@ func RecieveLogChannel(logChannel chan *Log) {
 		}
 	}
 }
+
+func sendLog(logChannel chan *Log, scriptIndex int64, msg string) {
+	logChannel <- &Log{
+		Script:    scriptIndex,
+		Suffix:    "",
+		Text:      msg,
+		Timestamp: time.Now(),
+	}
+}
+
+func sendLogError(logChannel chan *Log, scriptIndex int64, msg string) {
+	logChannel <- &Log{
+		Script:    scriptIndex,
+		Suffix:    ":ERROR",
+		Text:      msg,
+		Timestamp: time.Now(),
+	}
+}

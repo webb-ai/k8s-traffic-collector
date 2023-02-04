@@ -33,13 +33,13 @@ func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, licens
 		}
 		req, err := http.NewRequest(method, url, strings.NewReader(body))
 		if err != nil {
-			log.Error().Err(err).Send()
+			sendLogError(logChannel, scriptIndex, err.Error())
 			return returnValue
 		}
 
 		_, err = client.Do(req)
 		if err != nil {
-			log.Error().Err(err).Send()
+			sendLogError(logChannel, scriptIndex, err.Error())
 			return returnValue
 		}
 
@@ -47,33 +47,19 @@ func defineWebhook(o *otto.Otto, logChannel chan *Log, scriptIndex int64, licens
 	})
 
 	if err != nil {
-		log.Error().Err(err).Send()
+		sendLogError(logChannel, scriptIndex, err.Error())
 	}
 }
 
 func defineConsole(o *otto.Otto, logChannel chan *Log, scriptIndex int64) {
 	err := o.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
-			text := call.Argument(0).String()
-
-			logChannel <- &Log{
-				Script:    scriptIndex,
-				Suffix:    "",
-				Text:      text,
-				Timestamp: time.Now(),
-			}
+			sendLog(logChannel, scriptIndex, call.Argument(0).String())
 
 			return otto.UndefinedValue()
 		},
 		"error": func(call otto.FunctionCall) otto.Value {
-			text := call.Argument(0).String()
-
-			logChannel <- &Log{
-				Script:    scriptIndex,
-				Suffix:    ":ERROR",
-				Text:      text,
-				Timestamp: time.Now(),
-			}
+			sendLogError(logChannel, scriptIndex, call.Argument(0).String())
 
 			return otto.UndefinedValue()
 		},
