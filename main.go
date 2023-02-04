@@ -111,6 +111,9 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		hook := "capturedItem"
 		vm.Range(func(key, value interface{}) bool {
 			v := value.(*vm.VM)
+			if entry == nil {
+				return true
+			}
 			_, err := v.Otto.Call(hook, nil, entry)
 			if err != nil {
 				vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
