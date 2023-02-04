@@ -19,6 +19,9 @@ help: ## Print this help message.
 build: ## Build the program.
 	go build -ldflags="-extldflags=-static -s -w" -o worker .
 
+build-race: ## Build the program with -race flag.
+	go build -race -ldflags="-extldflags=-static -s -w" -o worker .
+
 bpf: ## Compile the object files for eBPF
 	BPF_TARGET="$(BPF_TARGET)" BPF_CFLAGS="-O2 -g -D__TARGET_ARCH_$(BPF_ARCH_SUFFIX)" go generate tracer/tracer.go
 
@@ -29,10 +32,10 @@ setcap:
 	sudo setcap cap_net_raw,cap_net_admin,cap_sys_admin,cap_sys_ptrace,cap_dac_override,cap_sys_resource=eip ./worker
 
 run: setcap ## Run the program. Requires Hub being available on port 8898
-	./worker -i any -port 8897 -debug
+	GODEBUG=netdns=go ./worker -i any -port 8897 -debug
 
 run-pcap: setcap ## Run the program with a PCAP file. Requires Hub being available on port 8898
-	./worker -f ./import -port 8897 -debug
+	GODEBUG=netdns=go ./worker -f ./import -port 8897 -debug
 
 run-tls: setcap ## Run the program with TLS capture enabled. Requires Hub being available on port 8898
 	KUBESHARK_GLOBAL_LIBSSL_PID=$(shell ps -ef | awk '$$8=="python3" && $$9=="tls.py" {print $$2}') \
