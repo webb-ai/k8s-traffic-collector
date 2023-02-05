@@ -8,12 +8,10 @@ import (
 func ScriptsRoutes(ginApp *gin.Engine) {
 	routeGroup := ginApp.Group("/scripts")
 
-	routeGroup.PUT("/:key", func(c *gin.Context) {
-		controllers.PutScript(c)
-	})
+	routeGroup.PUT("/:key", controllers.PutScript)
 	routeGroup.DELETE("/:key", controllers.DeleteScript)
 
-	routeGroup.GET("/logs", func(c *gin.Context) {
-		controllers.ScriptLogsHandler(c)
-	})
+	routeGroup.GET("/logs", controllers.ScriptLogsHandler)
+
+	routeGroup.PUT("/consts", controllers.PutConsts)
 }

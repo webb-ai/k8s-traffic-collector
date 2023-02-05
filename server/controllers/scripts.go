@@ -69,3 +69,13 @@ func ScriptLogsHandler(c *gin.Context) {
 	done := make(chan bool)
 	<-done
 }
+
+func PutConsts(c *gin.Context) {
+	var consts map[string]interface{}
+	if err := c.Bind(&consts); err != nil {
+		c.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	vm.SetConsts(consts)
+}
