@@ -80,7 +80,10 @@ func (reader *tcpReader) sendMsgIfNotClosed(msg api.TcpReaderDataMsg) {
 }
 
 func (reader *tcpReader) isProtocolIdentified() bool {
-	return reader.parent.protocol != nil
+	reader.parent.Lock()
+	v := reader.parent.protocol != nil
+	reader.parent.Unlock()
+	return v
 }
 
 func (reader *tcpReader) rewind() {
