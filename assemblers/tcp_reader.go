@@ -128,12 +128,12 @@ func (reader *tcpReader) Read(p []byte) (int, error) {
 			reader.populateData(msg)
 
 			if !reader.isProtocolIdentified() {
-				reader.Lock()
+				reader.parent.Lock()
 				reader.msgBufferMaster = append(
 					reader.msgBufferMaster,
 					msg,
 				)
-				reader.Unlock()
+				reader.parent.Unlock()
 			}
 		}
 	}

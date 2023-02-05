@@ -123,15 +123,11 @@ func (t *tcpStream) isEmittable() bool {
 func (t *tcpStream) SetProtocol(protocol *api.Protocol) {
 	t.Lock()
 	t.protocol = protocol
-	t.Unlock()
 
 	// Clean the buffers
-	t.client.Lock()
 	t.client.msgBufferMaster = make([]api.TcpReaderDataMsg, 0)
-	t.client.Unlock()
-	t.server.Lock()
 	t.server.msgBufferMaster = make([]api.TcpReaderDataMsg, 0)
-	t.server.Unlock()
+	t.Unlock()
 }
 
 func (t *tcpStream) SetAsEmittable() {
