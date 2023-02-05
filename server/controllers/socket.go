@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/utils"
+	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
 
@@ -186,6 +188,34 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			log.Error().Err(err).Msg("Failed unmarshalling altered item:")
 			continue
 		}
+
+		// Hook: queriedItem, accepts Object type returns
+		hook := "queriedItem"
+		vm.Range(func(key, value interface{}) bool {
+			v := value.(*vm.VM)
+			if alteredEntry == nil {
+				return true
+			}
+			v.Lock()
+			ottoValue, err := v.Otto.Call(hook, nil, alteredEntry)
+			v.Unlock()
+			if err != nil {
+				vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+				return true
+			}
+
+			if ottoValue.IsObject() {
+				newAlteredEntry, err := ottoValue.Export()
+				if err != nil {
+					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+					return true
+				}
+
+				alteredEntry = newAlteredEntry.(*api.Entry)
+			}
+
+			return true
+		})
 
 		baseEntry := utils.SummarizeEntry(alteredEntry)
 
