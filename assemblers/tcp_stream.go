@@ -125,8 +125,12 @@ func (t *tcpStream) SetProtocol(protocol *api.Protocol) {
 	t.protocol = protocol
 
 	// Clean the buffers
+	t.client.Lock()
 	t.client.msgBufferMaster = make([]api.TcpReaderDataMsg, 0)
+	t.client.Unlock()
+	t.server.Lock()
 	t.server.msgBufferMaster = make([]api.TcpReaderDataMsg, 0)
+	t.server.Unlock()
 	t.Unlock()
 }
 
