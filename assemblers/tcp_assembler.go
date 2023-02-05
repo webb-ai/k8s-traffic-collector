@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -125,7 +126,7 @@ func (a *TcpAssembler) processTCPPacket(packet gopacket.Packet, tcp *layers.TCP)
 	c := context{
 		CaptureInfo: packet.Metadata().CaptureInfo,
 	}
-	diagnose.InternalStats.Totalsz += len(tcp.Payload)
+	atomic.AddInt64(&diagnose.InternalStats.Totalsz, int64(len(tcp.Payload)))
 	a.AssembleWithContext(packet, tcp, &c)
 }
 

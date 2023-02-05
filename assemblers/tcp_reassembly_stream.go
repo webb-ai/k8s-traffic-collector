@@ -2,6 +2,7 @@ package assemblers
 
 import (
 	"encoding/binary"
+	"sync/atomic"
 
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
@@ -82,28 +83,28 @@ func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reas
 	// update stats
 	sgStats := sg.Stats()
 	if skip > 0 {
-		diagnose.InternalStats.MissedBytes += skip
+		atomic.AddInt64(&diagnose.InternalStats.MissedBytes, int64(skip))
 	}
-	diagnose.InternalStats.Sz += length - saved
-	diagnose.InternalStats.Pkt += sgStats.Packets
+	atomic.AddInt64(&diagnose.InternalStats.Sz, int64(length-saved))
+	atomic.AddInt64(&diagnose.InternalStats.Pkt, int64(sgStats.Packets))
 	if sgStats.Chunks > 1 {
 		diagnose.InternalStats.Reassembled++
 	}
-	diagnose.InternalStats.OutOfOrderPackets += sgStats.QueuedPackets
-	diagnose.InternalStats.OutOfOrderBytes += sgStats.QueuedBytes
-	if length > diagnose.InternalStats.BiggestChunkBytes {
-		diagnose.InternalStats.BiggestChunkBytes = length
+	atomic.AddInt64(&diagnose.InternalStats.OutOfOrderPackets, int64(sgStats.QueuedPackets))
+	atomic.AddInt64(&diagnose.InternalStats.OutOfOrderBytes, int64(sgStats.QueuedBytes))
+	if int64(length) > diagnose.InternalStats.BiggestChunkBytes {
+		atomic.StoreInt64(&diagnose.InternalStats.BiggestChunkBytes, int64(length))
 	}
-	if sgStats.Packets > diagnose.InternalStats.BiggestChunkPackets {
-		diagnose.InternalStats.BiggestChunkPackets = sgStats.Packets
+	if int64(sgStats.Packets) > diagnose.InternalStats.BiggestChunkPackets {
+		atomic.StoreInt64(&diagnose.InternalStats.BiggestChunkPackets, int64(sgStats.Packets))
 	}
 	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
 		// In the original example this was handled with panic().
 		// I don't know what this error means or how to handle it properly.
 		diagnose.ErrorsMap.SilentError("Invalid-Overlap", "bytes:%d, pkts:%d", sgStats.OverlapBytes, sgStats.OverlapPackets)
 	}
-	diagnose.InternalStats.OverlapBytes += sgStats.OverlapBytes
-	diagnose.InternalStats.OverlapPackets += sgStats.OverlapPackets
+	atomic.AddInt64(&diagnose.InternalStats.OverlapBytes, int64(sgStats.OverlapBytes))
+	atomic.AddInt64(&diagnose.InternalStats.OverlapPackets, int64(sgStats.OverlapPackets))
 
 	if skip != -1 && skip != 0 {
 		// Missing bytes in stream: do not even try to parse it

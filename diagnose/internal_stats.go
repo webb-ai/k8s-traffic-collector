@@ -7,21 +7,21 @@ import (
 )
 
 type workerInternalStats struct {
-	Ipdefrag            int
-	MissedBytes         int
-	Pkt                 int
-	Sz                  int
-	Totalsz             int
-	RejectFsm           int
-	RejectOpt           int
-	RejectConnFsm       int
-	Reassembled         int
-	OutOfOrderBytes     int
-	OutOfOrderPackets   int
-	BiggestChunkBytes   int
-	BiggestChunkPackets int
-	OverlapBytes        int
-	OverlapPackets      int
+	Ipdefrag            int64
+	MissedBytes         int64
+	Pkt                 int64
+	Sz                  int64
+	Totalsz             int64
+	RejectFsm           int64
+	RejectOpt           int64
+	RejectConnFsm       int64
+	Reassembled         int64
+	OutOfOrderBytes     int64
+	OutOfOrderPackets   int64
+	BiggestChunkBytes   int64
+	BiggestChunkPackets int64
+	OverlapBytes        int64
+	OverlapPackets      int64
 }
 
 var InternalStats *workerInternalStats
