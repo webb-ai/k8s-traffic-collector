@@ -57,7 +57,7 @@ type postMergeRequest struct {
 func PostMerge(c *gin.Context) {
 	var req postMergeRequest
 	if err := c.Bind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -157,7 +157,7 @@ type postStorageLimit struct {
 func PostStorageLimit(c *gin.Context) {
 	var req postStorageLimit
 	if err := c.Bind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 

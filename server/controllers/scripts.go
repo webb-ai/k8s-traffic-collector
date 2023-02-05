@@ -18,20 +18,20 @@ type Script struct {
 func PutScript(c *gin.Context) {
 	var script Script
 	if err := c.Bind(&script); err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	key := c.Param("key")
 	i, err := strconv.ParseInt(key, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
 	v, err := vm.Create(i, script.Code, script.License)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -47,7 +47,7 @@ func DeleteScript(c *gin.Context) {
 	key := c.Param("key")
 	i, err := strconv.ParseInt(key, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -73,7 +73,7 @@ func ScriptLogsHandler(c *gin.Context) {
 func PutConsts(c *gin.Context) {
 	var consts map[string]interface{}
 	if err := c.Bind(&consts); err != nil {
-		c.JSON(http.StatusBadRequest, err)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
