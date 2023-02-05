@@ -11,6 +11,7 @@ var vms *sync.Map
 type VM struct {
 	Otto *otto.Otto
 	Code string
+	sync.Mutex
 }
 
 func Init() {

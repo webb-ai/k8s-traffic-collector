@@ -114,7 +114,9 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 			if entry == nil {
 				return true
 			}
+			v.Lock()
 			_, err := v.Otto.Call(hook, nil, entry)
+			v.Unlock()
 			if err != nil {
 				vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
 			}

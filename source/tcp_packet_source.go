@@ -117,7 +117,9 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 					log.Debug().Err(err).Send()
 				}
 
+				v.Lock()
 				_, err = v.Otto.Call(hook, nil, info)
+				v.Unlock()
 				if err != nil {
 					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
 				}
