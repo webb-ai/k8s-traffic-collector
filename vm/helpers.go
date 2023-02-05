@@ -72,7 +72,43 @@ func defineConsole(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func definePass(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("pass", func(call otto.FunctionCall) otto.Value {
+		obj := call.Argument(0).Object()
+
+		err := obj.Set("passed", true)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+		}
+
+		return obj.Value()
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
+func defineFail(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("fail", func(call otto.FunctionCall) otto.Value {
+		obj := call.Argument(0).Object()
+
+		err := obj.Set("failed", true)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+		}
+
+		return obj.Value()
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
+	definePass(otto, scriptIndex)
+	defineFail(otto, scriptIndex)
 }
