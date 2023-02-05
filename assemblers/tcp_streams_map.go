@@ -115,10 +115,11 @@ func (streamMap *tcpStreamMap) CloseTimedoutTcpStreamChannels() {
 
 			stream.Lock()
 			protocol := stream.protocol
+			isClosed := stream.isClosed
 			stream.Unlock()
 
 			if protocol == nil {
-				if !stream.isClosed && time.Now().After(stream.createdAt.Add(tcpStreamChannelTimeoutMs)) {
+				if !isClosed && time.Now().After(stream.createdAt.Add(tcpStreamChannelTimeoutMs)) {
 					stream.close()
 					diagnose.AppStats.IncDroppedTcpStreams()
 					log.Debug().
