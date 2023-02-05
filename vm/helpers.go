@@ -56,12 +56,12 @@ func defineWebhook(o *otto.Otto, scriptIndex int64, license bool) {
 func defineConsole(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("console", map[string]interface{}{
 		"log": func(call otto.FunctionCall) otto.Value {
-			SendLog(scriptIndex, call.Argument(0).String())
+			SendLog(scriptIndex, ArgumentListToString(call.ArgumentList))
 
 			return otto.UndefinedValue()
 		},
 		"error": func(call otto.FunctionCall) otto.Value {
-			SendLogError(scriptIndex, call.Argument(0).String())
+			SendLogError(scriptIndex, ArgumentListToString(call.ArgumentList))
 
 			return otto.UndefinedValue()
 		},
