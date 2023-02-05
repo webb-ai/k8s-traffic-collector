@@ -12,7 +12,9 @@ function capturedItem(item) {
 }
 
 `
-	LogChannel = make(chan *Log)
+	LogGlobal = &LogState{
+		Channel: make(chan *Log),
+	}
 
 	v, err := Create(key, code, true)
 	if err != nil {

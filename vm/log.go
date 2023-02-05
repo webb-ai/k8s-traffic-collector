@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -15,12 +16,20 @@ type Log struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-var LogSockets []*websocket.Conn
-var LogChannel chan *Log
+type LogState struct {
+	Sockets []*websocket.Conn
+	Channel chan *Log
+	sync.Mutex
+}
+
+var LogGlobal *LogState
 
 func RecieveLogChannel() {
-	for l := range LogChannel {
-		for _, ws := range LogSockets {
+	for l := range LogGlobal.Channel {
+		LogGlobal.Lock()
+		sockets := LogGlobal.Sockets
+		LogGlobal.Unlock()
+		for _, ws := range sockets {
 			err := ws.WriteMessage(1, []byte(fmt.Sprintf("%d%s] %s", l.Script, l.Suffix, l.Text)))
 			if err != nil {
 				log.Error().Err(err).Send()
@@ -30,7 +39,7 @@ func RecieveLogChannel() {
 }
 
 func SendLog(scriptIndex int64, msg string) {
-	LogChannel <- &Log{
+	LogGlobal.Channel <- &Log{
 		Script:    scriptIndex,
 		Suffix:    "",
 		Text:      msg,
@@ -39,7 +48,7 @@ func SendLog(scriptIndex int64, msg string) {
 }
 
 func SendLogError(scriptIndex int64, msg string) {
-	LogChannel <- &Log{
+	LogGlobal.Channel <- &Log{
 		Script:    scriptIndex,
 		Suffix:    ":ERROR",
 		Text:      msg,

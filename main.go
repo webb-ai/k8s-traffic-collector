@@ -83,7 +83,9 @@ func run() {
 		go handleCapturedItems(outputItems)
 	}
 
-	vm.LogChannel = make(chan *vm.Log)
+	vm.LogGlobal = &vm.LogState{
+		Channel: make(chan *vm.Log),
+	}
 	go vm.RecieveLogChannel()
 
 	ginApp := server.Build(opts, *procfs)

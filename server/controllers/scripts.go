@@ -62,7 +62,9 @@ func ScriptLogsHandler(c *gin.Context) {
 	}
 	defer ws.Close()
 
-	vm.LogSockets = append(vm.LogSockets, ws)
+	vm.LogGlobal.Lock()
+	vm.LogGlobal.Sockets = append(vm.LogGlobal.Sockets, ws)
+	vm.LogGlobal.Unlock()
 
 	done := make(chan bool)
 	<-done
