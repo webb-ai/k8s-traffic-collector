@@ -121,7 +121,9 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 				_, err = v.Otto.Call(hook, nil, info)
 				v.Unlock()
 				if err != nil {
-					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+					if !vm.IsMissingHookError(err, hook) {
+						vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+					}
 				}
 				return true
 			})

@@ -200,7 +200,9 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			ottoValue, err := v.Otto.Call(hook, nil, alteredEntry)
 			v.Unlock()
 			if err != nil {
-				vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+				if !vm.IsMissingHookError(err, hook) {
+					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+				}
 				return true
 			}
 
