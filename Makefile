@@ -32,10 +32,10 @@ setcap:
 	sudo setcap cap_net_raw,cap_net_admin,cap_sys_admin,cap_sys_ptrace,cap_dac_override,cap_sys_resource=eip ./worker
 
 run: setcap ## Run the program. Requires Hub being available on port 8898
-	GODEBUG=netdns=go ./worker -i any -port 8897 -debug
+	./worker -i any -port 8897 -debug
 
 run-pcap: setcap ## Run the program with a PCAP file. Requires Hub being available on port 8898
-	GODEBUG=netdns=go ./worker -f ./import -port 8897 -debug
+	./worker -f ./import -port 8897 -debug
 
 run-tls: setcap ## Run the program with TLS capture enabled. Requires Hub being available on port 8898
 	KUBESHARK_GLOBAL_LIBSSL_PID=$(shell ps -ef | awk '$$8=="python3" && $$9=="tls.py" {print $$2}') \
