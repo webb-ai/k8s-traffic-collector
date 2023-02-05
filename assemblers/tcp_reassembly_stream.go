@@ -2,7 +2,6 @@ package assemblers
 
 import (
 	"encoding/binary"
-	"sync/atomic"
 
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
@@ -38,10 +37,8 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 	// FSM
 	if !t.tcpState.CheckState(tcp, dir) {
 		diagnose.ErrorsMap.SilentError("FSM-rejection", "%s: Packet rejected by FSM (state:%s)", t.ident, t.tcpState.String())
-		diagnose.InternalStats.RejectFsm++
 		if !t.fsmerr {
 			t.fsmerr = true
-			diagnose.InternalStats.RejectConnFsm++
 		}
 		if t.notignorefsmerr {
 			return false
@@ -51,7 +48,6 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 	err := t.optchecker.Accept(tcp, ci, dir, nextSeq, start)
 	if err != nil {
 		diagnose.ErrorsMap.SilentError("OptionChecker-rejection", "%s: Packet rejected by OptionChecker: %s", t.ident, err)
-		diagnose.InternalStats.RejectOpt++
 		if t.optcheck {
 			return false
 		}
@@ -68,9 +64,6 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 			accept = false
 		}
 	}
-	if !accept {
-		diagnose.InternalStats.RejectOpt++
-	}
 
 	*start = true
 
@@ -79,32 +72,13 @@ func (t *tcpReassemblyStream) Accept(tcp *layers.TCP, ci gopacket.CaptureInfo, d
 
 func (t *tcpReassemblyStream) ReassembledSG(sg reassembly.ScatterGather, ac reassembly.AssemblerContext) {
 	dir, _, _, skip := sg.Info()
-	length, saved := sg.Lengths()
-	// update stats
+	length, _ := sg.Lengths()
 	sgStats := sg.Stats()
-	if skip > 0 {
-		atomic.AddInt64(&diagnose.InternalStats.MissedBytes, int64(skip))
-	}
-	atomic.AddInt64(&diagnose.InternalStats.Sz, int64(length-saved))
-	atomic.AddInt64(&diagnose.InternalStats.Pkt, int64(sgStats.Packets))
-	if sgStats.Chunks > 1 {
-		diagnose.InternalStats.Reassembled++
-	}
-	atomic.AddInt64(&diagnose.InternalStats.OutOfOrderPackets, int64(sgStats.QueuedPackets))
-	atomic.AddInt64(&diagnose.InternalStats.OutOfOrderBytes, int64(sgStats.QueuedBytes))
-	if int64(length) > diagnose.InternalStats.BiggestChunkBytes {
-		atomic.StoreInt64(&diagnose.InternalStats.BiggestChunkBytes, int64(length))
-	}
-	if int64(sgStats.Packets) > diagnose.InternalStats.BiggestChunkPackets {
-		atomic.StoreInt64(&diagnose.InternalStats.BiggestChunkPackets, int64(sgStats.Packets))
-	}
 	if sgStats.OverlapBytes != 0 && sgStats.OverlapPackets == 0 {
 		// In the original example this was handled with panic().
 		// I don't know what this error means or how to handle it properly.
 		diagnose.ErrorsMap.SilentError("Invalid-Overlap", "bytes:%d, pkts:%d", sgStats.OverlapBytes, sgStats.OverlapPackets)
 	}
-	atomic.AddInt64(&diagnose.InternalStats.OverlapBytes, int64(sgStats.OverlapBytes))
-	atomic.AddInt64(&diagnose.InternalStats.OverlapPackets, int64(sgStats.OverlapPackets))
 
 	if skip != -1 && skip != 0 {
 		// Missing bytes in stream: do not even try to parse it

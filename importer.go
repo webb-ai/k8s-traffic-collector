@@ -16,7 +16,6 @@ import (
 
 func startImporter(folder string, opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem) {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
-	diagnose.InitializeWorkerInternalStats()
 
 	packets := make(chan source.TcpPacketInfo)
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second

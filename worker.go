@@ -120,7 +120,6 @@ func initializePacketSources() error {
 
 func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *assemblers.TcpAssembler {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
-	diagnose.InitializeWorkerInternalStats()
 
 	target.MainPacketInputChan = make(chan source.TcpPacketInfo)
 
@@ -161,7 +160,6 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 
 	assembler.WaitAndDump()
 
-	diagnose.InternalStats.PrintStatsSummary()
 	diagnose.ErrorsMap.PrintSummary()
 	log.Info().Interface("AppStats", diagnose.AppStats).Send()
 }

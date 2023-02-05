@@ -7,7 +7,6 @@ import (
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/ip4defrag"
 	"github.com/kubeshark/gopacket/layers"
-	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
@@ -153,7 +152,6 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 				continue // packet fragment, we don't have whole packet yet.
 			}
 			if newipv4.Length != l {
-				diagnose.InternalStats.Ipdefrag++
 				log.Debug().Int("layer-type", int(newipv4.NextLayerType())).Msg("Decoding re-assembled packet:")
 				pb, ok := packet.(gopacket.PacketBuilder)
 				if !ok {
