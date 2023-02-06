@@ -20,6 +20,7 @@ require (
 	github.com/robertkrimen/otto v0.2.1
 	github.com/rs/zerolog v1.28.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
+	github.com/slack-go/slack v0.12.1
 	github.com/struCoder/pidusage v0.2.1
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
 	golang.org/x/net v0.2.0

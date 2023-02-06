@@ -1,6 +1,8 @@
 package vm
 
-import "github.com/robertkrimen/otto"
+import (
+	"github.com/robertkrimen/otto"
+)
 
 func ArgumentListToString(args []otto.Value) (text string) {
 	for _, arg := range args {

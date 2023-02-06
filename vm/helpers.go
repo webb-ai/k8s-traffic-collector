@@ -2,12 +2,15 @@ package vm
 
 import (
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/kubeshark/worker/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/rs/zerolog/log"
+	"github.com/slack-go/slack"
 )
 
 const HttpRequestTimeoutSecond = 5
@@ -106,9 +109,63 @@ func defineFail(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func defineSlack(o *otto.Otto, scriptIndex int64, license bool) {
+	helperName := "slack"
+	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
+		returnValue := otto.UndefinedValue()
+
+		if protectLicense(helperName, scriptIndex, license) {
+			return returnValue
+		}
+
+		token := call.Argument(0).String()
+		channelId := call.Argument(1).String()
+		pretext := call.Argument(2).String()
+		text := call.Argument(3).String()
+		color := call.Argument(4).String()
+
+		client := slack.New(token, slack.OptionDebug(false))
+
+		attachment := slack.Attachment{
+			Pretext: pretext,
+			Text:    text,
+			Color:   color,
+			Fields: []slack.AttachmentField{
+				{
+					Title: "Timestamp",
+					Value: time.Now().String(),
+				},
+			},
+		}
+
+		_, timestamp, err := client.PostMessage(
+			channelId,
+			slack.MsgOptionAttachments(attachment),
+		)
+
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+		} else {
+			secs, nanos, err := utils.ParseSeconds(timestamp)
+			if err != nil {
+				log.Error().Err(err).Send()
+				return returnValue
+			}
+			SendLog(scriptIndex, fmt.Sprintf("Message sent to Slack channel: %s at %s", channelId, time.Unix(secs, nanos).UTC()))
+		}
+
+		return returnValue
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
 	definePass(otto, scriptIndex)
 	defineFail(otto, scriptIndex)
+	defineSlack(otto, scriptIndex, license)
 }
