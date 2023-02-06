@@ -1,7 +1,6 @@
 package vm
 
 import (
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,14 +27,7 @@ func defineWebhook(o *otto.Otto, scriptIndex int64, license bool) {
 		url := call.Argument(1).String()
 		body := call.Argument(2).String()
 
-		client := &http.Client{
-			Transport: &http.Transport{
-				MaxConnsPerHost:   1,
-				DisableKeepAlives: true,
-				TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-			},
-			Timeout: time.Duration(HttpRequestTimeoutSecond) * time.Second,
-		}
+		client := &http.Client{}
 		req, err := http.NewRequest(method, url, strings.NewReader(body))
 		if err != nil {
 			SendLogError(scriptIndex, err.Error())

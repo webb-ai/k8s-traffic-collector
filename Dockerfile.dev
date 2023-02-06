@@ -55,13 +55,15 @@ RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 
 ### The shipped image
 ARG TARGETARCH=amd64
-FROM ${TARGETARCH}/busybox:latest
+FROM ${TARGETARCH}/alpine:latest
 
 ENV GIN_MODE=release
 
 WORKDIR /app/import/
 WORKDIR /app/data/
 WORKDIR /app
+
+RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 COPY --from=builder ["/app/worker", "."]
 
