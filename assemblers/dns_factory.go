@@ -232,25 +232,25 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		}
 	}
 
-	if !factory.identifyMode {
-		if !isTargeted {
-			return
-		}
-		factory.outputChannel <- &item
-	} else {
-		if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
-			resolver.K8sResolver.SaveResolvedName(dns.Answers[0].IP.String(), string(dns.Questions[0].Name), "", watch.Added)
-		}
-
-		pcap := factory.pcapMap[dns.ID]
-		pcap.Close()
-
-		delete(factory.idMap, dns.ID)
-		delete(factory.pcapMap, dns.ID)
-		delete(factory.pcapWriterMap, dns.ID)
-
-		if !isTargeted {
-			os.Remove(misc.GetPcapPath(pcap.Name()))
-		}
+	if !isTargeted {
+		return
 	}
+
+	factory.outputChannel <- &item
+
+	if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
+		resolver.K8sResolver.SaveResolvedName(dns.Answers[0].IP.String(), string(dns.Questions[0].Name), "", watch.Added)
+	}
+
+	pcap := factory.pcapMap[dns.ID]
+	pcap.Close()
+
+	delete(factory.idMap, dns.ID)
+	delete(factory.pcapMap, dns.ID)
+	delete(factory.pcapWriterMap, dns.ID)
+
+	if !isTargeted {
+		os.Remove(misc.GetPcapPath(pcap.Name()))
+	}
+
 }

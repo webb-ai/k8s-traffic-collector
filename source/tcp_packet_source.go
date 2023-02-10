@@ -108,25 +108,7 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 		packet, err := source.Handle.NextPacket()
 
 		if masterCapture {
-			// Hook: capturedPacket, does not accept returns
-			hook := "capturedPacket"
-			vm.Range(func(key, value interface{}) bool {
-				v := value.(*vm.VM)
-				info, err := BuildCustomPacketInfo(packet)
-				if err != nil {
-					log.Debug().Err(err).Send()
-				}
-
-				v.Lock()
-				_, err = v.Otto.Call(hook, nil, info)
-				v.Unlock()
-				if err != nil {
-					if !vm.IsMissingHookError(err, hook) {
-						vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-					}
-				}
-				return true
-			})
+			vm.CapturedPacketHook(packet)
 		}
 
 		if err == io.EOF {

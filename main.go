@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"flag"
-	"fmt"
 	"os"
 	"time"
 
@@ -109,22 +108,6 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 
 		entry := utils.ItemToEntry(finalItem)
 
-		// Hook: capturedItem, does not accept returns
-		hook := "capturedItem"
-		vm.Range(func(key, value interface{}) bool {
-			v := value.(*vm.VM)
-			if entry == nil {
-				return true
-			}
-			v.Lock()
-			_, err := v.Otto.Call(hook, nil, entry)
-			v.Unlock()
-			if err != nil {
-				if !vm.IsMissingHookError(err, hook) {
-					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-				}
-			}
-			return true
-		})
+		vm.CapturedItemHook(entry)
 	}
 }

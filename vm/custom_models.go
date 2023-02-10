@@ -1,4 +1,4 @@
-package source
+package vm
 
 import (
 	"errors"

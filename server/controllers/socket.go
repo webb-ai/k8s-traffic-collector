@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -189,35 +188,7 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			continue
 		}
 
-		// Hook: queriedItem, accepts Object type returns
-		hook := "queriedItem"
-		vm.Range(func(key, value interface{}) bool {
-			v := value.(*vm.VM)
-			if alteredEntry == nil {
-				return true
-			}
-			v.Lock()
-			ottoValue, err := v.Otto.Call(hook, nil, alteredEntry)
-			v.Unlock()
-			if err != nil {
-				if !vm.IsMissingHookError(err, hook) {
-					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-				}
-				return true
-			}
-
-			if ottoValue.IsObject() {
-				newAlteredEntry, err := ottoValue.Export()
-				if err != nil {
-					vm.SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
-					return true
-				}
-
-				alteredEntry = newAlteredEntry.(*api.Entry)
-			}
-
-			return true
-		})
+		alteredEntry = vm.QueriedItemHook(alteredEntry)
 
 		baseEntry := utils.SummarizeEntry(alteredEntry)
 
