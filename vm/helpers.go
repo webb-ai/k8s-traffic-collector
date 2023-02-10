@@ -156,8 +156,8 @@ func defineSlack(o *otto.Otto, scriptIndex int64, license bool) {
 	}
 }
 
-func defineInflux(o *otto.Otto, scriptIndex int64, license bool) {
-	helperName := "influx"
+func defineInfluxDB(o *otto.Otto, scriptIndex int64, license bool) {
+	helperName := "influxdb"
 	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
 		returnValue := otto.UndefinedValue()
 
@@ -217,5 +217,5 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
 	definePass(otto, scriptIndex)
 	defineFail(otto, scriptIndex)
 	defineSlack(otto, scriptIndex, license)
-	defineInflux(otto, scriptIndex, license)
+	defineInfluxDB(otto, scriptIndex, license)
 }
