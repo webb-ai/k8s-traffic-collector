@@ -1,11 +1,13 @@
 package vm
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
 
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/worker/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/rs/zerolog/log"
@@ -154,10 +156,66 @@ func defineSlack(o *otto.Otto, scriptIndex int64, license bool) {
 	}
 }
 
+func defineInflux(o *otto.Otto, scriptIndex int64, license bool) {
+	helperName := "influx"
+	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
+		returnValue := otto.UndefinedValue()
+
+		if protectLicense(helperName, scriptIndex, license) {
+			return returnValue
+		}
+
+		url := call.Argument(0).String()
+		token := call.Argument(1).String()
+		measurement := call.Argument(2).String()
+		organization := call.Argument(3).String()
+		bucket := call.Argument(4).String()
+
+		bytes, err := call.Argument(5).Object().MarshalJSON()
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		var object map[string]interface{}
+		if err := json.Unmarshal(bytes, &object); err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		client := influxdb2.NewClientWithOptions(
+			url,
+			token,
+			influxdb2.DefaultOptions().SetBatchSize(20),
+		)
+		defer client.Close()
+
+		writeAPI := client.WriteAPI(organization, bucket)
+
+		p := influxdb2.NewPoint(
+			measurement,
+			nil,
+			object,
+			time.Now(),
+		)
+
+		writeAPI.WritePoint(p)
+
+		writeAPI.Flush()
+
+		return returnValue
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
 	definePass(otto, scriptIndex)
 	defineFail(otto, scriptIndex)
 	defineSlack(otto, scriptIndex, license)
+	defineInflux(otto, scriptIndex, license)
 }
