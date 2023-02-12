@@ -3,6 +3,7 @@ package assemblers
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -67,7 +68,7 @@ func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
 				}
 			}
 
-			factory.pcapId = pcapPath
+			factory.pcapId = filepath.Base(pcapPath)
 
 			factory.idMap[dnsID] = id
 			factory.pcapMap[dnsID] = pcap
