@@ -252,7 +252,11 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 			Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
 		}
 
-		s3Session := session.New(s3Config)
+		s3Session, err := session.NewSession(s3Config)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
 
 		uploader := s3manager.NewUploader(s3Session)
 
@@ -263,6 +267,10 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 			ContentType: aws.String(contentType),
 		}
 		_, err = uploader.UploadWithContext(context.Background(), input)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
 
 		return returnValue
 	})
