@@ -1,13 +1,20 @@
 package vm
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/rs/zerolog/log"
@@ -211,11 +218,66 @@ func defineInfluxDB(o *otto.Otto, scriptIndex int64, license bool) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool) {
+func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
+	helperName := "s3"
+	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
+		returnValue := otto.UndefinedValue()
+
+		if protectLicense(helperName, scriptIndex, license) {
+			return returnValue
+		}
+
+		region := call.Argument(0).String()
+		keyID := call.Argument(1).String()
+		accessKey := call.Argument(2).String()
+		bucket := call.Argument(3).String()
+		id := call.Argument(4).String()
+
+		pcapPath := misc.GetPcapPath(id)
+
+		file, err := os.Open(pcapPath)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		contentType, err := misc.GetFileContentType(file)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		s3Config := &aws.Config{
+			Region:      aws.String(region),
+			Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
+		}
+
+		s3Session := session.New(s3Config)
+
+		uploader := s3manager.NewUploader(s3Session)
+
+		input := &s3manager.UploadInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(fmt.Sprintf("%s_%s_%s", node, ip, id)),
+			Body:        file,
+			ContentType: aws.String(contentType),
+		}
+		_, err = uploader.UploadWithContext(context.Background(), input)
+
+		return returnValue
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
+func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
 	definePass(otto, scriptIndex)
 	defineFail(otto, scriptIndex)
 	defineSlack(otto, scriptIndex, license)
 	defineInfluxDB(otto, scriptIndex, license)
+	defineS3(otto, scriptIndex, license, node, ip)
 }
