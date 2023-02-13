@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -261,9 +262,11 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 
 		uploader := s3manager.NewUploader(s3Session)
 
+		key := fmt.Sprintf("%s_%s_%s", node, ip, id)
+
 		input := &s3manager.UploadInput{
 			Bucket:      aws.String(bucket),
-			Key:         aws.String(fmt.Sprintf("%s_%s_%s", node, ip, id)),
+			Key:         aws.String(key),
 			Body:        file,
 			ContentType: aws.String(contentType),
 		}
@@ -272,6 +275,67 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 			SendLogError(scriptIndex, err.Error())
 			return returnValue
 		}
+
+		SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
+
+		return returnValue
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
+func defineS3JSON(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
+	helperName := "s3JSON"
+	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
+		returnValue := otto.UndefinedValue()
+
+		if protectLicense(helperName, scriptIndex, license) {
+			return returnValue
+		}
+
+		region := call.Argument(0).String()
+		keyID := call.Argument(1).String()
+		accessKey := call.Argument(2).String()
+		bucket := call.Argument(3).String()
+		object := call.Argument(4).Object()
+		name := call.Argument(5).String()
+
+		b, err := object.MarshalJSON()
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		s3Config := &aws.Config{
+			Region:      aws.String(region),
+			Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
+		}
+
+		s3Session, err := session.NewSession(s3Config)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		uploader := s3manager.NewUploader(s3Session)
+
+		key := fmt.Sprintf("%s_%s_%s.json", node, ip, name)
+
+		input := &s3manager.UploadInput{
+			Bucket:      aws.String(bucket),
+			Key:         aws.String(key),
+			Body:        bytes.NewReader(b),
+			ContentType: aws.String("application/json"),
+		}
+		_, err = uploader.UploadWithContext(context.Background(), input)
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return returnValue
+		}
+
+		SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
 
 		return returnValue
 	})
@@ -308,5 +372,6 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string
 	defineSlack(otto, scriptIndex, license)
 	defineInfluxDB(otto, scriptIndex, license)
 	defineS3(otto, scriptIndex, license, node, ip)
+	defineS3JSON(otto, scriptIndex, license, node, ip)
 	defineNameResolutionHistory(otto, scriptIndex)
 }
