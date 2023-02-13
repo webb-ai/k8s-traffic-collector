@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/utils"
 	"github.com/robertkrimen/otto"
@@ -280,6 +281,25 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 	}
 }
 
+func defineNameResolutionHistory(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("nameResolutionHistory", func(call otto.FunctionCall) otto.Value {
+		m := resolver.K8sResolver.GetDumpNameResolutionHistoryMap()
+
+		o := otto.New()
+		value, err := o.ToValue(m) // FIXME: https://github.com/robertkrimen/otto/issues/488
+		if err != nil {
+			SendLogError(scriptIndex, err.Error())
+			return otto.UndefinedValue()
+		}
+
+		return value
+	})
+
+	if err != nil {
+		SendLogError(scriptIndex, err.Error())
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
@@ -288,4 +308,5 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string
 	defineSlack(otto, scriptIndex, license)
 	defineInfluxDB(otto, scriptIndex, license)
 	defineS3(otto, scriptIndex, license, node, ip)
+	defineNameResolutionHistory(otto, scriptIndex)
 }

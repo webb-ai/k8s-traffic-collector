@@ -145,8 +145,7 @@ func GetReplay(c *gin.Context) {
 }
 
 func GetNameResolutionHistory(c *gin.Context) {
-	res := resolver.K8sResolver
-	m := res.GetDumpNameResolutionHistoryMap()
+	m := resolver.K8sResolver.GetDumpNameResolutionHistoryMap()
 	c.JSON(http.StatusOK, m)
 }
 
