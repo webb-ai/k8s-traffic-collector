@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"encoding/json"
 	"errors"
 	"time"
 
@@ -14,18 +15,34 @@ type CustomPacketInfo struct {
 	Truncated     bool      `json:"truncated"`
 }
 
-func BuildCustomPacketInfo(packet gopacket.Packet) (*CustomPacketInfo, error) {
+func BuildCustomPacketInfo(packet gopacket.Packet) (info map[string]interface{}, err error) {
 	if packet == nil {
-		return nil, errors.New("Packet is nil")
+		err = errors.New("Packet is nil")
+		return
 	}
 	metadata := packet.Metadata()
 	if metadata == nil {
-		return nil, errors.New("Metadata is nil")
+		err = errors.New("Metadata is nil")
+		return
 	}
-	return &CustomPacketInfo{
+
+	cpi := &CustomPacketInfo{
 		Timestamp:     packet.Metadata().Timestamp,
 		CaptureLength: packet.Metadata().CaptureLength,
 		Length:        packet.Metadata().Length,
 		Truncated:     packet.Metadata().Truncated,
-	}, nil
+	}
+
+	var data []byte
+	data, err = json.Marshal(cpi)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(data, &info)
+	if err != nil {
+		return
+	}
+
+	return
 }
