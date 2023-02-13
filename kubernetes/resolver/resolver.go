@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -97,6 +98,16 @@ func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]map[string
 	m := make(map[int64]map[string]*ResolvedObjectInfo)
 	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
 		m[key.(int64)] = value.(map[string]*ResolvedObjectInfo)
+		return true
+	})
+
+	return m
+}
+
+func (resolver *Resolver) GetDumpNameResolutionHistoryMapStringKeys() map[string]map[string]*ResolvedObjectInfo {
+	m := make(map[string]map[string]*ResolvedObjectInfo)
+	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
+		m[strconv.FormatInt(key.(int64), 10)] = value.(map[string]*ResolvedObjectInfo)
 		return true
 	})
 

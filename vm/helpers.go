@@ -283,10 +283,10 @@ func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip str
 
 func defineNameResolutionHistory(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("nameResolutionHistory", func(call otto.FunctionCall) otto.Value {
-		m := resolver.K8sResolver.GetDumpNameResolutionHistoryMap()
+		m := resolver.K8sResolver.GetDumpNameResolutionHistoryMapStringKeys()
 
 		o := otto.New()
-		value, err := o.ToValue(m) // FIXME: https://github.com/robertkrimen/otto/issues/488
+		value, err := o.ToValue(m)
 		if err != nil {
 			SendLogError(scriptIndex, err.Error())
 			return otto.UndefinedValue()
