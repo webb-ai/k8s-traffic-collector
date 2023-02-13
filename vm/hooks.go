@@ -11,13 +11,21 @@ import (
 // Hook: capturedItem, does not accept returns
 func CapturedItemHook(entry *api.Entry) {
 	hook := "capturedItem"
+
+	data, err := MarshalUnmarshalEntry(entry)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return
+	}
+
+	// TODO: JSON marshal/unmarshal to have the field names lowercase
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
 		if entry == nil {
 			return true
 		}
 		v.Lock()
-		_, err := v.Otto.Call(hook, nil, entry)
+		_, err := v.Otto.Call(hook, nil, data)
 		v.Unlock()
 		if err != nil {
 			if !IsMissingHookError(err, hook) {
@@ -53,6 +61,13 @@ func CapturedPacketHook(packet gopacket.Packet) {
 // Hook: queriedItem, accepts Object type returns
 func QueriedItemHook(entry *api.Entry) *api.Entry {
 	returnedEntry := entry
+
+	data, err := MarshalUnmarshalEntry(entry)
+	if err != nil {
+		log.Error().Err(err).Send()
+		return nil
+	}
+
 	hook := "queriedItem"
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
@@ -60,7 +75,7 @@ func QueriedItemHook(entry *api.Entry) *api.Entry {
 			return true
 		}
 		v.Lock()
-		ottoValue, err := v.Otto.Call(hook, nil, entry)
+		ottoValue, err := v.Otto.Call(hook, nil, data)
 		v.Unlock()
 		if err != nil {
 			if !IsMissingHookError(err, hook) {
@@ -76,7 +91,13 @@ func QueriedItemHook(entry *api.Entry) *api.Entry {
 				return true
 			}
 
-			returnedEntry = newAlteredEntry.(*api.Entry)
+			convertedEntry, err := MarshalUnmarshalEntryReverse(newAlteredEntry.(map[string]interface{}))
+			if err != nil {
+				SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+				return true
+			}
+
+			returnedEntry = convertedEntry
 		}
 
 		return true
