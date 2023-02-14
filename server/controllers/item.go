@@ -15,6 +15,7 @@ import (
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/utils"
+	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
 
@@ -113,6 +114,8 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 			log.Error().Err(err).Msg("Failed unmarshalling altered entry:")
 			break
 		}
+
+		alteredEntry = vm.QueriedItemHook(alteredEntry)
 
 		base := extension.Dissector.Summarize(alteredEntry)
 		var representation []byte
