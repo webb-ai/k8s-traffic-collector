@@ -20,8 +20,8 @@ func Init() {
 
 func Create(key int64, code string, license bool, node string, ip string) (*VM, error) {
 	o := otto.New()
-	defineHelpers(o, key, license, node, ip)
 	defineConsts(o)
+	defineHelpers(o, key, license, node, ip)
 	_, err := o.Run(code)
 	if err != nil {
 		return nil, err
