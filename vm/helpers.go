@@ -328,7 +328,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				return otto.UndefinedValue()
 			}
 
-			outFile, err := os.CreateTemp(dir, "snapshot")
+			outFile, err := os.Create(fmt.Sprintf("%s/%d.pcap", dir, time.Now().Unix()))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -411,7 +411,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 		"delete": func(call otto.FunctionCall) otto.Value {
 			path := call.Argument(0).String()
 
-			err := os.Remove(misc.GetDataPath(path))
+			err := os.RemoveAll(misc.GetDataPath(path))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 			}
@@ -429,9 +429,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"mkdirTemp": func(call otto.FunctionCall) otto.Value {
-			path := call.Argument(0).String()
+			name := call.Argument(0).String()
 
-			dirPath, err := os.MkdirTemp(misc.GetDataPath(path), "tempDir")
+			dirPath, err := os.MkdirTemp(misc.GetDataDir(), name)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 			}
@@ -446,12 +446,15 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 		},
 		"temp": func(call otto.FunctionCall) otto.Value {
 			path := call.Argument(0).String()
-			extension := call.Argument(1).String()
+			name := call.Argument(1).String()
+			extension := call.Argument(2).String()
 
-			f, err := os.CreateTemp(misc.GetDataPath(path), fmt.Sprintf("tempFile*.%s", extension))
+			f, err := os.CreateTemp(misc.GetDataPath(path), fmt.Sprintf("%s*.%s", name, extension))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
 			}
+			defer f.Close()
 
 			value, err := otto.ToValue(misc.RemoveDataDir(f.Name()))
 			if err != nil {
