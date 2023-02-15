@@ -297,7 +297,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				return otto.UndefinedValue()
 			}
 
-			value, err := otto.ToValue(outFile.Name())
+			value, err := otto.ToValue(misc.RemoveDataDir(outFile.Name()))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -308,7 +308,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 		"path": func(call otto.FunctionCall) otto.Value {
 			pcapPath := misc.GetPcapPath(call.Argument(0).String())
 
-			value, err := otto.ToValue(pcapPath)
+			value, err := otto.ToValue(misc.RemoveDataDir(pcapPath))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -392,7 +392,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 				SendLogError(scriptIndex, err.Error())
 			}
 
-			value, err := otto.ToValue(dirPath)
+			value, err := otto.ToValue(misc.RemoveDataDir(dirPath))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -463,7 +463,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 				return otto.UndefinedValue()
 			}
 
-			value, err := otto.ToValue(zipPath)
+			value, err := otto.ToValue(misc.RemoveDataDir(zipPath))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
