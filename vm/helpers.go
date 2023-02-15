@@ -305,6 +305,17 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 
 			return value
 		},
+		"path": func(call otto.FunctionCall) otto.Value {
+			pcapPath := misc.GetPcapPath(call.Argument(0).String())
+
+			value, err := otto.ToValue(pcapPath)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
 	})
 
 	if err != nil {
