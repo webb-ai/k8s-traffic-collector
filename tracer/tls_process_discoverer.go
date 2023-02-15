@@ -17,12 +17,13 @@ import (
 
 var numberRegex = regexp.MustCompile("[0-9]+")
 
-func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) error {
+func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) {
 	containerIds := buildContainerIdsMap(pods)
 	containerPids, err := findContainerPids(procfs, containerIds)
 
 	if err != nil {
-		return err
+		log.Error().Err(err).Send()
+		return
 	}
 
 	tls.ClearPids()
@@ -36,8 +37,6 @@ func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) error {
 			LogError(err)
 		}
 	}
-
-	return nil
 }
 
 func findContainerPids(procfs string, containerIds map[string]v1.Pod) (map[uint32]v1.Pod, error) {

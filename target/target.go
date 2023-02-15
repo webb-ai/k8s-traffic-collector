@@ -17,8 +17,6 @@ var MainPacketInputChan chan source.TcpPacketInfo   // global
 var TracerInstance *tracer.Tracer                   // global
 
 func UpdatePods(pods []v1.Pod, procfs string) {
-	success := true
-
 	misc.TargetedPods = pods
 
 	if PacketSourceManager != nil {
@@ -26,25 +24,18 @@ func UpdatePods(pods []v1.Pod, procfs string) {
 	}
 
 	if TracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
-		if err := tracer.UpdateTargets(TracerInstance, &pods, procfs); err != nil {
-			tracer.LogError(err)
-			success = false
-		}
+		go tracer.UpdateTargets(TracerInstance, &pods, procfs)
 	}
 
-	printNewTargets(success)
+	printNewTargets()
 }
 
-func printNewTargets(success bool) {
+func printNewTargets() {
 	printStr := ""
 	for _, pod := range misc.TargetedPods {
 		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
 	}
 	printStr = strings.TrimRight(printStr, ", ")
 
-	if success {
-		log.Info().Msg(fmt.Sprintf("Now targeting: %s", printStr))
-	} else {
-		log.Error().Msg(fmt.Sprintf("Failed to start targeting: %s", printStr))
-	}
+	log.Info().Msg(fmt.Sprintf("Now targeting: %s", printStr))
 }

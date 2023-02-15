@@ -174,10 +174,7 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 		return nil
 	}
 
-	if err := tracer.UpdateTargets(&tls, &misc.TargetedPods, *procfs); err != nil {
-		tracer.LogError(err)
-		return nil
-	}
+	go tracer.UpdateTargets(&tls, &misc.TargetedPods, *procfs)
 
 	// A quick way to instrument libssl.so without PID filtering - used for debuging and troubleshooting
 	//
