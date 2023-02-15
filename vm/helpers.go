@@ -1,12 +1,12 @@
 package vm
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,40 +24,6 @@ import (
 )
 
 const HttpRequestTimeoutSecond = 5
-
-func defineWebhook(o *otto.Otto, scriptIndex int64, license bool) {
-	helperName := "webhook"
-	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
-		returnValue := otto.UndefinedValue()
-
-		if protectLicense(helperName, scriptIndex, license) {
-			return returnValue
-		}
-
-		method := call.Argument(0).String()
-		url := call.Argument(1).String()
-		body := call.Argument(2).String()
-
-		client := &http.Client{}
-		req, err := http.NewRequest(method, url, strings.NewReader(body))
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		_, err = client.Do(req)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		return returnValue
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
 
 func defineConsole(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("console", map[string]interface{}{
@@ -78,289 +44,236 @@ func defineConsole(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
-func definePass(o *otto.Otto, scriptIndex int64) {
-	err := o.Set("pass", func(call otto.FunctionCall) otto.Value {
-		obj := call.Argument(0).Object()
+func defineTest(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("test", map[string]interface{}{
+		"pass": func(call otto.FunctionCall) otto.Value {
+			obj := call.Argument(0).Object()
 
-		err := obj.Set("passed", true)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-		}
-
-		return obj.Value()
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
-
-func defineFail(o *otto.Otto, scriptIndex int64) {
-	err := o.Set("fail", func(call otto.FunctionCall) otto.Value {
-		obj := call.Argument(0).Object()
-
-		err := obj.Set("failed", true)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-		}
-
-		return obj.Value()
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
-
-func defineSlack(o *otto.Otto, scriptIndex int64, license bool) {
-	helperName := "slack"
-	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
-		returnValue := otto.UndefinedValue()
-
-		if protectLicense(helperName, scriptIndex, license) {
-			return returnValue
-		}
-
-		token := call.Argument(0).String()
-		channelId := call.Argument(1).String()
-		pretext := call.Argument(2).String()
-		text := call.Argument(3).String()
-		color := call.Argument(4).String()
-
-		client := slack.New(token, slack.OptionDebug(false))
-
-		attachment := slack.Attachment{
-			Pretext: pretext,
-			Text:    text,
-			Color:   color,
-			Fields: []slack.AttachmentField{
-				{
-					Title: "Timestamp",
-					Value: time.Now().String(),
-				},
-			},
-		}
-
-		_, timestamp, err := client.PostMessage(
-			channelId,
-			slack.MsgOptionAttachments(attachment),
-		)
-
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-		} else {
-			secs, nanos, err := utils.ParseSeconds(timestamp)
+			err := obj.Set("passed", true)
 			if err != nil {
-				log.Error().Err(err).Send()
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return obj.Value()
+		},
+		"fail": func(call otto.FunctionCall) otto.Value {
+			obj := call.Argument(0).Object()
+
+			err := obj.Set("failed", true)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return obj.Value()
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
+func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
+	err := o.Set("vendor", map[string]interface{}{
+		"webhook": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("webhook", scriptIndex, license) {
 				return returnValue
 			}
-			SendLog(scriptIndex, fmt.Sprintf("Message sent to Slack channel: %s at %s", channelId, time.Unix(secs, nanos).UTC()))
-		}
 
-		return returnValue
+			method := call.Argument(0).String()
+			url := call.Argument(1).String()
+			body := call.Argument(2).String()
+
+			client := &http.Client{}
+			req, err := http.NewRequest(method, url, strings.NewReader(body))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			_, err = client.Do(req)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			return returnValue
+		},
+		"slack": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("slack", scriptIndex, license) {
+				return returnValue
+			}
+
+			token := call.Argument(0).String()
+			channelId := call.Argument(1).String()
+			pretext := call.Argument(2).String()
+			text := call.Argument(3).String()
+			color := call.Argument(4).String()
+
+			client := slack.New(token, slack.OptionDebug(false))
+
+			attachment := slack.Attachment{
+				Pretext: pretext,
+				Text:    text,
+				Color:   color,
+				Fields: []slack.AttachmentField{
+					{
+						Title: "Timestamp",
+						Value: time.Now().String(),
+					},
+				},
+			}
+
+			_, timestamp, err := client.PostMessage(
+				channelId,
+				slack.MsgOptionAttachments(attachment),
+			)
+
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			} else {
+				secs, nanos, err := utils.ParseSeconds(timestamp)
+				if err != nil {
+					log.Error().Err(err).Send()
+					return returnValue
+				}
+				SendLog(scriptIndex, fmt.Sprintf("Message sent to Slack channel: %s at %s", channelId, time.Unix(secs, nanos).UTC()))
+			}
+
+			return returnValue
+		},
+		"influxdb": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("influxdb", scriptIndex, license) {
+				return returnValue
+			}
+
+			url := call.Argument(0).String()
+			token := call.Argument(1).String()
+			measurement := call.Argument(2).String()
+			organization := call.Argument(3).String()
+			bucket := call.Argument(4).String()
+
+			bytes, err := call.Argument(5).Object().MarshalJSON()
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			var object map[string]interface{}
+			if err := json.Unmarshal(bytes, &object); err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			client := influxdb2.NewClientWithOptions(
+				url,
+				token,
+				influxdb2.DefaultOptions().SetBatchSize(20),
+			)
+			defer client.Close()
+
+			writeAPI := client.WriteAPI(organization, bucket)
+
+			p := influxdb2.NewPoint(
+				measurement,
+				nil,
+				object,
+				time.Now(),
+			)
+
+			writeAPI.WritePoint(p)
+
+			writeAPI.Flush()
+
+			return returnValue
+		},
+		"s3": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("s3", scriptIndex, license) {
+				return returnValue
+			}
+
+			region := call.Argument(0).String()
+			keyID := call.Argument(1).String()
+			accessKey := call.Argument(2).String()
+			bucket := call.Argument(3).String()
+			path := call.Argument(4).String()
+
+			file, err := os.Open(misc.GetDataPath(path))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			contentType, err := misc.GetFileContentType(file)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			s3Config := &aws.Config{
+				Region:      aws.String(region),
+				Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
+			}
+
+			s3Session, err := session.NewSession(s3Config)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			uploader := s3manager.NewUploader(s3Session)
+
+			key := fmt.Sprintf("%s/%s/%s", node, ip, filepath.Base(path))
+
+			input := &s3manager.UploadInput{
+				Bucket:      aws.String(bucket),
+				Key:         aws.String(key),
+				Body:        file,
+				ContentType: aws.String(contentType),
+			}
+			_, err = uploader.UploadWithContext(context.Background(), input)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
+
+			return returnValue
+		},
 	})
 
 	if err != nil {
-		SendLogError(scriptIndex, err.Error())
+		log.Error().Err(err).Send()
 	}
 }
 
-func defineInfluxDB(o *otto.Otto, scriptIndex int64, license bool) {
-	helperName := "influxdb"
-	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
-		returnValue := otto.UndefinedValue()
+func definePcap(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("pcap", map[string]interface{}{
+		"nameResolutionHistory": func(call otto.FunctionCall) otto.Value {
+			m := resolver.K8sResolver.GetDumpNameResolutionHistoryMapStringKeys()
 
-		if protectLicense(helperName, scriptIndex, license) {
-			return returnValue
-		}
+			o := otto.New()
+			value, err := o.ToValue(m)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
 
-		url := call.Argument(0).String()
-		token := call.Argument(1).String()
-		measurement := call.Argument(2).String()
-		organization := call.Argument(3).String()
-		bucket := call.Argument(4).String()
-
-		bytes, err := call.Argument(5).Object().MarshalJSON()
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		var object map[string]interface{}
-		if err := json.Unmarshal(bytes, &object); err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		client := influxdb2.NewClientWithOptions(
-			url,
-			token,
-			influxdb2.DefaultOptions().SetBatchSize(20),
-		)
-		defer client.Close()
-
-		writeAPI := client.WriteAPI(organization, bucket)
-
-		p := influxdb2.NewPoint(
-			measurement,
-			nil,
-			object,
-			time.Now(),
-		)
-
-		writeAPI.WritePoint(p)
-
-		writeAPI.Flush()
-
-		return returnValue
+			return value
+		},
 	})
 
 	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
-
-func defineS3(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
-	helperName := "s3"
-	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
-		returnValue := otto.UndefinedValue()
-
-		if protectLicense(helperName, scriptIndex, license) {
-			return returnValue
-		}
-
-		region := call.Argument(0).String()
-		keyID := call.Argument(1).String()
-		accessKey := call.Argument(2).String()
-		bucket := call.Argument(3).String()
-		id := call.Argument(4).String()
-
-		pcapPath := misc.GetPcapPath(id)
-
-		file, err := os.Open(pcapPath)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		contentType, err := misc.GetFileContentType(file)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		s3Config := &aws.Config{
-			Region:      aws.String(region),
-			Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
-		}
-
-		s3Session, err := session.NewSession(s3Config)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		uploader := s3manager.NewUploader(s3Session)
-
-		key := fmt.Sprintf("%s_%s_%s", node, ip, id)
-
-		input := &s3manager.UploadInput{
-			Bucket:      aws.String(bucket),
-			Key:         aws.String(key),
-			Body:        file,
-			ContentType: aws.String(contentType),
-		}
-		_, err = uploader.UploadWithContext(context.Background(), input)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
-
-		return returnValue
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
-
-func defineS3JSON(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
-	helperName := "s3JSON"
-	err := o.Set(helperName, func(call otto.FunctionCall) otto.Value {
-		returnValue := otto.UndefinedValue()
-
-		if protectLicense(helperName, scriptIndex, license) {
-			return returnValue
-		}
-
-		region := call.Argument(0).String()
-		keyID := call.Argument(1).String()
-		accessKey := call.Argument(2).String()
-		bucket := call.Argument(3).String()
-		object := call.Argument(4).Object()
-		name := call.Argument(5).String()
-
-		b, err := object.MarshalJSON()
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		s3Config := &aws.Config{
-			Region:      aws.String(region),
-			Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
-		}
-
-		s3Session, err := session.NewSession(s3Config)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		uploader := s3manager.NewUploader(s3Session)
-
-		key := fmt.Sprintf("%s_%s_%s.json", node, ip, name)
-
-		input := &s3manager.UploadInput{
-			Bucket:      aws.String(bucket),
-			Key:         aws.String(key),
-			Body:        bytes.NewReader(b),
-			ContentType: aws.String("application/json"),
-		}
-		_, err = uploader.UploadWithContext(context.Background(), input)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return returnValue
-		}
-
-		SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
-
-		return returnValue
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
-	}
-}
-
-func defineNameResolutionHistory(o *otto.Otto, scriptIndex int64) {
-	err := o.Set("nameResolutionHistory", func(call otto.FunctionCall) otto.Value {
-		m := resolver.K8sResolver.GetDumpNameResolutionHistoryMapStringKeys()
-
-		o := otto.New()
-		value, err := o.ToValue(m)
-		if err != nil {
-			SendLogError(scriptIndex, err.Error())
-			return otto.UndefinedValue()
-		}
-
-		return value
-	})
-
-	if err != nil {
-		SendLogError(scriptIndex, err.Error())
+		log.Error().Err(err).Send()
 	}
 }
 
@@ -423,14 +336,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 }
 
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
-	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
-	definePass(otto, scriptIndex)
-	defineFail(otto, scriptIndex)
-	defineSlack(otto, scriptIndex, license)
-	defineInfluxDB(otto, scriptIndex, license)
-	defineS3(otto, scriptIndex, license, node, ip)
-	defineS3JSON(otto, scriptIndex, license, node, ip)
-	defineNameResolutionHistory(otto, scriptIndex)
+	defineTest(otto, scriptIndex)
+	defineVendor(otto, scriptIndex, license, node, ip)
+	definePcap(otto, scriptIndex)
 	defineFile(otto, scriptIndex)
 }
