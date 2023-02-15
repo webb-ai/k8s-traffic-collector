@@ -17,6 +17,7 @@ import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/misc/mergecap"
 	"github.com/kubeshark/worker/utils"
 	"github.com/robertkrimen/otto"
 	"github.com/rs/zerolog/log"
@@ -263,6 +264,35 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 
 			o := otto.New()
 			value, err := o.ToValue(m)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
+		"snapshot": func(call otto.FunctionCall) otto.Value {
+			pcapsDir := misc.GetPcapsDir()
+			pcapFiles, err := os.ReadDir(pcapsDir)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			outFile, err := os.CreateTemp(pcapsDir, "mergecap")
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+			defer outFile.Close()
+
+			err = mergecap.Mergecap(pcapFiles, "", []string{}, outFile)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			value, err := otto.ToValue(outFile.Name())
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
