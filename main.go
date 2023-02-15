@@ -75,11 +75,11 @@ func run() {
 			os.Getenv(assemblers.MemoryUsageTimeIntervalMilliseconds))
 	}
 
+	go handleCapturedItems(outputItems)
 	if *folder != "" {
 		startImporter(*folder, opts, streamsMap, outputItems)
 	} else {
 		startWorker(opts, streamsMap, outputItems, extensions.Extensions)
-		go handleCapturedItems(outputItems)
 	}
 
 	vm.LogGlobal = &vm.LogState{
