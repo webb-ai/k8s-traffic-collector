@@ -279,7 +279,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				return otto.UndefinedValue()
 			}
 
-			outFile, err := os.CreateTemp(pcapsDir, "mergecap")
+			outFile, err := os.CreateTemp(pcapsDir, "snapshot")
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -357,6 +357,32 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			}
 
 			return otto.UndefinedValue()
+		},
+		"mkdir": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+
+			err := os.MkdirAll(misc.GetDataPath(path), os.ModePerm)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return otto.UndefinedValue()
+		},
+		"mkdirTemp": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+
+			dirPath, err := os.MkdirTemp(misc.GetDataPath(path), "tempDir")
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			value, err := otto.ToValue(dirPath)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
 		},
 	})
 
