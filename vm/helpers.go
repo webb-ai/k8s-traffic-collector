@@ -364,6 +364,64 @@ func defineNameResolutionHistory(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func defineFile(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("file", map[string]interface{}{
+		"write": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+			content := call.Argument(1).String()
+
+			err := os.WriteFile(misc.GetDataPath(path), []byte(content), 0644)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return otto.UndefinedValue()
+		},
+		"append": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+			content := call.Argument(1).String()
+
+			f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+			defer f.Close()
+
+			if _, err := f.WriteString(content); err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return otto.UndefinedValue()
+		},
+		"move": func(call otto.FunctionCall) otto.Value {
+			oldPath := call.Argument(0).String()
+			newPath := call.Argument(1).String()
+
+			err := os.Rename(misc.GetDataPath(oldPath), misc.GetDataPath(newPath))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return otto.UndefinedValue()
+		},
+		"delete": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+
+			err := os.Remove(misc.GetDataPath(path))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			return otto.UndefinedValue()
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
 	defineWebhook(otto, scriptIndex, license)
 	defineConsole(otto, scriptIndex)
@@ -374,4 +432,5 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string
 	defineS3(otto, scriptIndex, license, node, ip)
 	defineS3JSON(otto, scriptIndex, license, node, ip)
 	defineNameResolutionHistory(otto, scriptIndex)
+	defineFile(otto, scriptIndex)
 }

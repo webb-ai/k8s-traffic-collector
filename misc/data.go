@@ -45,8 +45,12 @@ func GetDataDir() string {
 	return dataDir
 }
 
+func GetDataPath(path string) string {
+	return fmt.Sprintf("%s/%s", GetDataDir(), path)
+}
+
 func GetPcapsDir() string {
-	return fmt.Sprintf("%s/%s", GetDataDir(), "pcaps")
+	return GetDataPath("pcaps")
 }
 
 func GetPcapPath(id string) string {
