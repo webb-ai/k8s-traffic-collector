@@ -1,9 +1,12 @@
 package vm
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -272,6 +275,8 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"snapshot": func(call otto.FunctionCall) otto.Value {
+			dir := misc.GetDataPath(call.Argument(0).String())
+
 			pcapsDir := misc.GetPcapsDir()
 			pcapFiles, err := os.ReadDir(pcapsDir)
 			if err != nil {
@@ -279,7 +284,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				return otto.UndefinedValue()
 			}
 
-			outFile, err := os.CreateTemp(pcapsDir, "snapshot")
+			outFile, err := os.CreateTemp(dir, "snapshot")
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
@@ -377,6 +382,77 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			}
 
 			value, err := otto.ToValue(dirPath)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
+		"tar": func(call otto.FunctionCall) otto.Value {
+			dir := misc.GetDataPath(call.Argument(0).String())
+
+			zipName := fmt.Sprintf("kubeshark_%d.tar.gz", time.Now().Unix())
+			zipPath := misc.GetDataPath(zipName)
+			var file *os.File
+			file, err := os.Create(zipPath)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+			defer file.Close()
+
+			gzipWriter := gzip.NewWriter(file)
+			defer gzipWriter.Close()
+
+			tarWriter := tar.NewWriter(gzipWriter)
+			defer tarWriter.Close()
+
+			walker := func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if info.IsDir() {
+					return nil
+				}
+				file, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer file.Close()
+
+				stat, err := file.Stat()
+				if err != nil {
+					return err
+				}
+
+				header := &tar.Header{
+					Name:    path[len(dir)+1:],
+					Size:    stat.Size(),
+					Mode:    int64(stat.Mode()),
+					ModTime: stat.ModTime(),
+				}
+
+				err = tarWriter.WriteHeader(header)
+				if err != nil {
+					return err
+				}
+
+				_, err = io.Copy(tarWriter, file)
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}
+
+			err = filepath.Walk(dir, walker)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			value, err := otto.ToValue(zipPath)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
