@@ -16,6 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/worker/kubernetes/resolver"
@@ -197,61 +198,104 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 
 			return returnValue
 		},
-		"s3": func(call otto.FunctionCall) otto.Value {
-			returnValue := otto.UndefinedValue()
+		"s3": map[string]interface{}{
+			"put": func(call otto.FunctionCall) otto.Value {
+				returnValue := otto.UndefinedValue()
 
-			if protectLicense("s3", scriptIndex, license) {
+				if protectLicense("s3", scriptIndex, license) {
+					return returnValue
+				}
+
+				region := call.Argument(0).String()
+				keyID := call.Argument(1).String()
+				accessKey := call.Argument(2).String()
+				bucket := call.Argument(3).String()
+				path := call.Argument(4).String()
+
+				file, err := os.Open(misc.GetDataPath(path))
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				contentType, err := misc.GetFileContentType(file)
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				s3Config := &aws.Config{
+					Region:      aws.String(region),
+					Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
+				}
+
+				s3Session, err := session.NewSession(s3Config)
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				uploader := s3manager.NewUploader(s3Session)
+
+				key := fmt.Sprintf("%s_%s/%s", node, ip, filepath.Base(path))
+
+				input := &s3manager.UploadInput{
+					Bucket:      aws.String(bucket),
+					Key:         aws.String(key),
+					Body:        file,
+					ContentType: aws.String(contentType),
+				}
+				_, err = uploader.UploadWithContext(context.Background(), input)
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
+
 				return returnValue
-			}
+			},
+			"clear": func(call otto.FunctionCall) otto.Value {
+				returnValue := otto.UndefinedValue()
 
-			region := call.Argument(0).String()
-			keyID := call.Argument(1).String()
-			accessKey := call.Argument(2).String()
-			bucket := call.Argument(3).String()
-			path := call.Argument(4).String()
+				if protectLicense("s3", scriptIndex, license) {
+					return returnValue
+				}
 
-			file, err := os.Open(misc.GetDataPath(path))
-			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				region := call.Argument(0).String()
+				keyID := call.Argument(1).String()
+				accessKey := call.Argument(2).String()
+				bucket := call.Argument(3).String()
+
+				s3Config := &aws.Config{
+					Region:      aws.String(region),
+					Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
+				}
+
+				s3Session, err := session.NewSession(s3Config)
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				s3client := s3.New(s3Session)
+
+				folder := fmt.Sprintf("%s_%s", node, ip)
+
+				iter := s3manager.NewDeleteListIterator(s3client, &s3.ListObjectsInput{
+					Bucket: aws.String(bucket),
+					Prefix: aws.String(folder),
+				})
+
+				if err := s3manager.NewBatchDeleteWithClient(s3client).Delete(context.Background(), iter); err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				SendLog(scriptIndex, fmt.Sprintf("Deleted all files under %s in AWS S3 bucket: %s", folder, bucket))
+
 				return returnValue
-			}
-
-			contentType, err := misc.GetFileContentType(file)
-			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
-			}
-
-			s3Config := &aws.Config{
-				Region:      aws.String(region),
-				Credentials: credentials.NewStaticCredentials(keyID, accessKey, ""),
-			}
-
-			s3Session, err := session.NewSession(s3Config)
-			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
-			}
-
-			uploader := s3manager.NewUploader(s3Session)
-
-			key := fmt.Sprintf("%s/%s/%s", node, ip, filepath.Base(path))
-
-			input := &s3manager.UploadInput{
-				Bucket:      aws.String(bucket),
-				Key:         aws.String(key),
-				Body:        file,
-				ContentType: aws.String(contentType),
-			}
-			_, err = uploader.UploadWithContext(context.Background(), input)
-			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
-			}
-
-			SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
-
-			return returnValue
+			},
 		},
 	})
 
