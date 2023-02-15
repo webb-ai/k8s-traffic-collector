@@ -400,6 +400,23 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			return value
 		},
+		"temp": func(call otto.FunctionCall) otto.Value {
+			path := call.Argument(0).String()
+			extension := call.Argument(1).String()
+
+			f, err := os.CreateTemp(misc.GetDataPath(path), fmt.Sprintf("tempFile*.%s", extension))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+			}
+
+			value, err := otto.ToValue(misc.RemoveDataDir(f.Name()))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
 		"tar": func(call otto.FunctionCall) otto.Value {
 			dir := misc.GetDataPath(call.Argument(0).String())
 
