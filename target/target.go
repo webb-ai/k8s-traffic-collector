@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/queue"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/tracer"
 	"github.com/rs/zerolog/log"
@@ -16,9 +17,7 @@ var PacketSourceManager *source.PacketSourceManager // global
 var MainPacketInputChan chan source.TcpPacketInfo   // global
 var TracerInstance *tracer.Tracer                   // global
 
-func UpdatePods(pods []v1.Pod, procfs string) {
-	success := true
-
+func UpdatePods(pods []v1.Pod, procfs string, updateTargetsQueue *queue.Queue) {
 	misc.TargetedPods = pods
 
 	if PacketSourceManager != nil {
@@ -26,25 +25,26 @@ func UpdatePods(pods []v1.Pod, procfs string) {
 	}
 
 	if TracerInstance != nil && os.Getenv("KUBESHARK_GLOBAL_GOLANG_PID") == "" {
-		if err := tracer.UpdateTargets(TracerInstance, &pods, procfs); err != nil {
-			tracer.LogError(err)
-			success = false
-		}
+		updateTargetsQueue.AddJob(
+			queue.Job{
+				Name: "Update pods (HTTP call) UpdateTargets",
+				Action: func() error {
+					err := tracer.UpdateTargets(TracerInstance, &misc.TargetedPods, procfs)
+					return err
+				},
+			},
+		)
 	}
 
-	printNewTargets(success)
+	printNewTargets()
 }
 
-func printNewTargets(success bool) {
+func printNewTargets() {
 	printStr := ""
 	for _, pod := range misc.TargetedPods {
 		printStr += fmt.Sprintf("%s (%s), ", pod.Status.PodIP, pod.Name)
 	}
 	printStr = strings.TrimRight(printStr, ", ")
 
-	if success {
-		log.Info().Msg(fmt.Sprintf("Now targeting: %s", printStr))
-	} else {
-		log.Error().Msg(fmt.Sprintf("Failed to start targeting: %s", printStr))
-	}
+	log.Info().Msg(fmt.Sprintf("Now targeting: %s", printStr))
 }

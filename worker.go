@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/queue"
 	"github.com/kubeshark/worker/source"
 	"github.com/kubeshark/worker/target"
 	"github.com/kubeshark/worker/tracer"
@@ -21,13 +22,13 @@ import (
 
 const cleanPeriod = time.Second * 10
 
-func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension) {
+func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
 	go misc.LimitPcapsDirSize()
 
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				target.TracerInstance = startTracer(e, outputItems, streamsMap)
+				target.TracerInstance = startTracer(e, outputItems, streamsMap, updateTargetsQueue)
 				break
 			}
 		}
@@ -164,7 +165,7 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 	log.Info().Interface("AppStats", diagnose.AppStats).Send()
 }
 
-func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *tracer.Tracer {
+func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, updateTargetsQueue *queue.Queue) *tracer.Tracer {
 	tls := tracer.Tracer{}
 	chunksBufferSize := os.Getpagesize() * 100
 	logBufferSize := os.Getpagesize()
@@ -178,6 +179,16 @@ func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelIt
 		tracer.LogError(err)
 		return nil
 	}
+
+	updateTargetsQueue.AddJob(
+		queue.Job{
+			Name: "Start tracer UpdateTargets",
+			Action: func() error {
+				err := tracer.UpdateTargets(&tls, &misc.TargetedPods, *procfs)
+				return err
+			},
+		},
+	)
 
 	// A quick way to instrument libssl.so without PID filtering - used for debuging and troubleshooting
 	//

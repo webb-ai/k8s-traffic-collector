@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/queue"
 	"github.com/kubeshark/worker/server"
 	"github.com/kubeshark/worker/utils"
 	"github.com/kubeshark/worker/vm"
@@ -75,11 +76,16 @@ func run() {
 			os.Getenv(assemblers.MemoryUsageTimeIntervalMilliseconds))
 	}
 
+	updateTargetsQueue := queue.NewQueue("UpdateTargets")
+
+	worker := queue.NewWorker(updateTargetsQueue)
+	go worker.DoWork()
+
 	go handleCapturedItems(outputItems)
 	if *folder != "" {
 		startImporter(*folder, opts, streamsMap, outputItems)
 	} else {
-		startWorker(opts, streamsMap, outputItems, extensions.Extensions)
+		startWorker(opts, streamsMap, outputItems, extensions.Extensions, updateTargetsQueue)
 	}
 
 	vm.LogGlobal = &vm.LogState{
@@ -87,7 +93,7 @@ func run() {
 	}
 	go vm.RecieveLogChannel()
 
-	ginApp := server.Build(opts, *procfs)
+	ginApp := server.Build(opts, *procfs, updateTargetsQueue)
 	server.Start(ginApp, *port)
 }
 
