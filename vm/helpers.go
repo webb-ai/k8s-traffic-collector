@@ -575,7 +575,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 				log.Debug().Err(err).Send()
 			}
 
-			s := jobScheduler.Cron(cron).Tag(tag)
+			s := jobScheduler.CronWithSeconds(cron).Tag(tag)
 			if limit > 0 {
 				s.LimitRunsTo(int(limit))
 			}
