@@ -10,18 +10,22 @@ import (
 )
 
 type ResultJob struct {
+	Tag              string    `json:"tag"`
 	LastRun          time.Time `json:"lastRun"`
 	NextRun          time.Time `json:"nextRun"`
-	Tags             []string  `json:"tags"`
 	RunCount         int       `json:"runCount"`
 	ScheduledAtTimes []string  `json:"scheduledAtTimes"`
 	IsRunning        bool      `json:"isRunning"`
 }
 
 func (j *ResultJob) Fill(x *gocron.Job) {
+	tags := x.Tags()
+	if len(tags) > 0 {
+		j.Tag = tags[0]
+	}
+
 	j.LastRun = x.LastRun()
 	j.NextRun = x.NextRun()
-	j.Tags = x.Tags()
 	j.RunCount = x.RunCount()
 	j.ScheduledAtTimes = x.ScheduledAtTimes()
 	j.IsRunning = x.IsRunning()
