@@ -695,6 +695,10 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 			}
 
 			truth, _, err := kfl.Apply(marshalled, query)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
 
 			value, err := otto.ToValue(truth)
 			if err != nil {
