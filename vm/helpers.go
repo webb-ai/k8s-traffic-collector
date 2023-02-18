@@ -19,6 +19,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/kubeshark/base/pkg/languages/kfl"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/mergecap"
@@ -681,6 +682,60 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func defineKFL(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("kfl", map[string]interface{}{
+		"match": func(call otto.FunctionCall) otto.Value {
+			query := call.Argument(0).String()
+			obj := call.Argument(1).Object()
+
+			marshalled, err := obj.MarshalJSON()
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			truth, _, err := kfl.Apply(marshalled, query)
+
+			value, err := otto.ToValue(truth)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
+		"validate": func(call otto.FunctionCall) otto.Value {
+			query := call.Argument(0).String()
+			quiet, err := call.Argument(1).ToBoolean()
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			isValid := true
+			err = kfl.Validate(query)
+			if err != nil {
+				isValid = false
+				if !quiet {
+					SendLogError(scriptIndex, err.Error())
+				}
+			}
+
+			value, err := otto.ToValue(isValid)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
 	defineConsole(otto, scriptIndex)
 	defineTest(otto, scriptIndex)
@@ -688,4 +743,5 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string
 	definePcap(otto, scriptIndex)
 	defineFile(otto, scriptIndex)
 	defineJobs(otto, scriptIndex)
+	defineKFL(otto, scriptIndex)
 }
