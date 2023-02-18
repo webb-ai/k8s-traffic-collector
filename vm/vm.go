@@ -68,3 +68,7 @@ func Len() uint {
 
 	return i
 }
+
+func GetJobScheduler() *gocron.Scheduler {
+	return jobScheduler
+}
