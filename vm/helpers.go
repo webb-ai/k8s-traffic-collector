@@ -551,6 +551,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			}
 
 			tag := call.Argument(0).String()
+			tag = strings.ReplaceAll(strings.ToLower(tag), " ", "-")
 			cron := call.Argument(1).String()
 			limit, err := call.Argument(3).ToInteger()
 			if err != nil {
