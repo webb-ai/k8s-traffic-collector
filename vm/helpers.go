@@ -545,11 +545,16 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 func defineJobs(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("jobs", map[string]interface{}{
 		"schedule": func(call otto.FunctionCall) otto.Value {
+			var argumentList []otto.Value
+			if len(call.ArgumentList) > 4 {
+				argumentList = call.ArgumentList[4:]
+			}
+
 			tag := call.Argument(0).String()
 			cron := call.Argument(1).String()
 			task := func() {
 				SendLog(scriptIndex, fmt.Sprintf("Job: \"%s\" is triggered.", tag))
-				_, err := call.Argument(2).Call(call.Argument(2), call.ArgumentList[4:])
+				_, err := call.Argument(2).Call(call.Argument(2), argumentList)
 				if err != nil {
 					SendLogError(scriptIndex, err.Error())
 				}
@@ -594,6 +599,23 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			}
 
 			SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
+
+			return otto.UndefinedValue()
+		},
+		"removeAll": func(call otto.FunctionCall) otto.Value {
+			jobs := jobScheduler.Jobs()
+			for _, job := range jobs {
+				tags := job.Tags()
+				if len(tags) == 0 {
+					continue
+				}
+
+				tag := tags[0]
+				jobScheduler.RemoveByReference(job)
+				SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
+			}
+
+			SendLog(scriptIndex, "All jobs are removed.")
 
 			return otto.UndefinedValue()
 		},
