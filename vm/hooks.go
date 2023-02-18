@@ -18,7 +18,6 @@ func CapturedItemHook(entry *api.Entry) {
 		return
 	}
 
-	// TODO: JSON marshal/unmarshal to have the field names lowercase
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
 		if entry == nil {
@@ -105,4 +104,40 @@ func QueriedItemHook(entry *api.Entry) *api.Entry {
 	})
 
 	return returnedEntry
+}
+
+// Hook: passedJob, does not accept returns
+func PassedJobHook(tag string, cron string, limit int64) {
+	hook := "passedJob"
+
+	Range(func(key, value interface{}) bool {
+		v := value.(*VM)
+		v.Lock()
+		_, err := v.Otto.Call(hook, nil, tag, cron, limit)
+		v.Unlock()
+		if err != nil {
+			if !IsMissingHookError(err, hook) {
+				SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+			}
+		}
+		return true
+	})
+}
+
+// Hook: failedJob, does not accept returns
+func FailedJobHook(tag string, cron string, limit int64, err string) {
+	hook := "failedJob"
+
+	Range(func(key, value interface{}) bool {
+		v := value.(*VM)
+		v.Lock()
+		_, err := v.Otto.Call(hook, nil, tag, cron, limit, err)
+		v.Unlock()
+		if err != nil {
+			if !IsMissingHookError(err, hook) {
+				SendLogError(key.(int64), fmt.Sprintf("(hook=%s) %s", hook, err.Error()))
+			}
+		}
+		return true
+	})
 }

@@ -552,17 +552,20 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 
 			tag := call.Argument(0).String()
 			cron := call.Argument(1).String()
-			task := func() {
-				SendLog(scriptIndex, fmt.Sprintf("Job: \"%s\" is triggered.", tag))
-				_, err := call.Argument(2).Call(call.Argument(2), argumentList)
-				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-				}
-			}
 			limit, err := call.Argument(3).ToInteger()
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				limit = 0
+			}
+			task := func() {
+				_, err := call.Argument(2).Call(call.Argument(2), argumentList)
+				if err != nil {
+					errMsg := err.Error()
+					SendLogError(scriptIndex, errMsg)
+					FailedJobHook(tag, cron, limit, errMsg)
+				} else {
+					PassedJobHook(tag, cron, limit)
+				}
 			}
 
 			limitMsg := "infinite"
