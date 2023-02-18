@@ -544,7 +544,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 func defineJobs(o *otto.Otto, scriptIndex int64) {
 	err := o.Set("jobs", map[string]interface{}{
-		"set": func(call otto.FunctionCall) otto.Value {
+		"schedule": func(call otto.FunctionCall) otto.Value {
 			tag := call.Argument(0).String()
 			cron := call.Argument(1).String()
 			task := func() {
@@ -576,6 +576,27 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
 
 			return otto.UndefinedValue()
+		},
+		"list": func(call otto.FunctionCall) otto.Value {
+			var jobNames []string
+			jobs := jobScheduler.Jobs()
+			for _, job := range jobs {
+				tags := job.Tags()
+				if len(tags) == 0 {
+					continue
+				}
+
+				jobNames = append(jobNames, tags[0])
+			}
+
+			o := otto.New()
+			value, err := o.ToValue(jobNames)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			return value
 		},
 	})
 
