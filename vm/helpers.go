@@ -573,6 +573,12 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 		"remove": func(call otto.FunctionCall) otto.Value {
 			tag := call.Argument(0).String()
 
+			err := jobScheduler.RemoveByTag(tag)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
 			SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
 
 			return otto.UndefinedValue()
