@@ -22,6 +22,7 @@ func Init() {
 
 	jobScheduler = gocron.NewScheduler(time.UTC)
 	jobScheduler.TagsUnique()
+	jobScheduler.SingletonModeAll()
 
 	jobScheduler.StartAsync()
 }
