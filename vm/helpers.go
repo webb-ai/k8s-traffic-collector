@@ -542,10 +542,46 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func defineJobs(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("jobs", map[string]interface{}{
+		"set": func(call otto.FunctionCall) otto.Value {
+			tag := call.Argument(0).String()
+			cron := call.Argument(1).String()
+			task := func() {
+				SendLog(scriptIndex, fmt.Sprintf("Job: \"%s\" is triggered.", tag))
+				call.Argument(2).Call(call.Argument(2), call.ArgumentList[3:])
+			}
+
+			jobScheduler.RemoveByTag(tag)
+			_, err := jobScheduler.Cron(cron).Tag(tag).Do(task)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			SendLog(scriptIndex, fmt.Sprintf("Scheduled the job: \"%s\" for cron: \"%s\"", tag, cron))
+
+			return otto.UndefinedValue()
+		},
+		"remove": func(call otto.FunctionCall) otto.Value {
+			tag := call.Argument(0).String()
+
+			SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
+
+			return otto.UndefinedValue()
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
 	defineConsole(otto, scriptIndex)
 	defineTest(otto, scriptIndex)
 	defineVendor(otto, scriptIndex, license, node, ip)
 	definePcap(otto, scriptIndex)
 	defineFile(otto, scriptIndex)
+	defineJobs(otto, scriptIndex)
 }

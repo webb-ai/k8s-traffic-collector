@@ -2,11 +2,14 @@ package vm
 
 import (
 	"sync"
+	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/robertkrimen/otto"
 )
 
 var vms *sync.Map
+var jobScheduler *gocron.Scheduler
 
 type VM struct {
 	Otto *otto.Otto
@@ -16,6 +19,11 @@ type VM struct {
 
 func Init() {
 	vms = &sync.Map{}
+
+	jobScheduler = gocron.NewScheduler(time.UTC)
+	jobScheduler.TagsUnique()
+
+	jobScheduler.StartAsync()
 }
 
 func Create(key int64, code string, license bool, node string, ip string) (*VM, error) {
