@@ -650,6 +650,27 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 
 			return otto.UndefinedValue()
 		},
+		"scheduler": map[string]interface{}{
+			"isRunning": func(call otto.FunctionCall) otto.Value {
+				value, err := otto.ToValue(jobScheduler.IsRunning())
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return otto.UndefinedValue()
+				}
+
+				return value
+			},
+			"start": func(call otto.FunctionCall) otto.Value {
+				jobScheduler.StartAsync()
+
+				return otto.UndefinedValue()
+			},
+			"stop": func(call otto.FunctionCall) otto.Value {
+				jobScheduler.Stop()
+
+				return otto.UndefinedValue()
+			},
+		},
 	})
 
 	if err != nil {
