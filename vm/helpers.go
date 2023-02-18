@@ -549,11 +549,18 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			cron := call.Argument(1).String()
 			task := func() {
 				SendLog(scriptIndex, fmt.Sprintf("Job: \"%s\" is triggered.", tag))
-				call.Argument(2).Call(call.Argument(2), call.ArgumentList[3:])
+				_, err := call.Argument(2).Call(call.Argument(2), call.ArgumentList[3:])
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+				}
 			}
 
-			jobScheduler.RemoveByTag(tag)
-			_, err := jobScheduler.Cron(cron).Tag(tag).Do(task)
+			err := jobScheduler.RemoveByTag(tag)
+			if err != nil {
+				log.Debug().Err(err).Send()
+			}
+
+			_, err = jobScheduler.Cron(cron).Tag(tag).Do(task)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
