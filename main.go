@@ -114,6 +114,6 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 
 		entry := utils.ItemToEntry(finalItem)
 
-		vm.CapturedItemHook(entry)
+		vm.ItemCapturedHook(entry)
 	}
 }

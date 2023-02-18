@@ -188,7 +188,7 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 			continue
 		}
 
-		alteredEntry = vm.QueriedItemHook(alteredEntry)
+		alteredEntry = vm.ItemQueriedHook(alteredEntry)
 
 		baseEntry := utils.SummarizeEntry(alteredEntry)
 

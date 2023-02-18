@@ -115,7 +115,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 			break
 		}
 
-		alteredEntry = vm.QueriedItemHook(alteredEntry)
+		alteredEntry = vm.ItemQueriedHook(alteredEntry)
 
 		base := extension.Dissector.Summarize(alteredEntry)
 		var representation []byte

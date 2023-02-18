@@ -7,7 +7,7 @@ import (
 func TestWebhookHelper(t *testing.T) {
 	var key int64 = 0
 	code := `
-function capturedItem(item) {
+function onItemCaptured(item) {
 	webhook("POST", "https://webhook.site/fd14dd50-980c-40d0-bd82-63b7807ac589", "hello world");
 }
 
@@ -21,7 +21,7 @@ function capturedItem(item) {
 		panic(err)
 	}
 
-	hook := "capturedItem"
+	hook := "onItemCaptured"
 	for i := 0; i < 5; i++ {
 		_, err = v.Otto.Call(hook, nil, nil)
 		if err != nil {

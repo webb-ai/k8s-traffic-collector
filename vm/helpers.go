@@ -562,9 +562,9 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 				if err != nil {
 					errMsg := err.Error()
 					SendLogError(scriptIndex, errMsg)
-					FailedJobHook(tag, cron, limit, errMsg)
+					JobFailedHook(tag, cron, limit, errMsg)
 				} else {
-					PassedJobHook(tag, cron, limit)
+					JobPassedHook(tag, cron, limit)
 				}
 			}
 

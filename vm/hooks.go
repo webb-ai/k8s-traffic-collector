@@ -8,9 +8,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Hook: capturedItem, does not accept returns
-func CapturedItemHook(entry *api.Entry) {
-	hook := "capturedItem"
+// Hook: onItemCaptured, does not accept returns
+func ItemCapturedHook(entry *api.Entry) {
+	hook := "onItemCaptured"
 
 	data, err := MarshalUnmarshalEntry(entry)
 	if err != nil {
@@ -35,9 +35,9 @@ func CapturedItemHook(entry *api.Entry) {
 	})
 }
 
-// Hook: capturedPacket, does not accept returns
-func CapturedPacketHook(packet gopacket.Packet) {
-	hook := "capturedPacket"
+// Hook: onPacketCaptured, does not accept returns
+func PacketCapturedHook(packet gopacket.Packet) {
+	hook := "onPacketCaptured"
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
 		info, err := BuildCustomPacketInfo(packet)
@@ -58,8 +58,8 @@ func CapturedPacketHook(packet gopacket.Packet) {
 	})
 }
 
-// Hook: queriedItem, accepts Object type returns
-func QueriedItemHook(entry *api.Entry) *api.Entry {
+// Hook: onItemQueried, accepts Object type returns
+func ItemQueriedHook(entry *api.Entry) *api.Entry {
 	returnedEntry := entry
 
 	data, err := MarshalUnmarshalEntry(entry)
@@ -68,7 +68,7 @@ func QueriedItemHook(entry *api.Entry) *api.Entry {
 		return nil
 	}
 
-	hook := "queriedItem"
+	hook := "onItemQueried"
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
 		if entry == nil {
@@ -106,9 +106,9 @@ func QueriedItemHook(entry *api.Entry) *api.Entry {
 	return returnedEntry
 }
 
-// Hook: passedJob, does not accept returns
-func PassedJobHook(tag string, cron string, limit int64) {
-	hook := "passedJob"
+// Hook: onJobPassed, does not accept returns
+func JobPassedHook(tag string, cron string, limit int64) {
+	hook := "onJobPassed"
 
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
@@ -124,9 +124,9 @@ func PassedJobHook(tag string, cron string, limit int64) {
 	})
 }
 
-// Hook: failedJob, does not accept returns
-func FailedJobHook(tag string, cron string, limit int64, err string) {
-	hook := "failedJob"
+// Hook: onJobFailed, does not accept returns
+func JobFailedHook(tag string, cron string, limit int64, err string) {
+	hook := "onJobFailed"
 
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)

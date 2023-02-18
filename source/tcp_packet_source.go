@@ -108,7 +108,7 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 		packet, err := source.Handle.NextPacket()
 
 		if masterCapture {
-			vm.CapturedPacketHook(packet)
+			vm.PacketCapturedHook(packet)
 		}
 
 		if err == io.EOF {
