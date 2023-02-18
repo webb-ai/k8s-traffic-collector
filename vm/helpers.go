@@ -603,17 +603,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"removeAll": func(call otto.FunctionCall) otto.Value {
-			jobs := jobScheduler.Jobs()
-			for _, job := range jobs {
-				tags := job.Tags()
-				if len(tags) == 0 {
-					continue
-				}
-
-				tag := tags[0]
-				jobScheduler.RemoveByReference(job)
-				SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
-			}
+			jobScheduler.Clear()
 
 			SendLog(scriptIndex, "All jobs are removed.")
 
@@ -639,6 +629,26 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			}
 
 			return value
+		},
+		"run": func(call otto.FunctionCall) otto.Value {
+			tag := call.Argument(0).String()
+
+			err := jobScheduler.RunByTag(tag)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return otto.UndefinedValue()
+			}
+
+			SendLog(scriptIndex, fmt.Sprintf("Triggered the job: \"%s\"", tag))
+
+			return otto.UndefinedValue()
+		},
+		"runAll": func(call otto.FunctionCall) otto.Value {
+			jobScheduler.RunAll()
+
+			SendLog(scriptIndex, "All jobs are triggered.")
+
+			return otto.UndefinedValue()
 		},
 	})
 
