@@ -44,6 +44,7 @@ func CapturedPacketHook(packet gopacket.Packet) {
 		info, err := BuildCustomPacketInfo(packet)
 		if err != nil {
 			log.Debug().Err(err).Send()
+			return true
 		}
 
 		v.Lock()
