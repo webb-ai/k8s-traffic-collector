@@ -550,8 +550,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 				argumentList = call.ArgumentList[4:]
 			}
 
-			tag := call.Argument(0).String()
-			tag = strings.ReplaceAll(strings.ToLower(tag), " ", "-")
+			tag := strings.ReplaceAll(strings.ToLower(call.Argument(0).String()), " ", "-")
 			cron := call.Argument(1).String()
 			limit, err := call.Argument(3).ToInteger()
 			if err != nil {
