@@ -549,24 +549,38 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			cron := call.Argument(1).String()
 			task := func() {
 				SendLog(scriptIndex, fmt.Sprintf("Job: \"%s\" is triggered.", tag))
-				_, err := call.Argument(2).Call(call.Argument(2), call.ArgumentList[3:])
+				_, err := call.Argument(2).Call(call.Argument(2), call.ArgumentList[4:])
 				if err != nil {
 					SendLogError(scriptIndex, err.Error())
 				}
 			}
+			limit, err := call.Argument(3).ToInteger()
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				limit = 0
+			}
 
-			err := jobScheduler.RemoveByTag(tag)
+			limitMsg := "infinite"
+			if limit > 0 {
+				limitMsg = fmt.Sprintf("%d", limit)
+			}
+
+			err = jobScheduler.RemoveByTag(tag)
 			if err != nil {
 				log.Debug().Err(err).Send()
 			}
 
-			_, err = jobScheduler.Cron(cron).Tag(tag).Do(task)
+			s := jobScheduler.Cron(cron).Tag(tag)
+			if limit > 0 {
+				s.LimitRunsTo(int(limit))
+			}
+			_, err = s.Do(task)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
 			}
 
-			SendLog(scriptIndex, fmt.Sprintf("Scheduled the job: \"%s\" for cron: \"%s\"", tag, cron))
+			SendLog(scriptIndex, fmt.Sprintf("Scheduled the job: \"%s\" for cron: \"%s\" (limit: %s)", tag, cron, limitMsg))
 
 			return otto.UndefinedValue()
 		},
