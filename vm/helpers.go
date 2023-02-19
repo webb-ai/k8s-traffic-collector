@@ -551,7 +551,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 				argumentList = call.ArgumentList[4:]
 			}
 
-			tag := strings.ReplaceAll(strings.ToLower(call.Argument(0).String()), " ", "-")
+			tag := FormatJobTag(call.Argument(0).String())
 			cron := call.Argument(1).String()
 			limit, err := call.Argument(3).ToInteger()
 			if err != nil {
@@ -594,7 +594,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"remove": func(call otto.FunctionCall) otto.Value {
-			tag := call.Argument(0).String()
+			tag := FormatJobTag(call.Argument(0).String())
 
 			err := jobScheduler.RemoveByTag(tag)
 			if err != nil {
@@ -635,7 +635,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"run": func(call otto.FunctionCall) otto.Value {
-			tag := call.Argument(0).String()
+			tag := FormatJobTag(call.Argument(0).String())
 
 			err := jobScheduler.RunByTag(tag)
 			if err != nil {

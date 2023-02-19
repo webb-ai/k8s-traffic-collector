@@ -2,6 +2,7 @@ package vm
 
 import (
 	"encoding/json"
+	"strings"
 
 	"github.com/kubeshark/base/pkg/api"
 	"github.com/robertkrimen/otto"
@@ -47,4 +48,8 @@ func MarshalUnmarshalEntryReverse(result map[string]interface{}) (entry *api.Ent
 	}
 
 	return
+}
+
+func FormatJobTag(tag string) string {
+	return strings.ReplaceAll(strings.ToLower(tag), " ", "-")
 }
