@@ -29,11 +29,21 @@ func RecieveLogChannel() {
 		LogGlobal.Lock()
 		sockets := LogGlobal.Sockets
 		LogGlobal.Unlock()
+
+		var newSockets []*websocket.Conn
 		for _, ws := range sockets {
 			err := ws.WriteMessage(1, []byte(fmt.Sprintf("%d%s] %s", l.Script, l.Suffix, l.Text)))
 			if err != nil {
 				log.Error().Err(err).Send()
+			} else {
+				newSockets = append(newSockets, ws)
 			}
+		}
+
+		if len(sockets) != len(newSockets) {
+			LogGlobal.Lock()
+			LogGlobal.Sockets = newSockets
+			LogGlobal.Unlock()
 		}
 	}
 }
