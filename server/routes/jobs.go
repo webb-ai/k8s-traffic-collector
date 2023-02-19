@@ -10,9 +10,7 @@ func JobsRoutes(ginApp *gin.Engine) {
 
 	routeGroup.GET("/:tag", controllers.GetJob)
 	routeGroup.DELETE("/:tag", controllers.DeleteJob)
-
 	routeGroup.POST("/run/:tag", controllers.PostRunJob)
-	routeGroup.POST("/run", controllers.PostRunAllJobs)
 
 	routeGroup.GET("/scheduler/status", controllers.GetSchedulerStatus)
 	routeGroup.POST("/scheduler/start", controllers.PostSchedulerStart)
@@ -20,4 +18,5 @@ func JobsRoutes(ginApp *gin.Engine) {
 
 	routeGroup.GET("", controllers.GetAllJobs)
 	routeGroup.DELETE("", controllers.DeleteAllJobs)
+	routeGroup.POST("/run", controllers.PostRunAllJobs)
 }
