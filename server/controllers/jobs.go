@@ -16,6 +16,7 @@ type ResultJob struct {
 	RunCount         int       `json:"runCount"`
 	ScheduledAtTimes []string  `json:"scheduledAtTimes"`
 	IsRunning        bool      `json:"isRunning"`
+	IsPending        bool      `json:"isPending"`
 }
 
 func (j *ResultJob) Fill(x *gocron.Job) {
@@ -24,11 +25,15 @@ func (j *ResultJob) Fill(x *gocron.Job) {
 		j.Tag = tags[0]
 	}
 
-	j.LastRun = x.LastRun()
-	j.NextRun = x.NextRun()
+	j.LastRun = x.LastRun().UTC()
+	j.NextRun = x.NextRun().UTC()
 	j.RunCount = x.RunCount()
 	j.ScheduledAtTimes = x.ScheduledAtTimes()
 	j.IsRunning = x.IsRunning()
+
+	if time.Now().UTC().After(j.NextRun) {
+		j.IsPending = true
+	}
 }
 
 func GetJob(c *gin.Context) {
