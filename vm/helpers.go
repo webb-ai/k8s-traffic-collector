@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/go-co-op/gocron"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/base/pkg/languages/kfl"
 	"github.com/kubeshark/worker/kubernetes/resolver"
@@ -543,7 +544,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
-func defineJobs(o *otto.Otto, scriptIndex int64) {
+func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 	err := o.Set("jobs", map[string]interface{}{
 		"schedule": func(call otto.FunctionCall) otto.Value {
 			var argumentList []otto.Value
@@ -583,11 +584,15 @@ func defineJobs(o *otto.Otto, scriptIndex int64) {
 			if limit > 0 {
 				s.LimitRunsTo(int(limit))
 			}
-			_, err = s.Do(task)
+
+			var job *gocron.Job
+			job, err = s.Do(task)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
 			}
+
+			v.Jobs[tag] = job
 
 			SendLog(scriptIndex, fmt.Sprintf("Scheduled the job: \"%s\" for cron: \"%s\" (limit: %s)", tag, cron, limitMsg))
 
@@ -740,12 +745,12 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
+func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string, v *VM) {
 	defineConsole(otto, scriptIndex)
 	defineTest(otto, scriptIndex)
 	defineVendor(otto, scriptIndex, license, node, ip)
 	definePcap(otto, scriptIndex)
 	defineFile(otto, scriptIndex)
-	defineJobs(otto, scriptIndex)
+	defineJobs(otto, scriptIndex, v)
 	defineKFL(otto, scriptIndex)
 }

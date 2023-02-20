@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-co-op/gocron"
 	"github.com/robertkrimen/otto"
+	"github.com/rs/zerolog/log"
 )
 
 var vms *sync.Map
@@ -14,6 +15,7 @@ var jobScheduler *gocron.Scheduler
 type VM struct {
 	Otto *otto.Otto
 	Code string
+	Jobs map[string]*gocron.Job
 	sync.Mutex
 }
 
@@ -29,21 +31,25 @@ func Init() {
 
 func Create(key int64, code string, license bool, node string, ip string) (*VM, error) {
 	o := otto.New()
+
+	v := &VM{
+		Otto: o,
+		Code: code,
+		Jobs: make(map[string]*gocron.Job),
+	}
+
 	defineConsts(o)
-	defineHelpers(o, key, license, node, ip)
+	defineHelpers(o, key, license, node, ip, v)
 	_, err := o.Run(code)
 	if err != nil {
 		return nil, err
 	}
 
-	return &VM{
-		Otto: o,
-		Code: code,
-	}, nil
+	return v, nil
 }
 
-func Set(key int64, vm *VM) {
-	vms.Store(key, vm)
+func Set(key int64, v *VM) {
+	vms.Store(key, v)
 }
 
 func Get(key int64) (*VM, bool) {
@@ -52,6 +58,14 @@ func Get(key int64) (*VM, bool) {
 }
 
 func Delete(key int64) {
+	v, ok := Get(key)
+	if !ok {
+		log.Error().Int64("index", key).Msg("Couldn't find the VM!")
+	} else {
+		for _, job := range v.Jobs {
+			jobScheduler.RemoveByReference(job)
+		}
+	}
 	vms.Delete(key)
 }
 
