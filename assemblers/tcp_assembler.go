@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -35,6 +36,7 @@ type TcpAssembler struct {
 	dnsFactory             *dnsFactory
 	staleConnectionTimeout time.Duration
 	stats                  AssemblerStats
+	sync.Mutex
 }
 
 // Context
@@ -144,14 +146,18 @@ func (a *TcpAssembler) WaitAndDump() {
 }
 
 func (a *TcpAssembler) periodicClean() {
+	a.Lock()
 	flushed, closed := a.FlushCloseOlderThan(time.Now().Add(-a.staleConnectionTimeout))
 	stats := a.stats
 	stats.ClosedConnections += closed
 	stats.FlushedConnections += flushed
+	a.Unlock()
 }
 
 func (a *TcpAssembler) DumpStats() AssemblerStats {
+	a.Lock()
 	result := a.stats
 	a.stats = AssemblerStats{}
+	a.Unlock()
 	return result
 }

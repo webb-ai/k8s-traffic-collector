@@ -31,7 +31,9 @@ func (cl *Cleaner) clean() {
 				continue
 			}
 			deleted := deleteOlderThan(reqResMatcher.GetMap(), startCleanTime.Add(-cl.connectionTimeout))
+			cl.statsMutex.Lock()
 			cl.stats.deleted += deleted
+			cl.statsMutex.Unlock()
 		}
 		return true
 	})
