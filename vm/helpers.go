@@ -560,7 +560,9 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 				limit = 0
 			}
 			task := func() {
+				v.Lock()
 				_, err := call.Argument(2).Call(call.Argument(2), argumentList)
+				v.Unlock()
 				if err != nil {
 					errMsg := err.Error()
 					SendLogError(scriptIndex, errMsg)

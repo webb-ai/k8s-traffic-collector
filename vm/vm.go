@@ -40,7 +40,10 @@ func Create(key int64, code string, license bool, node string, ip string) (*VM, 
 
 	defineConsts(o)
 	defineHelpers(o, key, license, node, ip, v)
+
+	v.Lock()
 	_, err := o.Run(code)
+	v.Unlock()
 	if err != nil {
 		return nil, err
 	}
