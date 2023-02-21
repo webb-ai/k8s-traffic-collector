@@ -52,11 +52,22 @@ func Create(key int64, code string, license bool, node string, ip string) (*VM, 
 }
 
 func Set(key int64, v *VM) {
+	oldV, ok := Get(key)
+	if ok {
+		for _, job := range oldV.Jobs {
+			jobScheduler.RemoveByReference(job)
+		}
+	}
+
 	vms.Store(key, v)
 }
 
 func Get(key int64) (*VM, bool) {
 	v, ok := vms.Load(key)
+	if !ok {
+		return nil, ok
+	}
+
 	return v.(*VM), ok
 }
 
@@ -69,6 +80,7 @@ func Delete(key int64) {
 			jobScheduler.RemoveByReference(job)
 		}
 	}
+
 	vms.Delete(key)
 }
 
