@@ -432,8 +432,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 		},
 		"mkdirTemp": func(call otto.FunctionCall) otto.Value {
 			name := call.Argument(0).String()
+			dir := call.Argument(1).String()
 
-			dirPath, err := os.MkdirTemp(misc.GetDataDir(), name)
+			dirPath, err := os.MkdirTemp(misc.GetDataPath(dir), name)
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 			}
@@ -447,11 +448,15 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"temp": func(call otto.FunctionCall) otto.Value {
-			path := call.Argument(0).String()
-			name := call.Argument(1).String()
+			name := call.Argument(0).String()
+			dir := call.Argument(1).String()
 			extension := call.Argument(2).String()
 
-			f, err := os.CreateTemp(misc.GetDataPath(path), fmt.Sprintf("%s*.%s", name, extension))
+			if extension == "" {
+				extension = "txt"
+			}
+
+			f, err := os.CreateTemp(misc.GetDataPath(dir), fmt.Sprintf("%s*.%s", name, extension))
 			if err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return otto.UndefinedValue()
