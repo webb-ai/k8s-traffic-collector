@@ -21,7 +21,7 @@ func defineEnv(otto *otto.Otto) {
 		}
 	}
 
-	err := otto.Set("env", keys)
+	err := otto.Set("env", env)
 	if err != nil {
 		log.Error().Err(err).Send()
 	}
