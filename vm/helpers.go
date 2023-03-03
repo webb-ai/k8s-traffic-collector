@@ -172,8 +172,20 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 				return returnValue
 			}
 
-			var object map[string]interface{}
-			if err := json.Unmarshal(bytes, &object); err != nil {
+			var fields map[string]interface{}
+			if err := json.Unmarshal(bytes, &fields); err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			bytes, err = call.Argument(6).Object().MarshalJSON()
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			var tags map[string]string
+			if err := json.Unmarshal(bytes, &tags); err != nil {
 				SendLogError(scriptIndex, err.Error())
 				return returnValue
 			}
@@ -189,8 +201,8 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 
 			p := influxdb2.NewPoint(
 				measurement,
-				nil,
-				object,
+				tags,
+				fields,
 				time.Now(),
 			)
 
