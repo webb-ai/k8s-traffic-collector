@@ -13,5 +13,5 @@ func ScriptsRoutes(ginApp *gin.Engine) {
 
 	routeGroup.GET("/logs", controllers.ScriptLogsHandler)
 
-	routeGroup.PUT("/consts", controllers.PutConsts)
+	routeGroup.PUT("/env", controllers.PutEnv)
 }

@@ -72,12 +72,12 @@ func ScriptLogsHandler(c *gin.Context) {
 	<-done
 }
 
-func PutConsts(c *gin.Context) {
-	var consts map[string]interface{}
-	if err := c.Bind(&consts); err != nil {
+func PutEnv(c *gin.Context) {
+	var env map[string]interface{}
+	if err := c.Bind(&env); err != nil {
 		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	vm.SetConsts(consts)
+	vm.SetEnv(env)
 }

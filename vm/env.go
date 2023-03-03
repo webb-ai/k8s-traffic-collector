@@ -5,15 +5,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-var consts map[string]interface{}
+var env map[string]interface{}
 
-func SetConsts(c map[string]interface{}) {
-	consts = c
+func SetEnv(c map[string]interface{}) {
+	env = c
 }
 
-func defineConsts(otto *otto.Otto) {
+func defineEnv(otto *otto.Otto) {
 	var keys []string
-	for key, value := range consts {
+	for key, value := range env {
 		keys = append(keys, key)
 		err := otto.Set(key, value)
 		if err != nil {
@@ -21,7 +21,7 @@ func defineConsts(otto *otto.Otto) {
 		}
 	}
 
-	err := otto.Set("CONSTS", keys)
+	err := otto.Set("env", keys)
 	if err != nil {
 		log.Error().Err(err).Send()
 	}
