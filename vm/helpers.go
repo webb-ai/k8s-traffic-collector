@@ -80,12 +80,12 @@ func defineTest(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
-func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip string) {
+func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 	err := o.Set("vendor", map[string]interface{}{
 		"webhook": func(call otto.FunctionCall) otto.Value {
 			returnValue := otto.UndefinedValue()
 
-			if protectLicense("webhook", scriptIndex, license) {
+			if protectLicense("webhook", scriptIndex) {
 				return returnValue
 			}
 
@@ -111,7 +111,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 		"slack": func(call otto.FunctionCall) otto.Value {
 			returnValue := otto.UndefinedValue()
 
-			if protectLicense("slack", scriptIndex, license) {
+			if protectLicense("slack", scriptIndex) {
 				return returnValue
 			}
 
@@ -156,7 +156,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 		"influxdb": func(call otto.FunctionCall) otto.Value {
 			returnValue := otto.UndefinedValue()
 
-			if protectLicense("influxdb", scriptIndex, license) {
+			if protectLicense("influxdb", scriptIndex) {
 				return returnValue
 			}
 
@@ -213,7 +213,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 			"put": func(call otto.FunctionCall) otto.Value {
 				returnValue := otto.UndefinedValue()
 
-				if protectLicense("s3", scriptIndex, license) {
+				if protectLicense("s3", scriptIndex) {
 					return returnValue
 				}
 
@@ -269,7 +269,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, license bool, node string, ip
 			"clear": func(call otto.FunctionCall) otto.Value {
 				returnValue := otto.UndefinedValue()
 
-				if protectLicense("s3", scriptIndex, license) {
+				if protectLicense("s3", scriptIndex) {
 					return returnValue
 				}
 
@@ -761,10 +761,10 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
-func defineHelpers(otto *otto.Otto, scriptIndex int64, license bool, node string, ip string, v *VM) {
+func defineHelpers(otto *otto.Otto, scriptIndex int64, node string, ip string, v *VM) {
 	defineConsole(otto, scriptIndex)
 	defineTest(otto, scriptIndex)
-	defineVendor(otto, scriptIndex, license, node, ip)
+	defineVendor(otto, scriptIndex, node, ip)
 	definePcap(otto, scriptIndex)
 	defineFile(otto, scriptIndex)
 	defineJobs(otto, scriptIndex, v)

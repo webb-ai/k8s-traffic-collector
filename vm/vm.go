@@ -29,7 +29,7 @@ func Init() {
 	jobScheduler.StartAsync()
 }
 
-func Create(key int64, code string, license bool, node string, ip string) (*VM, error) {
+func Create(key int64, code string, node string, ip string) (*VM, error) {
 	o := otto.New()
 
 	v := &VM{
@@ -39,7 +39,7 @@ func Create(key int64, code string, license bool, node string, ip string) (*VM, 
 	}
 
 	defineEnv(o)
-	defineHelpers(o, key, license, node, ip, v)
+	defineHelpers(o, key, node, ip, v)
 
 	v.Lock()
 	_, err := o.Run(code)

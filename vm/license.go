@@ -6,7 +6,9 @@ import (
 
 const licenseErrorMsgFormat = "%s helper requires Pro license! Please visit https://kubeshark.co/pro"
 
-func protectLicense(helperName string, scriptIndex int64, license bool) bool {
+var license bool
+
+func protectLicense(helperName string, scriptIndex int64) bool {
 	if !license {
 		SendLogError(scriptIndex, fmt.Sprintf(licenseErrorMsgFormat, helperName))
 
@@ -14,4 +16,8 @@ func protectLicense(helperName string, scriptIndex int64, license bool) bool {
 	}
 
 	return false
+}
+
+func SetLicense(v bool) {
+	license = v
 }
