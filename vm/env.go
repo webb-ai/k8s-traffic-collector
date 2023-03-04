@@ -12,9 +12,7 @@ func SetEnv(c map[string]interface{}) {
 }
 
 func defineEnv(otto *otto.Otto) {
-	var keys []string
 	for key, value := range env {
-		keys = append(keys, key)
 		err := otto.Set(key, value)
 		if err != nil {
 			log.Error().Err(err).Send()
