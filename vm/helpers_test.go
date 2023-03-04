@@ -16,7 +16,7 @@ function onItemCaptured(item) {
 		Channel: make(chan *Log),
 	}
 
-	v, err := Create(key, code, true, "minikube", "192.168.1.1")
+	v, err := Create(key, code, "minikube", "192.168.1.1")
 	if err != nil {
 		panic(err)
 	}
