@@ -178,16 +178,18 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 				return returnValue
 			}
 
-			bytes, err = call.Argument(6).Object().MarshalJSON()
-			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
-			}
-
 			var tags map[string]string
-			if err := json.Unmarshal(bytes, &tags); err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+			if len(call.ArgumentList) > 6 {
+				bytes, err = call.Argument(6).Object().MarshalJSON()
+				if err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
+
+				if err := json.Unmarshal(bytes, &tags); err != nil {
+					SendLogError(scriptIndex, err.Error())
+					return returnValue
+				}
 			}
 
 			client := influxdb2.NewClientWithOptions(
