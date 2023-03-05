@@ -2,6 +2,7 @@ package vm
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -112,6 +113,51 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			returnValue := otto.UndefinedValue()
 
 			if protectLicense("slack", scriptIndex) {
+				return returnValue
+			}
+
+			webhookUrl := call.Argument(0).String()
+			pretext := call.Argument(1).String()
+			text := call.Argument(2).String()
+			color := call.Argument(3).String()
+
+			attachment := slack.Attachment{
+				Pretext: pretext,
+				Text:    text,
+				Color:   color,
+				Fields: []slack.AttachmentField{
+					{
+						Title: "Timestamp",
+						Value: time.Now().String(),
+					},
+				},
+			}
+
+			attachmentMarshalled, err := json.Marshal(attachment)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			client := &http.Client{}
+			req, err := http.NewRequest("POST", webhookUrl, bytes.NewBuffer(attachmentMarshalled))
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			_, err = client.Do(req)
+			if err != nil {
+				SendLogError(scriptIndex, err.Error())
+				return returnValue
+			}
+
+			return returnValue
+		},
+		"slackBot": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("slackBot", scriptIndex) {
 				return returnValue
 			}
 
