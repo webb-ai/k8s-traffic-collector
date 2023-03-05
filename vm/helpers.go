@@ -59,7 +59,7 @@ func defineTest(o *otto.Otto, scriptIndex int64) {
 
 			err := obj.Set("passed", true)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return obj.Value()
@@ -69,7 +69,7 @@ func defineTest(o *otto.Otto, scriptIndex int64) {
 
 			err := obj.Set("failed", true)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return obj.Value()
@@ -97,14 +97,12 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			client := &http.Client{}
 			req, err := http.NewRequest(method, url, strings.NewReader(body))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			_, err = client.Do(req)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			return returnValue
@@ -135,21 +133,18 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 			attachmentMarshalled, err := json.Marshal(attachment)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			client := &http.Client{}
 			req, err := http.NewRequest("POST", webhookUrl, bytes.NewBuffer(attachmentMarshalled))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			_, err = client.Do(req)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			return returnValue
@@ -187,7 +182,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			)
 
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			} else {
 				secs, nanos, err := utils.ParseSeconds(timestamp)
 				if err != nil {
@@ -214,27 +209,23 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 			bytes, err := call.Argument(5).Object().MarshalJSON()
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			var fields map[string]interface{}
 			if err := json.Unmarshal(bytes, &fields); err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return returnValue
+				return throwError(call, err)
 			}
 
 			var tags map[string]string
 			if len(call.ArgumentList) > 6 {
 				bytes, err = call.Argument(6).Object().MarshalJSON()
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				if err := json.Unmarshal(bytes, &tags); err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 			}
 
@@ -276,14 +267,12 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 				file, err := os.Open(misc.GetDataPath(path))
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				contentType, err := misc.GetFileContentType(file)
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				s3Config := &aws.Config{
@@ -293,8 +282,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 				s3Session, err := session.NewSession(s3Config)
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				uploader := s3manager.NewUploader(s3Session)
@@ -309,8 +297,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 				}
 				_, err = uploader.UploadWithContext(context.Background(), input)
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
@@ -336,8 +323,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 				s3Session, err := session.NewSession(s3Config)
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				s3client := s3.New(s3Session)
@@ -350,8 +336,7 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 				})
 
 				if err := s3manager.NewBatchDeleteWithClient(s3client).Delete(context.Background(), iter); err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return returnValue
+					return throwError(call, err)
 				}
 
 				SendLog(scriptIndex, fmt.Sprintf("Deleted all files under %s in AWS S3 bucket: %s", folder, bucket))
@@ -374,8 +359,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			o := otto.New()
 			value, err := o.ToValue(m)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -386,27 +370,23 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			pcapsDir := misc.GetPcapsDir()
 			pcapFiles, err := os.ReadDir(pcapsDir)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			outFile, err := os.Create(fmt.Sprintf("%s/%d.pcap", dir, time.Now().Unix()))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 			defer outFile.Close()
 
 			err = mergecap.Mergecap(pcapFiles, "", []string{}, outFile)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			value, err := otto.ToValue(misc.RemoveDataDir(outFile.Name()))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -416,8 +396,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 
 			value, err := otto.ToValue(misc.RemoveDataDir(pcapPath))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -437,7 +416,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			err := os.WriteFile(misc.GetDataPath(path), []byte(content), 0644)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return otto.UndefinedValue()
@@ -448,13 +427,12 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 			defer f.Close()
 
 			if _, err := f.WriteString(content); err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return otto.UndefinedValue()
@@ -465,7 +443,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			err := os.Rename(misc.GetDataPath(oldPath), misc.GetDataPath(newPath))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return otto.UndefinedValue()
@@ -475,7 +453,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			err := os.RemoveAll(misc.GetDataPath(path))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return otto.UndefinedValue()
@@ -485,7 +463,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			err := os.MkdirAll(misc.GetDataPath(path), os.ModePerm)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			return otto.UndefinedValue()
@@ -496,13 +474,12 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			dirPath, err := os.MkdirTemp(misc.GetDataPath(dir), name)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
+				return throwError(call, err)
 			}
 
 			value, err := otto.ToValue(misc.RemoveDataDir(dirPath))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -518,15 +495,13 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			f, err := os.CreateTemp(misc.GetDataPath(dir), fmt.Sprintf("%s*.%s", name, extension))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 			defer f.Close()
 
 			value, err := otto.ToValue(misc.RemoveDataDir(f.Name()))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -539,8 +514,7 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			var file *os.File
 			file, err := os.Create(zipPath)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 			defer file.Close()
 
@@ -590,14 +564,12 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			err = filepath.Walk(dir, walker)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			value, err := otto.ToValue(misc.RemoveDataDir(zipPath))
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -655,8 +627,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 			var job *gocron.Job
 			job, err = s.Do(task)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			v.Jobs[tag] = job
@@ -670,8 +641,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 
 			err := jobScheduler.RemoveByTag(tag)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			SendLog(scriptIndex, fmt.Sprintf("Removed the job: \"%s\"", tag))
@@ -700,8 +670,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 			o := otto.New()
 			value, err := o.ToValue(jobNames)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -711,8 +680,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 
 			err := jobScheduler.RunByTag(tag)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			SendLog(scriptIndex, fmt.Sprintf("Triggered the job: \"%s\"", tag))
@@ -730,8 +698,7 @@ func defineJobs(o *otto.Otto, scriptIndex int64, v *VM) {
 			"isRunning": func(call otto.FunctionCall) otto.Value {
 				value, err := otto.ToValue(jobScheduler.IsRunning())
 				if err != nil {
-					SendLogError(scriptIndex, err.Error())
-					return otto.UndefinedValue()
+					return throwError(call, err)
 				}
 
 				return value
@@ -762,20 +729,17 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 
 			marshalled, err := obj.MarshalJSON()
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			truth, _, err := kfl.Apply(marshalled, query)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			value, err := otto.ToValue(truth)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value
@@ -784,8 +748,7 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 			query := call.Argument(0).String()
 			quiet, err := call.Argument(1).ToBoolean()
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			isValid := true
@@ -799,8 +762,7 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 
 			value, err := otto.ToValue(isValid)
 			if err != nil {
-				SendLogError(scriptIndex, err.Error())
-				return otto.UndefinedValue()
+				return throwError(call, err)
 			}
 
 			return value

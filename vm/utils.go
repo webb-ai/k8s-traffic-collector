@@ -53,3 +53,12 @@ func MarshalUnmarshalEntryReverse(result map[string]interface{}) (entry *api.Ent
 func FormatJobTag(tag string) string {
 	return strings.ReplaceAll(strings.ToLower(tag), " ", "-")
 }
+
+func throw(value otto.Value, _ error) otto.Value {
+	panic(value)
+	return otto.UndefinedValue() // nolint
+}
+
+func throwError(call otto.FunctionCall, err error) otto.Value {
+	return throw(call.Otto.Call("new Error", nil, err.Error()))
+}
