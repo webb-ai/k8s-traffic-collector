@@ -162,9 +162,9 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 			url := call.Argument(0).String()
 			token := call.Argument(1).String()
-			measurement := call.Argument(2).String()
-			organization := call.Argument(3).String()
-			bucket := call.Argument(4).String()
+			organization := call.Argument(2).String()
+			bucket := call.Argument(3).String()
+			measurement := call.Argument(4).String()
 
 			bytes, err := call.Argument(5).Object().MarshalJSON()
 			if err != nil {
