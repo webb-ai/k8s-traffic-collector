@@ -295,14 +295,19 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 					Body:        file,
 					ContentType: aws.String(contentType),
 				}
-				_, err = uploader.UploadWithContext(context.Background(), input)
+				output, err := uploader.UploadWithContext(context.Background(), input)
 				if err != nil {
 					return throwError(call, err)
 				}
 
 				SendLog(scriptIndex, fmt.Sprintf("Uploaded %s file to AWS S3 bucket: %s", key, bucket))
 
-				return returnValue
+				value, err := otto.ToValue(output.Location)
+				if err != nil {
+					return throwError(call, err)
+				}
+
+				return value
 			},
 			"clear": func(call otto.FunctionCall) otto.Value {
 				returnValue := otto.UndefinedValue()
