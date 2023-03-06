@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -27,7 +26,6 @@ func InitAlivePcapsMap() {
 func RemovePortFromWorkerHost(workerHost string) string {
 	host, _, err := net.SplitHostPort(workerHost)
 	if err != nil {
-		log.Error().Err(err).Send()
 		return workerHost
 	}
 
