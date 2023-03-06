@@ -114,6 +114,15 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 
 		entry := utils.ItemToEntry(finalItem)
 
+		worker := misc.GetSelfHost()
+		node := misc.GetSelfNode()
+
+		entry.Worker = worker
+		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
+		entry.Node.Name = node
+		entry.BuildId()
+		entry.Tls = misc.IsTls(entry.Stream)
+
 		vm.ItemCapturedHook(entry)
 	}
 }
