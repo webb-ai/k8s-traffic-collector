@@ -370,7 +370,15 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"snapshot": func(call otto.FunctionCall) otto.Value {
-			dir := misc.GetDataPath(call.Argument(0).String())
+			pcaps, err := call.Argument(0).Export()
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			selectedPcaps, ok := pcaps.([]string)
+			if !ok {
+				selectedPcaps = []string{}
+			}
 
 			pcapsDir := misc.GetPcapsDir()
 			pcapFiles, err := os.ReadDir(pcapsDir)
@@ -378,13 +386,13 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				return throwError(call, err)
 			}
 
-			outFile, err := os.Create(fmt.Sprintf("%s/%d.pcap", dir, time.Now().Unix()))
+			outFile, err := os.Create(fmt.Sprintf("%s/%d.pcap", misc.GetDataDir(), time.Now().Unix()))
 			if err != nil {
 				return throwError(call, err)
 			}
 			defer outFile.Close()
 
-			err = mergecap.Mergecap(pcapFiles, "", []string{}, outFile)
+			err = mergecap.Mergecap(pcapFiles, "", selectedPcaps, outFile)
 			if err != nil {
 				return throwError(call, err)
 			}
