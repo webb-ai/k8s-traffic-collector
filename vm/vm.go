@@ -1,6 +1,7 @@
 package vm
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -42,7 +43,7 @@ func Create(key int64, code string, node string, ip string) (*VM, error) {
 	defineHelpers(o, key, node, ip, v)
 
 	v.Lock()
-	_, err := o.Run(code)
+	_, err := o.Run(fmt.Sprintf("%s\n%s", nativeCode, code))
 	v.Unlock()
 	if err != nil {
 		return nil, err
