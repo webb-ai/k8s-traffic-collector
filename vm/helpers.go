@@ -370,17 +370,26 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"snapshot": func(call otto.FunctionCall) otto.Value {
-			pcaps, err := call.Argument(0).Export()
-			if err != nil {
-				return throwError(call, err)
-			}
+			selectedPcaps := []string{}
+			if len(call.ArgumentList) > 0 {
+				// The final element of the PCAP paths (the base name), not the entire path
+				_selectedPcaps, err := call.Argument(0).Export()
+				if err != nil {
+					return throwError(call, err)
+				}
 
-			selectedPcaps, ok := pcaps.([]string)
-			if !ok {
-				selectedPcaps = []string{}
+				var ok bool
+				selectedPcaps, ok = _selectedPcaps.([]string)
+				if !ok {
+					selectedPcaps = []string{}
+				}
 			}
 
 			pcapsDir := misc.GetPcapsDir()
+			if len(call.ArgumentList) > 1 {
+				pcapsDir = misc.GetDataPath(call.Argument(1).String())
+			}
+
 			pcapFiles, err := os.ReadDir(pcapsDir)
 			if err != nil {
 				return throwError(call, err)
