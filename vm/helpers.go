@@ -506,8 +506,16 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"mkdirTemp": func(call otto.FunctionCall) otto.Value {
-			name := call.Argument(0).String()
-			dir := misc.GetDataPath(call.Argument(1).String())
+			name := ""
+			dir := misc.GetDataDir()
+
+			if len(call.ArgumentList) > 0 {
+				name = call.Argument(0).String()
+			}
+
+			if len(call.ArgumentList) > 1 {
+				dir = misc.GetDataPath(call.Argument(1).String())
+			}
 
 			dirPath, err := os.MkdirTemp(dir, name)
 			if err != nil {
