@@ -453,6 +453,17 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 
 			return otto.UndefinedValue()
 		},
+		"copy": func(call otto.FunctionCall) otto.Value {
+			srcPath := call.Argument(0).String()
+			dstPath := call.Argument(1).String()
+
+			err := CopyFile(misc.GetDataPath(srcPath), misc.GetDataPath(dstPath))
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			return otto.UndefinedValue()
+		},
 		"delete": func(call otto.FunctionCall) otto.Value {
 			path := call.Argument(0).String()
 

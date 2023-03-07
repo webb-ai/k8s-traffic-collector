@@ -2,6 +2,7 @@ package vm
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"strings"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -52,6 +53,20 @@ func MarshalUnmarshalEntryReverse(result map[string]interface{}) (entry *api.Ent
 
 func FormatJobTag(tag string) string {
 	return strings.ReplaceAll(strings.ToLower(tag), " ", "-")
+}
+
+func CopyFile(src string, dst string) error {
+	data, err := ioutil.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	err = ioutil.WriteFile(dst, data, 0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func throw(value otto.Value, _ error) otto.Value {
