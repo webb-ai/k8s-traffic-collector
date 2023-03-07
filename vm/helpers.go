@@ -451,10 +451,14 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"move": func(call otto.FunctionCall) otto.Value {
-			oldPath := call.Argument(0).String()
-			newPath := call.Argument(1).String()
+			oldPath := misc.GetDataPath(call.Argument(0).String())
+			newPath := misc.GetDataPath(call.Argument(1).String())
 
-			err := os.Rename(misc.GetDataPath(oldPath), misc.GetDataPath(newPath))
+			if isDirectory(newPath) {
+				newPath = filepath.Join(newPath, filepath.Base(oldPath))
+			}
+
+			err := os.Rename(oldPath, newPath)
 			if err != nil {
 				return throwError(call, err)
 			}
@@ -462,10 +466,10 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"copy": func(call otto.FunctionCall) otto.Value {
-			srcPath := call.Argument(0).String()
-			dstPath := call.Argument(1).String()
+			srcPath := misc.GetDataPath(call.Argument(0).String())
+			dstPath := misc.GetDataPath(call.Argument(1).String())
 
-			err := CopyFile(misc.GetDataPath(srcPath), misc.GetDataPath(dstPath))
+			err := CopyFile(srcPath, dstPath)
 			if err != nil {
 				return throwError(call, err)
 			}
@@ -473,9 +477,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"delete": func(call otto.FunctionCall) otto.Value {
-			path := call.Argument(0).String()
+			path := misc.GetDataPath(call.Argument(0).String())
 
-			err := os.RemoveAll(misc.GetDataPath(path))
+			err := os.RemoveAll(path)
 			if err != nil {
 				return throwError(call, err)
 			}
@@ -483,9 +487,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 			return otto.UndefinedValue()
 		},
 		"mkdir": func(call otto.FunctionCall) otto.Value {
-			path := call.Argument(0).String()
+			path := misc.GetDataPath(call.Argument(0).String())
 
-			err := os.MkdirAll(misc.GetDataPath(path), os.ModePerm)
+			err := os.MkdirAll(path, os.ModePerm)
 			if err != nil {
 				return throwError(call, err)
 			}
@@ -494,9 +498,9 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 		},
 		"mkdirTemp": func(call otto.FunctionCall) otto.Value {
 			name := call.Argument(0).String()
-			dir := call.Argument(1).String()
+			dir := misc.GetDataPath(call.Argument(1).String())
 
-			dirPath, err := os.MkdirTemp(misc.GetDataPath(dir), name)
+			dirPath, err := os.MkdirTemp(dir, name)
 			if err != nil {
 				return throwError(call, err)
 			}
@@ -510,14 +514,14 @@ func defineFile(o *otto.Otto, scriptIndex int64) {
 		},
 		"temp": func(call otto.FunctionCall) otto.Value {
 			name := call.Argument(0).String()
-			dir := call.Argument(1).String()
+			dir := misc.GetDataPath(call.Argument(1).String())
 			extension := call.Argument(2).String()
 
 			if extension == "" {
 				extension = "txt"
 			}
 
-			f, err := os.CreateTemp(misc.GetDataPath(dir), fmt.Sprintf("%s*.%s", name, extension))
+			f, err := os.CreateTemp(dir, fmt.Sprintf("%s*.%s", name, extension))
 			if err != nil {
 				return throwError(call, err)
 			}

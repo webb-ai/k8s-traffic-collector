@@ -3,6 +3,7 @@ package vm
 import (
 	"encoding/json"
 	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/kubeshark/base/pkg/api"
@@ -67,6 +68,15 @@ func CopyFile(src string, dst string) error {
 	}
 
 	return nil
+}
+
+func isDirectory(path string) bool {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+
+	return fileInfo.IsDir()
 }
 
 func throw(value otto.Value, _ error) otto.Value {
