@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -19,7 +20,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/elastic/go-elasticsearch/esapi"
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/go-co-op/gocron"
+	"github.com/google/uuid"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/base/pkg/languages/kfl"
 	"github.com/kubeshark/worker/kubernetes/resolver"
@@ -250,6 +254,74 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			writeAPI.Flush()
 
 			return returnValue
+		},
+		"elastic": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("elastic", scriptIndex) {
+				return returnValue
+			}
+
+			url := call.Argument(0).String()
+			index := call.Argument(1).String()
+
+			username := call.Argument(3).String()
+			password := call.Argument(4).String()
+
+			cloudID := call.Argument(5).String()
+			apiKey := call.Argument(6).String()
+			serviceToken := call.Argument(7).String()
+			certificateFingerprint := call.Argument(8).String()
+
+			bytes, err := call.Argument(2).Object().MarshalJSON()
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			ctx := context.Background()
+
+			cfg := elasticsearch.Config{
+				Addresses: []string{
+					url,
+				},
+				Username:               username,
+				Password:               password,
+				CloudID:                cloudID,
+				APIKey:                 apiKey,
+				ServiceToken:           serviceToken,
+				CertificateFingerprint: certificateFingerprint,
+			}
+
+			client, err := elasticsearch.NewClient(cfg)
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			documentID := uuid.New().String()
+
+			req := esapi.IndexRequest{
+				Index:      index,
+				DocumentID: documentID,
+				Body:       strings.NewReader(string(bytes)),
+				Refresh:    "true",
+			}
+
+			res, err := req.Do(ctx, client)
+			if err != nil {
+				return throwError(call, err)
+			}
+			defer res.Body.Close()
+
+			if res.IsError() {
+				return throwError(call, errors.New(res.String()))
+			}
+
+			value, err := otto.ToValue(documentID)
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			return value
 		},
 		"s3": map[string]interface{}{
 			"put": func(call otto.FunctionCall) otto.Value {
