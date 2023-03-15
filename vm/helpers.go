@@ -266,12 +266,30 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			index := call.Argument(1).String()
 
 			username := call.Argument(3).String()
+			if len(call.ArgumentList) < 4 {
+				username = ""
+			}
 			password := call.Argument(4).String()
+			if len(call.ArgumentList) < 5 {
+				password = ""
+			}
 
 			cloudID := call.Argument(5).String()
+			if len(call.ArgumentList) < 6 {
+				cloudID = ""
+			}
 			apiKey := call.Argument(6).String()
+			if len(call.ArgumentList) < 7 {
+				apiKey = ""
+			}
 			serviceToken := call.Argument(7).String()
+			if len(call.ArgumentList) < 8 {
+				serviceToken = ""
+			}
 			certificateFingerprint := call.Argument(8).String()
+			if len(call.ArgumentList) < 9 {
+				certificateFingerprint = ""
+			}
 
 			bytes, err := call.Argument(2).Object().MarshalJSON()
 			if err != nil {
@@ -280,10 +298,15 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 
 			ctx := context.Background()
 
-			cfg := elasticsearch.Config{
-				Addresses: []string{
+			addresses := []string{}
+			if url != "" {
+				addresses = []string{
 					url,
-				},
+				}
+			}
+
+			cfg := elasticsearch.Config{
+				Addresses:              addresses,
 				Username:               username,
 				Password:               password,
 				CloudID:                cloudID,
