@@ -73,15 +73,13 @@ RUN go build -ldflags="-extldflags=-static -s -w" -o worker .
 
 ### The shipped image
 ARG TARGETARCH=amd64
-FROM ${TARGETARCH}/alpine:latest
+FROM kubeshark/alpine-ca-certificates:${TARGETARCH}
 
 ENV GIN_MODE=release
 
 WORKDIR /app/import/
 WORKDIR /app/data/
 WORKDIR /app
-
-RUN apk add --no-cache ca-certificates && update-ca-certificates
 
 COPY --from=builder ["/app/worker", "."]
 
