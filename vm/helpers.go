@@ -166,25 +166,73 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 			text := call.Argument(3).String()
 			color := call.Argument(4).String()
 
+			var fields []slack.AttachmentField
+			if len(call.ArgumentList) > 5 {
+
+				bytes, err := call.Argument(5).Object().MarshalJSON()
+				if err != nil {
+					return throwError(call, err)
+				}
+
+				var fieldsMap map[string]string
+				if err := json.Unmarshal(bytes, &fieldsMap); err != nil {
+					return throwError(call, err)
+				}
+
+				for key, value := range fieldsMap {
+					fields = append(fields, slack.AttachmentField{
+						Title: key,
+						Value: value,
+					})
+				}
+			}
+			fields = append(fields, slack.AttachmentField{
+				Title: "Timestamp",
+				Value: time.Now().String(),
+			})
+
 			client := slack.New(token, slack.OptionDebug(false))
 
-			attachment := slack.Attachment{
-				Pretext: pretext,
-				Text:    text,
-				Color:   color,
-				Fields: []slack.AttachmentField{
-					{
-						Title: "Timestamp",
-						Value: time.Now().String(),
-					},
-				},
+			var files []*slack.File
+			if len(call.ArgumentList) > 6 {
+
+				bytes, err := call.Argument(6).Object().MarshalJSON()
+				if err != nil {
+					return throwError(call, err)
+				}
+
+				var filesMap map[string]string
+				if err := json.Unmarshal(bytes, &filesMap); err != nil {
+					return throwError(call, err)
+				}
+
+				// Upload files
+				for name, path := range filesMap {
+					file, err := client.UploadFile(slack.FileUploadParameters{File: misc.GetDataPath(path), Filename: name})
+					if err != nil {
+						return throwError(call, err)
+					}
+
+					files = append(files, file)
+				}
 			}
+
+			var options []slack.MsgOption
+			options = append(options, slack.MsgOptionAttachments(
+				slack.Attachment{
+					Pretext: pretext,
+					Text:    text,
+					Color:   color,
+					Fields:  fields,
+				},
+			))
 
 			_, timestamp, err := client.PostMessage(
 				channelId,
-				slack.MsgOptionAttachments(attachment),
+				options...,
 			)
 
+			// Send message
 			if err != nil {
 				return throwError(call, err)
 			} else {
@@ -194,6 +242,17 @@ func defineVendor(o *otto.Otto, scriptIndex int64, node string, ip string) {
 					return returnValue
 				}
 				SendLog(scriptIndex, fmt.Sprintf("Message sent to Slack channel: %s at %s", channelId, time.Unix(secs, nanos).UTC()))
+			}
+
+			// Share files
+			for _, file := range files {
+				if file != nil {
+					_, err = client.ShareRemoteFile([]string{channelId}, file.ID, file.ID)
+					if err != nil {
+						return throwError(call, err)
+					}
+					SendLog(scriptIndex, fmt.Sprintf("Shared file: %s to Slack channel: %s", file.Name, channelId))
+				}
 			}
 
 			return returnValue
