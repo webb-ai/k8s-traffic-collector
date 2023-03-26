@@ -107,10 +107,6 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 	for {
 		packet, err := source.Handle.NextPacket()
 
-		if masterCapture {
-			vm.PacketCapturedHook(packet)
-		}
-
 		if err == io.EOF {
 			log.Debug().Str("source", source.name).Msg("Got EOF while reading packets from:")
 			if !dontClose {
@@ -132,9 +128,15 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 			newipv4, err := source.defragger.DefragIPv4(ipv4)
 			if err != nil {
 				log.Debug().Err(err).Msg("While de-fragmenting!")
+				if masterCapture {
+					vm.PacketCapturedHook(packet, false)
+				}
 				continue
 			} else if newipv4 == nil {
 				log.Debug().Msg("Fragment...")
+				if masterCapture {
+					vm.PacketCapturedHook(packet, true)
+				}
 				continue // packet fragment, we don't have whole packet yet.
 			}
 			if newipv4.Length != l {
@@ -146,6 +148,10 @@ func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClo
 				nextDecoder := newipv4.NextLayerType()
 				_ = nextDecoder.Decode(newipv4.Payload, pb)
 			}
+		}
+
+		if masterCapture {
+			vm.PacketCapturedHook(packet, false)
 		}
 
 		packets <- TcpPacketInfo{

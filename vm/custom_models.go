@@ -13,9 +13,10 @@ type CustomPacketInfo struct {
 	CaptureLength int       `json:"captureLength"`
 	Length        int       `json:"length"`
 	Truncated     bool      `json:"truncated"`
+	Fragmented    bool      `json:"fragmented"`
 }
 
-func BuildCustomPacketInfo(packet gopacket.Packet) (info map[string]interface{}, err error) {
+func BuildCustomPacketInfo(packet gopacket.Packet, fragmented bool) (info map[string]interface{}, err error) {
 	if packet == nil {
 		err = errors.New("Packet is nil")
 		return
@@ -31,6 +32,7 @@ func BuildCustomPacketInfo(packet gopacket.Packet) (info map[string]interface{},
 		CaptureLength: packet.Metadata().CaptureLength,
 		Length:        packet.Metadata().Length,
 		Truncated:     packet.Metadata().Truncated,
+		Fragmented:    fragmented,
 	}
 
 	var data []byte

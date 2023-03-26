@@ -36,11 +36,11 @@ func ItemCapturedHook(entry *api.Entry) {
 }
 
 // Hook: onPacketCaptured, does not accept returns
-func PacketCapturedHook(packet gopacket.Packet) {
+func PacketCapturedHook(packet gopacket.Packet, fragmented bool) {
 	hook := "onPacketCaptured"
 	Range(func(key, value interface{}) bool {
 		v := value.(*VM)
-		info, err := BuildCustomPacketInfo(packet)
+		info, err := BuildCustomPacketInfo(packet, fragmented)
 		if err != nil {
 			log.Debug().Err(err).Send()
 			return true
