@@ -8,9 +8,9 @@ import (
 
 var K8sResolver *Resolver
 
-func StartResolving(namespace string, nameResolutionHistoryPath string, clusterMode bool) {
+func StartResolving(nameResolutionHistoryPath string, clusterMode bool) {
 	errOut := make(chan error, 100)
-	res := NewFromInCluster(errOut, namespace)
+	res := NewFromInCluster(errOut)
 
 	ctx := context.Background()
 	res.Start(ctx, nameResolutionHistoryPath, clusterMode)

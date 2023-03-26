@@ -67,7 +67,7 @@ func run() {
 
 	outputItems := make(chan *api.OutputChannelItem)
 
-	resolver.StartResolving("", misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
+	resolver.StartResolving(misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
 
 	if assemblers.GetMemoryProfilingEnabled() {
 		diagnose.StartMemoryProfiler(

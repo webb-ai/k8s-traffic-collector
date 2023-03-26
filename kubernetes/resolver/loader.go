@@ -8,7 +8,7 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func NewFromInCluster(errOut chan error, namespace string) *Resolver {
+func NewFromInCluster(errOut chan error) *Resolver {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		log.Warn().Err(err).Send()
@@ -29,6 +29,5 @@ func NewFromInCluster(errOut chan error, namespace string) *Resolver {
 		serviceMap:     &sync.Map{},
 		nameMapHistory: &sync.Map{},
 		errOut:         errOut,
-		namespace:      namespace,
 	}
 }

@@ -32,7 +32,6 @@ type Resolver struct {
 	nameMapHistory *sync.Map
 	isStarted      bool
 	errOut         chan error
-	namespace      string
 }
 
 type ResolvedObjectInfo struct {
@@ -165,7 +164,7 @@ func (resolver *Resolver) CheckIsServiceIP(address string) bool {
 
 func (resolver *Resolver) watchPods(ctx context.Context) error {
 	// empty namespace makes the client watch all namespaces
-	watcher, err := resolver.clientSet.CoreV1().Pods(resolver.namespace).Watch(ctx, metav1.ListOptions{Watch: true})
+	watcher, err := resolver.clientSet.CoreV1().Pods(getSelfNamespace()).Watch(ctx, metav1.ListOptions{Watch: true})
 	if err != nil {
 		return err
 	}
@@ -188,7 +187,7 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 
 func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 	// empty namespace makes the client watch all namespaces
-	watcher, err := resolver.clientSet.CoreV1().Endpoints(resolver.namespace).Watch(ctx, metav1.ListOptions{Watch: true})
+	watcher, err := resolver.clientSet.CoreV1().Endpoints(getSelfNamespace()).Watch(ctx, metav1.ListOptions{Watch: true})
 	if err != nil {
 		return err
 	}
@@ -231,7 +230,7 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 
 func (resolver *Resolver) watchServices(ctx context.Context) error {
 	// empty namespace makes the client watch all namespaces
-	watcher, err := resolver.clientSet.CoreV1().Services(resolver.namespace).Watch(ctx, metav1.ListOptions{Watch: true})
+	watcher, err := resolver.clientSet.CoreV1().Services(getSelfNamespace()).Watch(ctx, metav1.ListOptions{Watch: true})
 	if err != nil {
 		return err
 	}
