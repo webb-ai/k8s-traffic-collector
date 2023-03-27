@@ -981,7 +981,7 @@ func defineChatGPT(o *otto.Otto, scriptIndex int64) {
 		"prompt": func(call otto.FunctionCall) otto.Value {
 			returnValue := otto.UndefinedValue()
 
-			if protectLicense("slack", scriptIndex) {
+			if protectLicense("prompt", scriptIndex) {
 				return returnValue
 			}
 
@@ -1018,7 +1018,7 @@ func defineChatGPT(o *otto.Otto, scriptIndex int64) {
 		"sentiment": func(call otto.FunctionCall) otto.Value {
 			returnValue := otto.UndefinedValue()
 
-			if protectLicense("slack", scriptIndex) {
+			if protectLicense("sentiment", scriptIndex) {
 				return returnValue
 			}
 
