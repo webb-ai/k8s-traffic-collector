@@ -14,6 +14,7 @@ require (
 	github.com/go-errors/errors v1.4.2
 	github.com/google/uuid v1.1.2
 	github.com/gorilla/websocket v1.5.0
+	github.com/grassmudhorses/vader-go v0.0.0-20191126145716-003d5aacdb71
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/influxdata/influxdb-client-go/v2 v2.12.2
 	github.com/jsimonetti/rtnetlink v1.2.2
@@ -21,6 +22,7 @@ require (
 	github.com/kubeshark/base v0.6.3
 	github.com/kubeshark/ebpf v0.9.1
 	github.com/kubeshark/gopacket v1.1.21
+	github.com/kubeshark/openai-go v0.1.0
 	github.com/mdlayher/netlink v1.7.1
 	github.com/moby/moby v20.10.17+incompatible
 	github.com/robertkrimen/otto v0.2.1
@@ -48,7 +50,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/go-playground/validator/v10 v10.10.0 // indirect
+	github.com/go-playground/validator/v10 v10.11.1 // indirect
 	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

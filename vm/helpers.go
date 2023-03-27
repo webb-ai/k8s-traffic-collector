@@ -24,8 +24,11 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
+	"github.com/grassmudhorses/vader-go/lexicon"
+	"github.com/grassmudhorses/vader-go/sentitext"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/kubeshark/base/pkg/languages/kfl"
+	openai "github.com/kubeshark/openai-go"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/mergecap"
@@ -973,6 +976,71 @@ func defineKFL(o *otto.Otto, scriptIndex int64) {
 	}
 }
 
+func defineChatGPT(o *otto.Otto, scriptIndex int64) {
+	err := o.Set("chatgpt", map[string]interface{}{
+		"prompt": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("slack", scriptIndex) {
+				return returnValue
+			}
+
+			apiKey := call.Argument(0).String()
+			prompt := call.Argument(1).String()
+
+			var maxTokens int64 = 1024
+			if len(call.ArgumentList) > 2 {
+				var err error
+				maxTokens, err = call.Argument(2).ToInteger()
+				if err != nil {
+					return throwError(call, err)
+				}
+			}
+
+			openaiEngine := openai.New(apiKey)
+			ctx := context.Background()
+			completionResp, err := openaiEngine.Completion(ctx, &openai.CompletionOptions{
+				Model:     openai.ModelGPT3TextDavinci003,
+				MaxTokens: int(maxTokens),
+				Prompt:    []string{prompt},
+			})
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			value, err := otto.ToValue(strings.TrimSpace(completionResp.Choices[0].Text))
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			return value
+		},
+		"sentiment": func(call otto.FunctionCall) otto.Value {
+			returnValue := otto.UndefinedValue()
+
+			if protectLicense("slack", scriptIndex) {
+				return returnValue
+			}
+
+			text := call.Argument(0).String()
+
+			vader := sentitext.PolarityScore(sentitext.Parse(text, lexicon.DefaultLexicon))
+
+			o := otto.New()
+			value, err := o.ToValue(vader)
+			if err != nil {
+				return throwError(call, err)
+			}
+
+			return value
+		},
+	})
+
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+}
+
 func defineHelpers(otto *otto.Otto, scriptIndex int64, node string, ip string, v *VM) {
 	defineConsole(otto, scriptIndex)
 	defineTest(otto, scriptIndex)
@@ -981,4 +1049,5 @@ func defineHelpers(otto *otto.Otto, scriptIndex int64, node string, ip string, v
 	defineFile(otto, scriptIndex)
 	defineJobs(otto, scriptIndex, v)
 	defineKFL(otto, scriptIndex)
+	defineChatGPT(otto, scriptIndex)
 }
