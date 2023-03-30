@@ -22,19 +22,19 @@ import (
 
 const cleanPeriod = time.Second * 10
 
-func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
+func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputChannel chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
 	go misc.LimitPcapsDirSize()
 
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				target.TracerInstance = startTracer(e, outputItems, streamsMap, updateTargetsQueue)
+				target.TracerInstance = startTracer(e, outputChannel, streamsMap, updateTargetsQueue)
 				break
 			}
 		}
 	}
 
-	assembler := initializeWorker(opts, outputItems, streamsMap)
+	assembler := initializeWorker(opts, outputChannel, streamsMap)
 	go startAssembler(streamsMap, assembler)
 }
 
@@ -119,7 +119,7 @@ func initializePacketSources() error {
 	return err
 }
 
-func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *assemblers.TcpAssembler {
+func initializeWorker(opts *misc.Opts, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *assemblers.TcpAssembler {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 
 	target.MainPacketInputChan = make(chan source.TcpPacketInfo)
@@ -130,7 +130,7 @@ func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, 
 
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
-	return assemblers.NewTcpAssembler("", true, outputItems, streamsMap, opts)
+	return assemblers.NewTcpAssembler("", true, outputChannel, streamsMap, opts)
 }
 
 func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssembler) {

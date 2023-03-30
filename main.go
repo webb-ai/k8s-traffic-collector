@@ -65,7 +65,7 @@ func run() {
 	}
 	streamsMap := assemblers.NewTcpStreamMap(true)
 
-	outputItems := make(chan *api.OutputChannelItem)
+	outputChannel := make(chan *api.OutputChannelItem)
 
 	resolver.StartResolving(misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
 
@@ -81,11 +81,13 @@ func run() {
 	worker := queue.NewWorker(updateTargetsQueue)
 	go worker.DoWork()
 
-	go handleCapturedItems(outputItems)
+	go handleCapturedItems(outputChannel)
 	if *folder != "" {
-		startImporter(*folder, opts, streamsMap, outputItems)
+		log.Info().Msg("importer mode")
+		startImporter(*folder, opts, streamsMap, outputChannel)
 	} else {
-		startWorker(opts, streamsMap, outputItems, extensions.Extensions, updateTargetsQueue)
+		log.Info().Msg("worker mode")
+		startWorker(opts, streamsMap, outputChannel, extensions.Extensions, updateTargetsQueue)
 	}
 
 	vm.LogGlobal = &vm.LogState{

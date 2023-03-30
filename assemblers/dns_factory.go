@@ -2,6 +2,7 @@ package assemblers
 
 import (
 	"fmt"
+	"github.com/kubeshark/worker/kubernetes/resolver"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
-	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
 	"github.com/rs/zerolog/log"
@@ -234,12 +234,14 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 	}
 
 	if !isTargeted {
+		log.Info().Msg("pod is not targeted, skipping")
 		return
 	}
 
 	factory.outputChannel <- &item
 
 	if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
+		log.Info().Interface("dns", dns).Msg("dns traffic")
 		resolver.K8sResolver.SaveResolvedName(dns.Answers[0].IP.String(), string(dns.Questions[0].Name), "", watch.Added)
 	}
 
@@ -251,6 +253,7 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 	delete(factory.pcapWriterMap, dns.ID)
 
 	if !isTargeted {
+		log.Info().Msg("pod is not targeted, delete pcap file")
 		os.Remove(misc.GetPcapPath(pcap.Name()))
 	}
 
