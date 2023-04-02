@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/kubeshark/gopacket"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const UnknownNamespace = ""
@@ -37,10 +38,12 @@ type Pod struct {
 }
 
 type Resolution struct {
-	IP   string `json:"ip"`
-	Port string `json:"port"`
-	Name string `json:"name"`
-	Pod  *Pod   `json:"pod"`
+	IP       string            `json:"ip"`
+	Port     string            `json:"port"`
+	Name     string            `json:"name"`
+	Pod      *corev1.Pod       `json:"pod"`
+	Endpoint *corev1.Endpoints `json:"endpoint"`
+	Service  *corev1.Service   `json:"service"`
 }
 
 type Extension struct {
