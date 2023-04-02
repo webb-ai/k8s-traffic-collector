@@ -15,7 +15,7 @@ import (
 func ItemToEntry(item *api.OutputChannelItem) *api.Entry {
 	extension := extensions.ExtensionsMap[item.Protocol.Name]
 
-	resolvedSource, resolvedDestination := resolveIP(item.ConnectionInfo, item.Timestamp)
+	resolvedSource, resolvedDestination := resolveSourceDestination(item.ConnectionInfo, item.Timestamp)
 
 	return extension.Dissector.Analyze(item, resolvedSource, resolvedDestination)
 }
@@ -26,19 +26,13 @@ func SummarizeEntry(entry *api.Entry) *api.BaseEntry {
 	return extension.Dissector.Summarize(entry)
 }
 
-func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSource *api.Resolution, resolvedDestination *api.Resolution) {
+func resolveSourceDestination(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSource *api.Resolution, resolvedDestination *api.Resolution) {
 	if resolver.K8sResolver != nil {
 		unresolvedSource := connectionInfo.ClientIP
 		resolvedSource = resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
 		if resolvedSource == nil {
 			unresolvedSource = fmt.Sprintf("%s:%s", connectionInfo.ClientIP, connectionInfo.ClientPort)
 			resolvedSource = resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
-			if resolvedSource == nil {
-				resolvedSource = &api.Resolution{
-					IP:   connectionInfo.ClientIP,
-					Port: connectionInfo.ClientPort,
-				}
-			}
 		}
 
 		unresolvedDestination := connectionInfo.ServerIP
@@ -46,14 +40,28 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		if resolvedDestination == nil {
 			unresolvedDestination = fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
 			resolvedDestination = resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
-			if resolvedDestination == nil {
-				resolvedDestination = &api.Resolution{
-					IP:   connectionInfo.ServerIP,
-					Port: connectionInfo.ServerPort,
-				}
-			}
 		}
 	}
+
+	if resolvedSource == nil {
+		resolvedSource = &api.Resolution{
+			IP:   connectionInfo.ClientIP,
+			Port: connectionInfo.ClientPort,
+		}
+	}
+
+	if resolvedDestination == nil {
+		resolvedDestination = &api.Resolution{
+			IP:   connectionInfo.ServerIP,
+			Port: connectionInfo.ServerPort,
+		}
+	}
+
+	resolvedSource.IP = connectionInfo.ClientIP
+	resolvedSource.Port = connectionInfo.ClientPort
+
+	resolvedDestination.IP = connectionInfo.ServerIP
+	resolvedDestination.Port = connectionInfo.ServerPort
 	return
 }
 
