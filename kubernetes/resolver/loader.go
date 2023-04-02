@@ -26,7 +26,6 @@ func NewFromInCluster(errOut chan error) *Resolver {
 		clientConfig:   config,
 		clientSet:      clientSet,
 		nameMap:        &sync.Map{},
-		serviceMap:     &sync.Map{},
 		nameMapHistory: &sync.Map{},
 		errOut:         errOut,
 	}

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
@@ -28,15 +29,9 @@ type Resolver struct {
 	clientConfig   *restclient.Config
 	clientSet      *kubernetes.Clientset
 	nameMap        *sync.Map
-	serviceMap     *sync.Map
 	nameMapHistory *sync.Map
 	isStarted      bool
 	errOut         chan error
-}
-
-type ResolvedObjectInfo struct {
-	FullAddress string
-	Namespace   string
 }
 
 func (resolver *Resolver) Start(ctx context.Context, nameResolutionHistoryPath string, clusterMode bool) {
@@ -54,7 +49,7 @@ func (resolver *Resolver) Start(ctx context.Context, nameResolutionHistoryPath s
 	}
 }
 
-func (resolver *Resolver) Resolve(name string, timestamp int64) *ResolvedObjectInfo {
+func (resolver *Resolver) Resolve(name string, timestamp int64) *api.Resolution {
 	resolvedName, isFound := resolver.getMap(timestamp)[name]
 	if !isFound {
 		return nil
@@ -62,24 +57,24 @@ func (resolver *Resolver) Resolve(name string, timestamp int64) *ResolvedObjectI
 	return resolvedName
 }
 
-func (resolver *Resolver) getMap(timestamp int64) map[string]*ResolvedObjectInfo {
-	nameMap := make(map[string]*ResolvedObjectInfo)
+func (resolver *Resolver) getMap(timestamp int64) map[string]*api.Resolution {
+	nameMap := make(map[string]*api.Resolution)
 	resolver.nameMapHistory.Range(func(k, v interface{}) bool {
 		t := k.(int64)
 		if t > timestamp {
 			return true
 		}
-		nameMap = v.(map[string]*ResolvedObjectInfo)
+		nameMap = v.(map[string]*api.Resolution)
 		return true
 	})
 	return nameMap
 }
 
 func (resolver *Resolver) updateNameResolutionHistory() {
-	nameMap := make(map[string]*ResolvedObjectInfo)
+	nameMap := make(map[string]*api.Resolution)
 	resolver.nameMap.Range(func(k, v interface{}) bool {
 		key := k.(string)
-		nameMap[key] = v.(*ResolvedObjectInfo)
+		nameMap[key] = v.(*api.Resolution)
 		return true
 	})
 	resolver.nameMapHistory.Store(time.Now().Unix(), nameMap)
@@ -93,20 +88,20 @@ func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration
 	}
 }
 
-func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]map[string]*ResolvedObjectInfo {
-	m := make(map[int64]map[string]*ResolvedObjectInfo)
+func (resolver *Resolver) GetDumpNameResolutionHistoryMap() map[int64]map[string]*api.Resolution {
+	m := make(map[int64]map[string]*api.Resolution)
 	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
-		m[key.(int64)] = value.(map[string]*ResolvedObjectInfo)
+		m[key.(int64)] = value.(map[string]*api.Resolution)
 		return true
 	})
 
 	return m
 }
 
-func (resolver *Resolver) GetDumpNameResolutionHistoryMapStringKeys() map[string]map[string]*ResolvedObjectInfo {
-	m := make(map[string]map[string]*ResolvedObjectInfo)
+func (resolver *Resolver) GetDumpNameResolutionHistoryMapStringKeys() map[string]map[string]*api.Resolution {
+	m := make(map[string]map[string]*api.Resolution)
 	resolver.nameMapHistory.Range(func(key, value interface{}) bool {
-		m[strconv.FormatInt(key.(int64), 10)] = value.(map[string]*ResolvedObjectInfo)
+		m[strconv.FormatInt(key.(int64), 10)] = value.(map[string]*api.Resolution)
 		return true
 	})
 
@@ -143,7 +138,7 @@ func (resolver *Resolver) RestoreNameResolutionHistory(nameResolutionHistoryPath
 		return
 	}
 
-	m := make(map[int64]map[string]*ResolvedObjectInfo)
+	m := make(map[int64]map[string]*api.Resolution)
 	err = json.Unmarshal(content, &m)
 	if err != nil {
 		log.Warn().Str("path", nameResolutionHistoryPath).Err(err).Msg("Failed unmarshalling the name resolution history dump:")
@@ -155,11 +150,6 @@ func (resolver *Resolver) RestoreNameResolutionHistory(nameResolutionHistoryPath
 	}
 
 	log.Info().Str("path", nameResolutionHistoryPath).Int("count", len(m)).Msg("Restored the name resolution history")
-}
-
-func (resolver *Resolver) CheckIsServiceIP(address string) bool {
-	_, isFound := resolver.serviceMap.Load(address)
-	return isFound
 }
 
 func (resolver *Resolver) watchPods(ctx context.Context) error {
@@ -176,7 +166,17 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 			}
 			if event.Type == watch.Deleted {
 				pod := event.Object.(*corev1.Pod)
-				resolver.SaveResolvedName(pod.Status.PodIP, "", pod.Namespace, event.Type)
+				resolver.SaveResolution(pod.Status.PodIP, &api.Resolution{
+					Name: "",
+					Pod: &api.Pod{
+						Name:      pod.Name,
+						Namespace: pod.Namespace,
+						Node: &api.Node{
+							IP:   pod.Status.HostIP,
+							Name: pod.Spec.NodeName,
+						},
+					},
+				}, event.Type)
 			}
 		case <-ctx.Done():
 			watcher.Stop()
@@ -211,10 +211,14 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 					}
 					if subset.Addresses != nil {
 						for _, address := range subset.Addresses {
-							resolver.SaveResolvedName(address.IP, serviceHostname, endpoint.Namespace, event.Type)
+							resolver.SaveResolution(address.IP, &api.Resolution{
+								Name: serviceHostname,
+							}, event.Type)
 							for _, port := range ports {
 								ipWithPort := fmt.Sprintf("%s:%d", address.IP, port)
-								resolver.SaveResolvedName(ipWithPort, serviceHostname, endpoint.Namespace, event.Type)
+								resolver.SaveResolution(ipWithPort, &api.Resolution{
+									Name: serviceHostname,
+								}, event.Type)
 							}
 						}
 					}
@@ -244,19 +248,26 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			service := event.Object.(*corev1.Service)
 			serviceHostname := fmt.Sprintf("%s.%s", service.Name, service.Namespace)
 			if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != kubClientNullString {
-				resolver.SaveResolvedName(service.Spec.ClusterIP, serviceHostname, service.Namespace, event.Type)
+				resolver.SaveResolution(service.Spec.ClusterIP, &api.Resolution{
+					Name: serviceHostname,
+				}, event.Type)
 				if service.Spec.Ports != nil {
 					for _, port := range service.Spec.Ports {
 						if port.Port > 0 {
-							resolver.SaveResolvedName(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), serviceHostname, service.Namespace, event.Type)
+							resolver.SaveResolution(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), &api.Resolution{
+								IP:   service.Spec.ClusterIP,
+								Port: strconv.FormatInt(int64(port.Port), 10),
+								Name: serviceHostname,
+							}, event.Type)
 						}
 					}
 				}
-				resolver.saveServiceIP(service.Spec.ClusterIP, serviceHostname, service.Namespace, event.Type)
 			}
 			if service.Status.LoadBalancer.Ingress != nil {
 				for _, ingress := range service.Status.LoadBalancer.Ingress {
-					resolver.SaveResolvedName(ingress.IP, serviceHostname, service.Namespace, event.Type)
+					resolver.SaveResolution(ingress.IP, &api.Resolution{
+						Name: serviceHostname,
+					}, event.Type)
 				}
 			}
 		case <-ctx.Done():
@@ -266,29 +277,16 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 	}
 }
 
-func (resolver *Resolver) SaveResolvedName(key string, resolved string, namespace string, eventType watch.EventType) {
+func (resolver *Resolver) SaveResolution(key string, resolution *api.Resolution, eventType watch.EventType) {
 	if eventType == watch.Deleted {
-		resolver.nameMap.Delete(resolved)
 		resolver.nameMap.Delete(key)
-		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=nil", key))
+		log.Debug().Str("key", key).Interface("resolution", resolution).Str("operation", "delete").Send()
 	} else {
-		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		resolver.nameMap.Store(resolved, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
+		resolver.nameMap.Store(key, resolution)
+		log.Debug().Str("key", key).Interface("resolution", resolution).Str("operation", "store").Send()
 	}
 
 	resolver.updateNameResolutionHistory()
-}
-
-func (resolver *Resolver) saveServiceIP(key string, resolved string, namespace string, eventType watch.EventType) {
-	if eventType == watch.Deleted {
-		resolver.serviceMap.Delete(key)
-	} else {
-		resolver.nameMap.Store(key, &ResolvedObjectInfo{FullAddress: resolved, Namespace: namespace})
-		log.Debug().Msg(fmt.Sprintf("Nameresolver set %s=%s", key, resolved))
-
-		resolver.updateNameResolutionHistory()
-	}
 }
 
 func (resolver *Resolver) infiniteErrorHandleRetryFunc(ctx context.Context, fun func(ctx context.Context) error) {

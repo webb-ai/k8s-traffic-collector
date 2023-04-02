@@ -240,7 +240,9 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 	factory.outputChannel <- &item
 
 	if len(dns.Answers) > 0 && len(dns.Questions) > 0 {
-		resolver.K8sResolver.SaveResolvedName(dns.Answers[0].IP.String(), string(dns.Questions[0].Name), "", watch.Added)
+		resolver.K8sResolver.SaveResolution(dns.Answers[0].IP.String(), &api.Resolution{
+			Name: string(dns.Questions[0].Name),
+		}, watch.Added)
 	}
 
 	pcap := factory.pcapMap[dns.ID]
