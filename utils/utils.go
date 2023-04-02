@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/kubeshark/base/pkg/api"
-	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/worker/kubernetes/resolver"
+	"github.com/kubeshark/worker/pkg/api"
+	"github.com/kubeshark/worker/pkg/extensions"
 )
 
 func ItemToEntry(item *api.OutputChannelItem) *api.Entry {

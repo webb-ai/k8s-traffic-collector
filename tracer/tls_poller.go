@@ -9,9 +9,9 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/golang-lru/simplelru"
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/ebpf/perf"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
 

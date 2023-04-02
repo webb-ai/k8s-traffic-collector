@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/kubeshark/base/pkg/api"
-	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
+	"github.com/kubeshark/worker/pkg/api"
+	"github.com/kubeshark/worker/pkg/extensions"
 	"github.com/rs/zerolog/log"
 	"k8s.io/apimachinery/pkg/watch"
 )

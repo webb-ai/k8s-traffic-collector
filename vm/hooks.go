@@ -3,8 +3,8 @@ package vm
 import (
 	"fmt"
 
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/gopacket"
+	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
 

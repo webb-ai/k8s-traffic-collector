@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/kubeshark/base/pkg/api"
-	"github.com/kubeshark/base/pkg/extensions"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/pkg/api"
+	"github.com/kubeshark/worker/pkg/extensions"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/kubeshark/gopacket"

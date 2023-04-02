@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
+	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
 

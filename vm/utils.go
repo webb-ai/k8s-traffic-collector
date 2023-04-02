@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/kubeshark/base/pkg/api"
+	"github.com/kubeshark/worker/pkg/api"
 	"github.com/robertkrimen/otto"
 )
 

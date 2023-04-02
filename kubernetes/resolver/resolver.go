@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kubeshark/base/pkg/api"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
