@@ -212,12 +212,21 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 					if subset.Addresses != nil {
 						for _, address := range subset.Addresses {
 							resolver.SaveResolution(address.IP, &api.Resolution{
+								IP:   address.IP,
 								Name: serviceHostname,
+								Pod: &api.Pod{
+									Namespace: endpoint.Namespace,
+								},
 							}, event.Type)
 							for _, port := range ports {
 								ipWithPort := fmt.Sprintf("%s:%d", address.IP, port)
 								resolver.SaveResolution(ipWithPort, &api.Resolution{
+									IP:   address.IP,
+									Port: strconv.FormatInt(int64(port), 10),
 									Name: serviceHostname,
+									Pod: &api.Pod{
+										Namespace: endpoint.Namespace,
+									},
 								}, event.Type)
 							}
 						}
@@ -249,7 +258,11 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			serviceHostname := fmt.Sprintf("%s.%s", service.Name, service.Namespace)
 			if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != kubClientNullString {
 				resolver.SaveResolution(service.Spec.ClusterIP, &api.Resolution{
+					IP:   service.Spec.ClusterIP,
 					Name: serviceHostname,
+					Pod: &api.Pod{
+						Namespace: service.Namespace,
+					},
 				}, event.Type)
 				if service.Spec.Ports != nil {
 					for _, port := range service.Spec.Ports {
@@ -258,6 +271,9 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 								IP:   service.Spec.ClusterIP,
 								Port: strconv.FormatInt(int64(port.Port), 10),
 								Name: serviceHostname,
+								Pod: &api.Pod{
+									Namespace: service.Namespace,
+								},
 							}, event.Type)
 						}
 					}
@@ -266,8 +282,22 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			if service.Status.LoadBalancer.Ingress != nil {
 				for _, ingress := range service.Status.LoadBalancer.Ingress {
 					resolver.SaveResolution(ingress.IP, &api.Resolution{
+						IP:   ingress.IP,
 						Name: serviceHostname,
+						Pod: &api.Pod{
+							Namespace: service.Namespace,
+						},
 					}, event.Type)
+					for _, port := range ingress.Ports {
+						resolver.SaveResolution(fmt.Sprintf("%s:%d", ingress.IP, port.Port), &api.Resolution{
+							IP:   ingress.IP,
+							Port: strconv.FormatInt(int64(port.Port), 10),
+							Name: serviceHostname,
+							Pod: &api.Pod{
+								Namespace: service.Namespace,
+							},
+						}, event.Type)
+					}
 				}
 			}
 		case <-ctx.Done():

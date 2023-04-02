@@ -31,19 +31,26 @@ func resolveIP(connectionInfo *api.ConnectionInfo, timestamp int64) (resolvedSou
 		unresolvedSource := connectionInfo.ClientIP
 		resolvedSource = resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
 		if resolvedSource == nil {
-			resolvedSource = &api.Resolution{
-				IP:   connectionInfo.ClientIP,
-				Port: connectionInfo.ClientPort,
+			unresolvedSource = fmt.Sprintf("%s:%s", connectionInfo.ClientIP, connectionInfo.ClientPort)
+			resolvedSource = resolver.K8sResolver.Resolve(unresolvedSource, timestamp)
+			if resolvedSource == nil {
+				resolvedSource = &api.Resolution{
+					IP:   connectionInfo.ClientIP,
+					Port: connectionInfo.ClientPort,
+				}
 			}
 		}
 
-		unresolvedDestination := fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
+		unresolvedDestination := connectionInfo.ServerIP
 		resolvedDestination = resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
-
 		if resolvedDestination == nil {
-			resolvedDestination = &api.Resolution{
-				IP:   connectionInfo.ServerIP,
-				Port: connectionInfo.ServerPort,
+			unresolvedDestination = fmt.Sprintf("%s:%s", connectionInfo.ServerIP, connectionInfo.ServerPort)
+			resolvedDestination = resolver.K8sResolver.Resolve(unresolvedDestination, timestamp)
+			if resolvedDestination == nil {
+				resolvedDestination = &api.Resolution{
+					IP:   connectionInfo.ServerIP,
+					Port: connectionInfo.ServerPort,
+				}
 			}
 		}
 	}
