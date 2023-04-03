@@ -208,6 +208,8 @@ type BaseEntry struct {
 	Source       *Resolution `json:"src"`
 	Destination  *Resolution `json:"dst"`
 	Outgoing     bool        `json:"outgoing"`
+	RequestSize  int         `json:"requestSize"`
+	ResponseSize int         `json:"responseSize"`
 	Size         int         `json:"size"`
 	ElapsedTime  int64       `json:"latency"`
 	Passed       bool        `json:"passed"`

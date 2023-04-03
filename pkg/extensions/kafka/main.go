@@ -190,6 +190,8 @@ func (d dissecting) Summarize(entry *api.Entry) *api.BaseEntry {
 		Source:       entry.Source,
 		Destination:  entry.Destination,
 		Outgoing:     entry.Outgoing,
+		RequestSize:  entry.RequestSize,
+		ResponseSize: entry.ResponseSize,
 		Size:         entry.RequestSize + entry.ResponseSize,
 		ElapsedTime:  entry.ElapsedTime,
 		Passed:       entry.Passed,
