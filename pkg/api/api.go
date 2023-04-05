@@ -210,8 +210,7 @@ type BaseEntry struct {
 	Outgoing     bool        `json:"outgoing"`
 	RequestSize  int         `json:"requestSize"`
 	ResponseSize int         `json:"responseSize"`
-	Size         int         `json:"size"`
-	ElapsedTime  int64       `json:"latency"`
+	ElapsedTime  int64       `json:"elapsedTime"`
 	Passed       bool        `json:"passed"`
 	Failed       bool        `json:"failed"`
 }
