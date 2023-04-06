@@ -166,8 +166,11 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 			}
 
 			pod := event.Object.(*corev1.Pod)
+			name := fmt.Sprintf("%s.%s", pod.Name, pod.Namespace)
 			resolver.SaveResolution(pod.Status.PodIP, &api.Resolution{
-				Pod: pod,
+				Name:      name,
+				Namespace: pod.Namespace,
+				Pod:       pod,
 			}, event.Type)
 		case <-ctx.Done():
 			watcher.Stop()
@@ -189,7 +192,7 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 				return errors.New("error in kubectl endpoint watch")
 			}
 			endpoint := event.Object.(*corev1.Endpoints)
-			serviceHostname := fmt.Sprintf("%s.%s", endpoint.Name, endpoint.Namespace)
+			name := fmt.Sprintf("%s.%s", endpoint.Name, endpoint.Namespace)
 			if endpoint.Subsets != nil {
 				for _, subset := range endpoint.Subsets {
 					var ports []int32
@@ -203,14 +206,16 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 					if subset.Addresses != nil {
 						for _, address := range subset.Addresses {
 							resolver.SaveResolution(address.IP, &api.Resolution{
-								Name:     serviceHostname,
-								Endpoint: endpoint,
+								Name:          name,
+								Namespace:     endpoint.Namespace,
+								EndpointSlice: endpoint,
 							}, event.Type)
 							for _, port := range ports {
 								ipWithPort := fmt.Sprintf("%s:%d", address.IP, port)
 								resolver.SaveResolution(ipWithPort, &api.Resolution{
-									Name:     serviceHostname,
-									Endpoint: endpoint,
+									Name:          name,
+									Namespace:     endpoint.Namespace,
+									EndpointSlice: endpoint,
 								}, event.Type)
 							}
 						}
@@ -242,15 +247,17 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			serviceHostname := fmt.Sprintf("%s.%s", service.Name, service.Namespace)
 			if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != kubClientNullString {
 				resolver.SaveResolution(service.Spec.ClusterIP, &api.Resolution{
-					Name:    serviceHostname,
-					Service: service,
+					Name:      serviceHostname,
+					Namespace: service.Namespace,
+					Service:   service,
 				}, event.Type)
 				if service.Spec.Ports != nil {
 					for _, port := range service.Spec.Ports {
 						if port.Port > 0 {
 							resolver.SaveResolution(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), &api.Resolution{
-								Name:    serviceHostname,
-								Service: service,
+								Name:      serviceHostname,
+								Namespace: service.Namespace,
+								Service:   service,
 							}, event.Type)
 						}
 					}
@@ -259,13 +266,15 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			if service.Status.LoadBalancer.Ingress != nil {
 				for _, ingress := range service.Status.LoadBalancer.Ingress {
 					resolver.SaveResolution(ingress.IP, &api.Resolution{
-						Name:    serviceHostname,
-						Service: service,
+						Name:      serviceHostname,
+						Namespace: service.Namespace,
+						Service:   service,
 					}, event.Type)
 					for _, port := range ingress.Ports {
 						resolver.SaveResolution(fmt.Sprintf("%s:%d", ingress.IP, port.Port), &api.Resolution{
-							Name:    serviceHostname,
-							Service: service,
+							Name:      serviceHostname,
+							Namespace: service.Namespace,
+							Service:   service,
 						}, event.Type)
 					}
 				}
@@ -285,17 +294,19 @@ func (resolver *Resolver) SaveResolution(key string, resolution *api.Resolution,
 		_oldResolution, ok := resolver.nameMap.Load(key)
 		if ok {
 			oldResolution := _oldResolution.(*api.Resolution)
+
+			if resolution.Name != "" && (resolution.Service != nil || (oldResolution.Service == nil && resolution.EndpointSlice != nil) || (oldResolution.Service == nil && oldResolution.EndpointSlice == nil && resolution.Pod != nil)) {
+				oldResolution.Name = resolution.Name
+			}
+
 			if resolution.Pod != nil {
 				oldResolution.Pod = resolution.Pod
 			}
-			if resolution.Endpoint != nil {
-				oldResolution.Endpoint = resolution.Endpoint
+			if resolution.EndpointSlice != nil {
+				oldResolution.EndpointSlice = resolution.EndpointSlice
 			}
 			if resolution.Service != nil {
 				oldResolution.Service = resolution.Service
-			}
-			if resolution.Name != "" {
-				oldResolution.Name = resolution.Name
 			}
 
 			resolution = oldResolution

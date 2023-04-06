@@ -27,12 +27,12 @@ func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) error {
 
 	tls.ClearPids()
 
-	for pid, pod := range containerPids {
-		if err := tls.AddSSLLibPid(procfs, pid, pod.Namespace); err != nil {
+	for pid := range containerPids {
+		if err := tls.AddSSLLibPid(procfs, pid); err != nil {
 			LogError(err)
 		}
 
-		if err := tls.AddGoPid(procfs, pid, pod.Namespace); err != nil {
+		if err := tls.AddGoPid(procfs, pid); err != nil {
 			LogError(err)
 		}
 	}

@@ -3,18 +3,12 @@ package api
 import (
 	"bufio"
 	"fmt"
-	"net"
 	"sync"
 	"time"
 
 	"github.com/kubeshark/gopacket"
 	corev1 "k8s.io/api/core/v1"
 )
-
-const UnknownNamespace = ""
-
-var UnknownIp = net.IP{0, 0, 0, 0}
-var UnknownPort uint16 = 0
 
 type Protocol struct {
 	Name            string   `json:"name"`
@@ -31,19 +25,14 @@ type Protocol struct {
 	Priority        uint8    `json:"priority"`
 }
 
-type Pod struct {
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Node      *Node  `json:"node"`
-}
-
 type Resolution struct {
-	IP       string            `json:"ip"`
-	Port     string            `json:"port"`
-	Name     string            `json:"name"`
-	Pod      *corev1.Pod       `json:"pod"`
-	Endpoint *corev1.Endpoints `json:"endpoint"`
-	Service  *corev1.Service   `json:"service"`
+	IP            string            `json:"ip"`
+	Port          string            `json:"port"`
+	Name          string            `json:"name"`
+	Namespace     string            `json:"namespace"`
+	Pod           *corev1.Pod       `json:"pod"`
+	EndpointSlice *corev1.Endpoints `json:"endpointSlice"`
+	Service       *corev1.Service   `json:"service"`
 }
 
 type Extension struct {
@@ -95,7 +84,6 @@ type OutputChannelItem struct {
 	Timestamp      int64
 	ConnectionInfo *ConnectionInfo
 	Pair           *RequestResponsePair
-	Namespace      string
 }
 
 type ReadProgress struct {

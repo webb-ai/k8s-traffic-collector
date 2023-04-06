@@ -5,11 +5,9 @@ import (
 )
 
 type tlsEmitter struct {
-	delegate  api.Emitter
-	namespace string
+	delegate api.Emitter
 }
 
 func (e *tlsEmitter) Emit(item *api.OutputChannelItem) {
-	item.Namespace = e.namespace
 	e.delegate.Emit(item)
 }

@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strconv"
-	"sync"
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/golang-lru/simplelru"
@@ -28,7 +27,6 @@ type tlsPoller struct {
 	chunksReader   *perf.Reader
 	extension      *api.Extension
 	procfs         string
-	pidToNamespace sync.Map
 	fdCache        *simplelru.LRU // Actual type is map[string]addressPair
 	evictedCounter int
 }
@@ -148,8 +146,7 @@ func (p *tlsPoller) handleTlsChunk(chunk *tracerTlsChunk, extension *api.Extensi
 		}
 
 		tlsEmitter := &tlsEmitter{
-			delegate:  emitter,
-			namespace: p.getNamespace(chunk.Pid),
+			delegate: emitter,
 		}
 
 		stream.client = NewTlsReader(p.buildTcpId(address, true), stream, true, tlsEmitter, extension, p.reqResMatcher)
@@ -191,33 +188,6 @@ func (p *tlsPoller) buildTcpId(address *addressPair, isRequest bool) *api.TcpID 
 			Ident:   "",
 		}
 	}
-}
-
-func (p *tlsPoller) addPid(pid uint32, namespace string) {
-	p.pidToNamespace.Store(pid, namespace)
-}
-
-func (p *tlsPoller) getNamespace(pid uint32) string {
-	namespaceIfc, ok := p.pidToNamespace.Load(pid)
-
-	if !ok {
-		return api.UnknownNamespace
-	}
-
-	namespace, ok := namespaceIfc.(string)
-
-	if !ok {
-		return api.UnknownNamespace
-	}
-
-	return namespace
-}
-
-func (p *tlsPoller) clearPids() {
-	p.pidToNamespace.Range(func(key, v interface{}) bool {
-		p.pidToNamespace.Delete(key)
-		return true
-	})
 }
 
 func (p *tlsPoller) fdCacheEvictCallback(key interface{}, value interface{}) {

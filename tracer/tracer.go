@@ -100,7 +100,7 @@ func (t *Tracer) GlobalSSLLibTarget(procfs string, pid string) error {
 		return err
 	}
 
-	return t.AddSSLLibPid(procfs, uint32(_pid), api.UnknownNamespace)
+	return t.AddSSLLibPid(procfs, uint32(_pid))
 }
 
 func (t *Tracer) GlobalGoTarget(procfs string, pid string) error {
@@ -109,10 +109,10 @@ func (t *Tracer) GlobalGoTarget(procfs string, pid string) error {
 		return err
 	}
 
-	return t.targetGoPid(procfs, uint32(_pid), api.UnknownNamespace)
+	return t.targetGoPid(procfs, uint32(_pid))
 }
 
-func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) AddSSLLibPid(procfs string, pid uint32) error {
 	sslLibrary, err := findSsllib(procfs, pid)
 
 	if err != nil {
@@ -122,11 +122,11 @@ func (t *Tracer) AddSSLLibPid(procfs string, pid uint32, namespace string) error
 		log.Info().Str("path", sslLibrary).Int("pid", int(pid)).Msg("Found libssl.so:")
 	}
 
-	return t.targetSSLLibPid(pid, sslLibrary, namespace)
+	return t.targetSSLLibPid(pid, sslLibrary)
 }
 
-func (t *Tracer) AddGoPid(procfs string, pid uint32, namespace string) error {
-	return t.targetGoPid(procfs, pid, namespace)
+func (t *Tracer) AddGoPid(procfs string, pid uint32) error {
+	return t.targetGoPid(procfs, pid)
 }
 
 func (t *Tracer) RemovePid(pid uint32) error {
@@ -142,7 +142,6 @@ func (t *Tracer) RemovePid(pid uint32) error {
 }
 
 func (t *Tracer) ClearPids() {
-	t.poller.clearPids()
 	t.registeredPids.Range(func(key, v interface{}) bool {
 		pid := key.(uint32)
 		if pid == GlobalWorkerPid {
@@ -197,7 +196,7 @@ func setupRLimit() error {
 	return nil
 }
 
-func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string) error {
+func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string) error {
 	newSsl := sslHooks{}
 
 	if err := newSsl.installUprobes(&t.bpfObjects, sslLibrary); err != nil {
@@ -207,8 +206,6 @@ func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string
 	log.Info().Msg(fmt.Sprintf("Targeting TLS (pid: %v) (libssl: %v)", pid, sslLibrary))
 
 	t.sslHooksStructs = append(t.sslHooksStructs, newSsl)
-
-	t.poller.addPid(pid, namespace)
 
 	pids := t.bpfObjects.tracerMaps.PidsMap
 
@@ -221,7 +218,7 @@ func (t *Tracer) targetSSLLibPid(pid uint32, sslLibrary string, namespace string
 	return nil
 }
 
-func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error {
+func (t *Tracer) targetGoPid(procfs string, pid uint32) error {
 	exePath, err := findLibraryByPid(procfs, pid, "")
 	if err != nil {
 		return err
@@ -237,8 +234,6 @@ func (t *Tracer) targetGoPid(procfs string, pid uint32, namespace string) error 
 	log.Info().Msg(fmt.Sprintf("Targeting TLS (pid: %v) (Go: %v)", pid, exePath))
 
 	t.goHooksStructs = append(t.goHooksStructs, hooks)
-
-	t.poller.addPid(pid, namespace)
 
 	pids := t.bpfObjects.tracerMaps.PidsMap
 
