@@ -299,6 +299,10 @@ func (resolver *Resolver) SaveResolution(key string, resolution *api.Resolution,
 				oldResolution.Name = resolution.Name
 			}
 
+			if resolution.Namespace != "" {
+				oldResolution.Namespace = resolution.Namespace
+			}
+
 			if resolution.Pod != nil {
 				oldResolution.Pod = resolution.Pod
 			}
