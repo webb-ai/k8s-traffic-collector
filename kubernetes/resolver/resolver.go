@@ -166,9 +166,8 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 			}
 
 			pod := event.Object.(*corev1.Pod)
-			name := fmt.Sprintf("%s.%s", pod.Name, pod.Namespace)
 			resolver.SaveResolution(pod.Status.PodIP, &api.Resolution{
-				Name:      name,
+				Name:      pod.Name,
 				Namespace: pod.Namespace,
 				Pod:       pod,
 			}, event.Type)
@@ -192,7 +191,6 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 				return errors.New("error in kubectl endpoint watch")
 			}
 			endpoint := event.Object.(*corev1.Endpoints)
-			name := fmt.Sprintf("%s.%s", endpoint.Name, endpoint.Namespace)
 			if endpoint.Subsets != nil {
 				for _, subset := range endpoint.Subsets {
 					var ports []int32
@@ -206,14 +204,14 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 					if subset.Addresses != nil {
 						for _, address := range subset.Addresses {
 							resolver.SaveResolution(address.IP, &api.Resolution{
-								Name:          name,
+								Name:          endpoint.Name,
 								Namespace:     endpoint.Namespace,
 								EndpointSlice: endpoint,
 							}, event.Type)
 							for _, port := range ports {
 								ipWithPort := fmt.Sprintf("%s:%d", address.IP, port)
 								resolver.SaveResolution(ipWithPort, &api.Resolution{
-									Name:          name,
+									Name:          endpoint.Name,
 									Namespace:     endpoint.Namespace,
 									EndpointSlice: endpoint,
 								}, event.Type)
@@ -244,10 +242,9 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			}
 
 			service := event.Object.(*corev1.Service)
-			serviceHostname := fmt.Sprintf("%s.%s", service.Name, service.Namespace)
 			if service.Spec.ClusterIP != "" && service.Spec.ClusterIP != kubClientNullString {
 				resolver.SaveResolution(service.Spec.ClusterIP, &api.Resolution{
-					Name:      serviceHostname,
+					Name:      service.Name,
 					Namespace: service.Namespace,
 					Service:   service,
 				}, event.Type)
@@ -255,7 +252,7 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 					for _, port := range service.Spec.Ports {
 						if port.Port > 0 {
 							resolver.SaveResolution(fmt.Sprintf("%s:%d", service.Spec.ClusterIP, port.Port), &api.Resolution{
-								Name:      serviceHostname,
+								Name:      service.Name,
 								Namespace: service.Namespace,
 								Service:   service,
 							}, event.Type)
@@ -266,13 +263,13 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 			if service.Status.LoadBalancer.Ingress != nil {
 				for _, ingress := range service.Status.LoadBalancer.Ingress {
 					resolver.SaveResolution(ingress.IP, &api.Resolution{
-						Name:      serviceHostname,
+						Name:      service.Name,
 						Namespace: service.Namespace,
 						Service:   service,
 					}, event.Type)
 					for _, port := range ingress.Ports {
 						resolver.SaveResolution(fmt.Sprintf("%s:%d", ingress.IP, port.Port), &api.Resolution{
-							Name:      serviceHostname,
+							Name:      service.Name,
 							Namespace: service.Namespace,
 							Service:   service,
 						}, event.Type)
