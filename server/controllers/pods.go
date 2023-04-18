@@ -16,5 +16,5 @@ func PostSetTargeted(c *gin.Context, procfs string, updateTargetsQueue *queue.Qu
 		return
 	}
 
-	target.UpdatePods(pods, procfs, updateTargetsQueue)
+	go target.UpdatePods(pods, procfs, updateTargetsQueue)
 }
