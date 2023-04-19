@@ -148,3 +148,21 @@ func GetNameResolutionHistory(c *gin.Context) {
 	m := resolver.K8sResolver.GetDumpNameResolutionHistoryMap()
 	c.JSON(http.StatusOK, m)
 }
+
+type postStorageLimit struct {
+	Limit int64 `json:"limit"`
+}
+
+func PostStorageLimit(c *gin.Context) {
+	var req postStorageLimit
+	if err := c.Bind(&req); err != nil {
+		c.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	misc.SetPcapsDirSizeLimit(req.Limit)
+
+	c.JSON(http.StatusOK, gin.H{
+		"limit": req.Limit,
+	})
+}
