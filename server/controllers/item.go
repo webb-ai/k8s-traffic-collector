@@ -47,7 +47,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")
-		c.String(http.StatusNotFound, fmt.Sprintf("The TCP/UDP stream %s is removed from the node: %s", id, node))
+		c.String(http.StatusNotFound, fmt.Sprintf("The TCP/UDP stream %s was removed from the node: %s", id, node))
 		return
 	}
 	go s.ReadPackets(packets, false, false)
