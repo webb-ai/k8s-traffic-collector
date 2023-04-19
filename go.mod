@@ -8,7 +8,6 @@ require (
 	github.com/aws/aws-sdk-go v1.44.199
 	github.com/clbanning/mxj/v2 v2.5.5
 	github.com/dlclark/regexp2 v1.4.0
-	github.com/docker/go-units v0.5.0
 	github.com/elastic/go-elasticsearch v0.0.0
 	github.com/elastic/go-elasticsearch/v8 v8.6.0
 	github.com/fatih/camelcase v1.0.0

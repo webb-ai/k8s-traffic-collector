@@ -13,5 +13,4 @@ func PcapsRoutes(ginApp *gin.Engine) {
 	routeGroup.POST("/merge", controllers.PostMerge)
 	routeGroup.GET("/replay/:id", controllers.GetReplay)
 	routeGroup.GET("/name-resolution-history", controllers.GetNameResolutionHistory)
-	routeGroup.POST("/set-storage-limit", controllers.PostStorageLimit)
 }

@@ -5,17 +5,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/docker/go-units"
 	"github.com/rs/zerolog/log"
 )
 
 const NameResolutionHistoryFilename string = "name_resolution_history.json"
 
 var dataDir = "data"
-var pcapsDirSizeLimit int64 = 200 * units.MB
-var pcapsDirSizeLimitInterval = 5 * time.Second
 
 func InitDataDir() {
 	body, err := os.ReadFile("/etc/machine-id")
@@ -105,68 +101,4 @@ func GetNameResolutionHistoryPath() string {
 
 func IsTls(id string) bool {
 	return strings.HasSuffix(id[:len(id)-len(filepath.Ext(id))], "_tls")
-}
-
-func SetPcapsDirSizeLimit(limit int64) {
-	pcapsDirSizeLimit = limit
-}
-
-func limitPcapsDirSize() {
-	if pcapsDirSizeLimit < 0 {
-		return
-	}
-
-	var size int64
-	err := filepath.Walk(GetPcapsDir(), func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return err
-	})
-
-	if err != nil {
-		log.Error().Err(err).Send()
-	}
-
-	log.Debug().Int("size", int(size)).Msg("PCAP directory:")
-
-	if size > pcapsDirSizeLimit {
-		pcapsDirSizeLimitInterval = pcapsDirSizeLimitInterval * time.Duration(pcapsDirSizeLimit/(size-pcapsDirSizeLimit))
-		err := filepath.Walk(GetPcapsDir(), func(pcapPath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-
-			if size <= pcapsDirSizeLimit {
-				return nil
-			}
-
-			err = os.Remove(pcapPath)
-			if err != nil {
-				return err
-			}
-
-			size -= info.Size()
-
-			log.Debug().Int("size", int(size)).Str("pcap", pcapPath).Msg("Removed PCAP file:")
-
-			return err
-		})
-
-		if err != nil {
-			log.Error().Err(err).Send()
-		}
-	}
-}
-
-func LimitPcapsDirSize() {
-	for range time.Tick(pcapsDirSizeLimitInterval) {
-		limitPcapsDirSize()
-	}
 }
