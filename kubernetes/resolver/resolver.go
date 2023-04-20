@@ -41,6 +41,8 @@ func (resolver *Resolver) Start(ctx context.Context, nameResolutionHistoryPath s
 		resolver.RestoreNameResolutionHistory(nameResolutionHistoryPath)
 
 		if clusterMode {
+			resolver.setStorageLimit(ctx)
+
 			go resolver.dumpNameResolutionHistoryEveryNSeconds(3)
 			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchServices)
 			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchEndpoints)
@@ -79,6 +81,26 @@ func (resolver *Resolver) updateNameResolutionHistory() {
 	})
 	resolver.nameMapHistory.Store(time.Now().Unix(), nameMap)
 	log.Debug().Msg("Updated the name resolution history.")
+}
+
+func (resolver *Resolver) setStorageLimit(ctx context.Context) {
+	persistentVolumeClaimList, err := resolver.clientSet.CoreV1().PersistentVolumeClaims(getSelfNamespace()).List(ctx, metav1.ListOptions{})
+	if err == nil {
+		for _, item := range persistentVolumeClaimList.Items {
+			if item.ObjectMeta.Name == "kubeshark-persistent-volume-claim" {
+				storageLimit := item.Spec.Resources.Requests.Storage()
+				value, ok := storageLimit.AsInt64()
+				if ok {
+					misc.SetPcapsDirSizeLimit(value)
+					log.Info().Str("value", storageLimit.String()).Msg("Storage limit is set to:")
+				} else {
+					log.Error().Str("value", storageLimit.String()).Msg("Incompatible value for setting the storage limit:")
+				}
+			}
+		}
+	} else {
+		log.Error().Err(err).Send()
+	}
 }
 
 func (resolver *Resolver) dumpNameResolutionHistoryEveryNSeconds(n time.Duration) {

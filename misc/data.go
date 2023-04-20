@@ -14,7 +14,7 @@ import (
 const NameResolutionHistoryFilename string = "name_resolution_history.json"
 
 var dataDir = "data"
-var pcapsDirSizeLimit int64 = 200 * units.MB
+var pcapsDirSizeLimit int64 = 200 * units.MiB
 var pcapsDirSizeLimitInterval = 5 * time.Second
 
 func InitDataDir() {
