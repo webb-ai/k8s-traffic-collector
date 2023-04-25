@@ -36,7 +36,7 @@ var procfs = flag.String("procfs", "/proc", "The procfs directory, used when map
 var debug = flag.Bool("debug", false, "Enable debug mode")
 var quiet = flag.Bool("quiet", false, "Be quiet regarding errors")
 var verbose = flag.Bool("verbose", false, "Be verbose")
-var statsevery = flag.Int("stats", 60, "Output statistics every N seconds")
+var statsevery = flag.Int("stats", 5, "Output statistics every N seconds")
 var memprofile = flag.String("memprofile", "", "Write memory profile")
 
 func main() {

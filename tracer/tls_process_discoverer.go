@@ -27,6 +27,7 @@ func UpdateTargets(tls *Tracer, pods *[]v1.Pod, procfs string) error {
 
 	tls.ClearPids()
 
+	// TODO: CAUSES INITIAL MEMORY SPIKE
 	for pid := range containerPids {
 		if err := tls.AddSSLLibPid(procfs, pid); err != nil {
 			LogError(err)

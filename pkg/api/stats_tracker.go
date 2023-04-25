@@ -81,6 +81,7 @@ func (as *AppStats) DumpStats() *AppStats {
 
 func resetUint64(ref *uint64) (val uint64) {
 	val = atomic.LoadUint64(ref)
-	atomic.StoreUint64(ref, 0)
+	// TODO: Temporarily disabled
+	// atomic.StoreUint64(ref, 0)
 	return
 }

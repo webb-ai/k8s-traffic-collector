@@ -1,12 +1,15 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
+	"github.com/docker/go-units"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
@@ -21,6 +24,10 @@ import (
 )
 
 const cleanPeriod = time.Second * 10
+
+var table1 []table.Row
+var table2 []table.Row
+var table3 []table.Row
 
 func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
 	go misc.LimitPcapsDirSize()
@@ -55,19 +62,8 @@ func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 	for {
 		<-ticker.C
 
-		// Since the start
-		errorMapLen, errorsSummery := diagnose.ErrorsMap.GetErrorsSummary()
+		errorMapLen, errorsSummary := diagnose.ErrorsMap.GetErrorsSummary()
 
-		log.Info().
-			Msg(fmt.Sprintf(
-				"%v (errors: %v, errTypes:%v) - Errors Summary: %s",
-				time.Since(diagnose.AppStats.StartTime),
-				diagnose.ErrorsMap.ErrorsCount,
-				errorMapLen,
-				errorsSummery,
-			))
-
-		// At this moment
 		memStats := runtime.MemStats{}
 		runtime.ReadMemStats(&memStats)
 		sysInfo, err := pidusage.GetStat(os.Getpid())
@@ -77,36 +73,138 @@ func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 				Memory: -1,
 			}
 		}
-		log.Info().
-			Msg(fmt.Sprintf(
-				"heap-alloc: %d, heap-idle: %d, heap-objects: %d, goroutines: %d, cpu: %f, cores: %d/%d, rss: %f",
-				memStats.HeapAlloc,
-				memStats.HeapIdle,
-				memStats.HeapObjects,
-				runtime.NumGoroutine(),
-				sysInfo.CPU,
-				logicalCoreCount,
-				physicalCoreCount,
-				sysInfo.Memory,
-			))
 
-		// Since the last print
 		cleanStats := cleaner.dumpStats()
 		assemblerStats := assembler.DumpStats()
-		log.Info().
-			Msg(fmt.Sprintf(
-				"Cleaner - flushed connections: %d, closed connections: %d, deleted messages: %d",
-				assemblerStats.FlushedConnections,
-				assemblerStats.ClosedConnections,
-				cleanStats.deleted,
-			))
 		currentAppStats := diagnose.AppStats.DumpStats()
-		appStatsJSON, _ := json.Marshal(currentAppStats)
-		log.Info().Msg(fmt.Sprintf("App stats - %v", string(appStatsJSON)))
 
-		// At the moment
-		log.Info().Msg(fmt.Sprintf("assembler-stats: %s, packet-source-stats: %s", assembler.Dump(), target.PacketSourceManager.Stats()))
+		packetsReceived, packetsDropped, err := target.PacketSourceManager.Stats()
+		if err != nil {
+			packetsReceived = -1
+			packetsDropped = -1
+		}
+
+		table1 = append(table1, table.Row{
+			time.Now(),
+			time.Since(diagnose.AppStats.StartTime),
+			diagnose.ErrorsMap.ErrorsCount,
+			errorMapLen,
+			errorsSummary,
+		})
+
+		table2 = append(table2, table.Row{
+			units.HumanSize(float64(memStats.Alloc)),
+			units.HumanSize(float64(memStats.TotalAlloc)),
+			units.HumanSize(float64(memStats.Sys)),
+			units.HumanSize(float64(memStats.HeapAlloc)),
+			units.HumanSize(float64(memStats.HeapIdle)),
+			memStats.HeapObjects,
+			units.HumanSize(sysInfo.Memory),
+			memStats.NumGC,
+			runtime.NumGoroutine(),
+			sysInfo.CPU,
+			logicalCoreCount,
+			physicalCoreCount,
+			countOpenFiles(),
+		})
+
+		table3 = append(table3, table.Row{
+			assemblerStats.FlushedConnections,
+			assemblerStats.ClosedConnections,
+			cleanStats.deleted,
+			currentAppStats.ProcessedBytes,
+			currentAppStats.PacketsCount,
+			currentAppStats.TcpPacketsCount,
+			currentAppStats.DnsPacketsCount,
+			currentAppStats.ReassembledTcpPayloadsCount,
+			currentAppStats.TlsConnectionsCount,
+			currentAppStats.MatchedPairs,
+			currentAppStats.DroppedTcpStreams,
+			currentAppStats.LiveTcpStreams,
+			packetsReceived,
+			packetsDropped,
+			assembler.Dump(),
+		})
+
+		table1Header := table.Row{
+			"Timestamp",
+			"Time Passed",
+			"Errors",
+			"Error Types",
+			"Errors Summary",
+		}
+
+		table2Header := table.Row{
+			"Alloc",
+			"Total Alloc",
+			"System Memory",
+			"Heap Alloc",
+			"Heap Idle",
+			"Heap Objects",
+			"Memory RSS",
+			"GC Cycles",
+			"Goroutines",
+			"CPU",
+			"Logical Cores",
+			"Physical Cores",
+			"Open Files",
+		}
+
+		table3Header := table.Row{
+			"Flushed Conn",
+			"Closed Conn",
+			"Deleted Conn",
+			"Processed Bytes",
+			"Total Packets",
+			"TCP Packets",
+			"UDP Packets",
+			"Reassembled",
+			"TLS Conns",
+			"Matched Pairs",
+			"Dropped TCP Streams",
+			"Live TCP Streams",
+			"Packets Received",
+			"Packets Dropped",
+		}
+
+		fmt.Printf("\n------------------ PERIODIC STATS ------------------\n\n")
+
+		t1 := table.NewWriter()
+		t1.SetOutputMirror(os.Stdout)
+		t1.AppendHeader(table1Header)
+		t1.AppendRows(table1)
+		t1.AppendFooter(table.Row{""})
+		t1.SetStyle(table.StyleColoredBright)
+		t1.Render()
+		fmt.Println()
+
+		t2 := table.NewWriter()
+		t2.SetOutputMirror(os.Stdout)
+		t2.AppendHeader(table2Header)
+		t2.AppendRows(table2)
+		t2.AppendFooter(table.Row{""})
+		t2.SetStyle(table.StyleColoredBright)
+		t2.Render()
+		fmt.Println()
+
+		t3 := table.NewWriter()
+		t3.SetOutputMirror(os.Stdout)
+		t3.AppendHeader(table3Header)
+		t3.AppendRows(table3)
+		t3.AppendFooter(table.Row{""})
+		t3.SetStyle(table.StyleColoredBright)
+		t3.Render()
+		fmt.Println()
 	}
+}
+
+func countOpenFiles() int64 {
+	out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof -p %v", os.Getpid())).Output()
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	lines := strings.Split(string(out), "\n")
+	return int64(len(lines) - 1)
 }
 
 func initializePacketSources() error {

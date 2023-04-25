@@ -161,18 +161,18 @@ func (m *PacketSourceManager) Close() {
 	}
 }
 
-func (m *PacketSourceManager) Stats() string {
-	result := ""
-
+func (m *PacketSourceManager) Stats() (packetsReceived int, packetsDropped int, err error) {
 	for _, source := range m.sources {
-		packetsReceived, packetsDropped, err := source.Stats()
+		var r, d uint
+		r, d, err = source.Stats()
 
 		if err != nil {
-			result = result + fmt.Sprintf("[%s: err:%s]", source.String(), err)
-		} else {
-			result = result + fmt.Sprintf("[%s: rec: %d dropped: %d]", source.String(), packetsReceived, packetsDropped)
+			return
 		}
+
+		packetsReceived += int(r)
+		packetsDropped += int(d)
 	}
 
-	return result
+	return
 }
