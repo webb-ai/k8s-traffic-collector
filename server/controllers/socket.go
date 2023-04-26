@@ -44,25 +44,55 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
 	}
 
-	quit := make(chan bool)
+	var done bool
+	shutdown := make(chan bool)
 	outputChannel := make(chan *api.OutputChannelItem)
-	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("node"), c.Query("q"), quit)
+	var sources []*source.TcpPacketSource
 
-	for _, pcap := range pcapFiles {
-		handlePcapFile(pcap.Name(), outputChannel, opts)
-	}
+	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("node"), c.Query("q"), shutdown)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Error().Err(err).Msg("NewWatcher failed:")
 		return
 	}
-	defer watcher.Close()
 
-	done := make(chan bool)
+	defer func() {
+		watcher.Close()
+		log.Info().Msg("PCAP watcher is closed!")
+		for i, s := range sources {
+			log.Info().Int("i", i).Msg("Source is closed!")
+			s.Close()
+
+		}
+	}()
+
 	go func() {
-		defer close(done)
+		for {
+			_, _, err := ws.ReadMessage()
+			if err != nil {
+				log.Info().Err(err).Msg("WebSocket read:")
+				done = true
+				shutdown <- true
+				shutdown <- true
+				return
+			}
+		}
+	}()
 
+	for _, pcap := range pcapFiles {
+		if done {
+			break
+		}
+		s, ok := createPcapSource(pcap.Name())
+		if !ok {
+			continue
+		}
+		sources = append(sources, s)
+		handlePcapSource(s, pcap.Name(), outputChannel, opts)
+	}
+
+	go func() {
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -71,18 +101,22 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 				}
 				if event.Op&fsnotify.Rename == fsnotify.Rename || event.Op&fsnotify.Create == fsnotify.Create {
 					_, filename := filepath.Split(event.Name)
-					handlePcapFile(filename, outputChannel, opts)
+					s, ok := createPcapSource(filename)
+					if ok {
+						sources = append(sources, s)
+						handlePcapSource(s, filename, outputChannel, opts)
+					}
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
 				log.Warn().Err(err).Msg("Watcher error:")
-			case <-quit:
+			case <-shutdown:
+				log.Info().Msg("Shutdown recieved!")
 				return
 			}
 		}
-
 	}()
 
 	err = watcher.Add(misc.GetPcapsDir())
@@ -90,23 +124,34 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 		log.Error().Err(err).Msg("Add failed:")
 		return
 	}
-	<-done
+	<-shutdown
+
+	log.Info().Msg("WebSocket is closed!")
 }
 
-func handlePcapFile(id string, outputChannel chan *api.OutputChannelItem, opts *misc.Opts) {
+func createPcapSource(id string) (s *source.TcpPacketSource, ok bool) {
+	ok = true
 	if strings.HasSuffix(id, "tmp") {
+		ok = false
 		return
 	}
 
 	log.Debug().Str("pcap", id).Msg("Reading:")
-	streamsMap := assemblers.NewTcpStreamMap(false)
-	packets := make(chan source.TcpPacketInfo)
-	pcapPath := misc.GetPcapPath(id)
-	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
+	var err error
+	s, err = source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
 	if err != nil {
+		ok = false
 		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")
 		return
 	}
+
+	return
+}
+
+func handlePcapSource(s *source.TcpPacketSource, id string, outputChannel chan *api.OutputChannelItem, opts *misc.Opts) {
+	streamsMap := assemblers.NewTcpStreamMap(false)
+	packets := make(chan source.TcpPacketInfo)
+	pcapPath := misc.GetPcapPath(id)
 	go s.ReadPackets(packets, false, false)
 
 	if _, ok := misc.AlivePcaps.Load(pcapPath); ok {
@@ -130,12 +175,11 @@ func processPackets(id string, outputChannel chan *api.OutputChannelItem, opts *
 	s.Close()
 }
 
-func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *websocket.Conn, worker string, node string, query string, quit chan bool) {
+func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *websocket.Conn, worker string, node string, query string, shutdown chan bool) {
 	var counter uint64
 	expr, prop, err := kfl.PrepareQuery(query)
 	if err != nil {
 		log.Error().Err(err).Send()
-		quit <- true
 		return
 	}
 
@@ -167,7 +211,6 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 		}
 
 		if prop.Limit > 0 && counter >= prop.Limit {
-			quit <- true
 			return
 		}
 
@@ -201,7 +244,6 @@ func writeChannelToSocket(outputChannel <-chan *api.OutputChannelItem, ws *webso
 		err = ws.WriteMessage(1, summary)
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to set write message to WebSocket:")
-			quit <- true
 			return
 		}
 
