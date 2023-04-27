@@ -58,6 +58,7 @@ func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
 			pcap, err = os.OpenFile(pcapPath, os.O_CREATE|os.O_WRONLY, 0644)
 			if err != nil {
 				log.Error().Int("dns-id", int(dnsID)).Err(err).Msg("Couldn't create PCAP:")
+				return
 			} else {
 				pcapWriter = pcapgo.NewWriter(pcap)
 				err = pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeEthernet)
@@ -78,7 +79,9 @@ func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
 			pcapWriter = factory.pcapWriterMap[dnsID]
 		}
 
-		factory.writeWithEthernetLayer(packet, pcap, pcapWriter)
+		if pcapWriter != nil {
+			factory.writeWithEthernetLayer(packet, pcap, pcapWriter)
+		}
 	}
 }
 
