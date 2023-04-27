@@ -26,7 +26,7 @@ var port = flag.Int("port", 80, "Port number of the HTTP server")
 // capture
 var iface = flag.String("i", "en0", "Interface to read packets from")
 var folder = flag.String("f", "", "Folder that contains a PCAP snapshot")
-var staleTimeoutSeconds = flag.Int("staletimout", 120, "Max time in seconds to keep connections which don't transmit data")
+var staleTimeoutSeconds = flag.Int("staletimeout", 30, "Max time in seconds to keep connections which don't transmit data")
 var servicemesh = flag.Bool("servicemesh", false, "Record decrypted traffic if the cluster is configured with a service mesh and with mtls")
 var tls = flag.Bool("tls", false, "Enable TLS tracing")
 var packetCapture = flag.String("packet-capture", "libpcap", "Packet capture backend. Possible values: libpcap, af_packet")

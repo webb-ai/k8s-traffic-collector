@@ -77,7 +77,7 @@ func NewTcpAssembler(pcapId string, identifyMode bool, outputChannel chan *api.O
 func (a *TcpAssembler) ProcessPackets(packets <-chan source.TcpPacketInfo) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt)
-	ticker := time.NewTicker(a.staleConnectionTimeout)
+	ticker := time.NewTicker(5 * time.Second)
 	dumpPacket := false
 
 	for {
