@@ -91,7 +91,7 @@ func (a *TcpAssembler) ProcessPackets(packets <-chan source.TcpPacketInfo) {
 			log.Info().Msg("Caught SIGINT: aborting")
 			break
 		case <-ticker.C:
-			a.periodicClean()
+			a.PeriodicClean()
 		}
 	}
 }
@@ -145,7 +145,7 @@ func (a *TcpAssembler) WaitAndDump() {
 	log.Debug().Msg(a.Dump())
 }
 
-func (a *TcpAssembler) periodicClean() {
+func (a *TcpAssembler) PeriodicClean() {
 	a.Lock()
 	flushed, closed := a.FlushCloseOlderThan(time.Now().Add(-a.staleConnectionTimeout))
 	stats := a.stats

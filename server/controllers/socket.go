@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 	shutdown := make(chan bool)
 	outputChannel := make(chan *api.OutputChannelItem)
 	var sources []*source.TcpPacketSource
+	var assemblerSlice []*assemblers.TcpAssembler
 
 	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("node"), c.Query("q"), shutdown)
 
@@ -89,9 +91,14 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 			continue
 		}
 		sources = append(sources, s)
-		handlePcapSource(s, pcap.Name(), outputChannel, opts)
+
+		assembler := createNewAsssembler(s, pcap.Name(), outputChannel, opts)
+		assemblerSlice = append(assemblerSlice, assembler)
+
+		handlePcapSource(s, pcap.Name(), assembler)
 	}
 
+	ticker := time.NewTicker(5 * time.Second)
 	go func() {
 		for {
 			select {
@@ -104,7 +111,11 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 					s, ok := createPcapSource(filename)
 					if ok {
 						sources = append(sources, s)
-						handlePcapSource(s, filename, outputChannel, opts)
+
+						assembler := createNewAsssembler(s, filename, outputChannel, opts)
+						assemblerSlice = append(assemblerSlice, assembler)
+
+						handlePcapSource(s, filename, assembler)
 					}
 				}
 			case err, ok := <-watcher.Errors:
@@ -112,6 +123,10 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 					return
 				}
 				log.Warn().Err(err).Msg("Watcher error:")
+			case <-ticker.C:
+				for _, assembler := range assemblerSlice {
+					assembler.PeriodicClean()
+				}
 			case <-shutdown:
 				log.Info().Msg("Shutdown recieved!")
 				return
@@ -148,22 +163,29 @@ func createPcapSource(id string) (s *source.TcpPacketSource, ok bool) {
 	return
 }
 
-func handlePcapSource(s *source.TcpPacketSource, id string, outputChannel chan *api.OutputChannelItem, opts *misc.Opts) {
-	streamsMap := assemblers.NewTcpStreamMap(false)
+func createNewAsssembler(s *source.TcpPacketSource, id string, outputChannel chan *api.OutputChannelItem, opts *misc.Opts) *assemblers.TcpAssembler {
+	return assemblers.NewTcpAssembler(
+		id,
+		false,
+		outputChannel,
+		assemblers.NewTcpStreamMap(false),
+		opts,
+	)
+}
+
+func handlePcapSource(s *source.TcpPacketSource, id string, assembler *assemblers.TcpAssembler) {
 	packets := make(chan source.TcpPacketInfo)
 	pcapPath := misc.GetPcapPath(id)
 	go s.ReadPackets(packets, false, false)
 
 	if _, ok := misc.AlivePcaps.Load(pcapPath); ok {
-		go processPackets(id, outputChannel, opts, streamsMap, packets, s)
+		go processPackets(s, assembler, packets)
 	} else {
-		processPackets(id, outputChannel, opts, streamsMap, packets, s)
+		processPackets(s, assembler, packets)
 	}
 }
 
-func processPackets(id string, outputChannel chan *api.OutputChannelItem, opts *misc.Opts,
-	streamsMap api.TcpStreamMap, packets chan source.TcpPacketInfo, s *source.TcpPacketSource) {
-	assembler := assemblers.NewTcpAssembler(id, false, outputChannel, streamsMap, opts)
+func processPackets(s *source.TcpPacketSource, assembler *assemblers.TcpAssembler, packets chan source.TcpPacketInfo) {
 	for {
 		packetInfo, ok := <-packets
 		if !ok {
