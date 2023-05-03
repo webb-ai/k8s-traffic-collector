@@ -84,6 +84,7 @@ type OutputChannelItem struct {
 	Timestamp      int64
 	ConnectionInfo *ConnectionInfo
 	Pair           *RequestResponsePair
+	Tls            bool
 }
 
 type ReadProgress struct {
@@ -132,10 +133,10 @@ type Emitter interface {
 
 func (e *Emitting) Emit(item *OutputChannelItem) {
 	e.AppStats.IncMatchedPairs()
-	e.Stream.SetAsEmittable()
 
 	item.Stream = e.Stream.GetPcapId()
 	item.Index = e.Stream.GetIndex()
+	item.Tls = e.Stream.GetTls()
 	e.Stream.IncrementItemCount()
 	e.OutputChannel <- item
 }
@@ -244,14 +245,15 @@ type TcpReader interface {
 
 type TcpStream interface {
 	SetProtocol(protocol *Protocol)
-	SetAsEmittable()
 	GetPcapId() string
 	GetIndex() int64
-	GetIsIdentifyMode() bool
+	ShouldWritePackets() bool
+	IsSortCapture() bool
 	GetReqResMatchers() []RequestResponseMatcher
 	GetIsTargeted() bool
 	GetIsClosed() bool
 	IncrementItemCount()
+	GetTls() bool
 }
 
 type TcpStreamMap interface {

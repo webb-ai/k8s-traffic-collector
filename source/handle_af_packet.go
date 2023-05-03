@@ -79,6 +79,10 @@ func (h *afPacketHandle) Close() (err error) {
 	return
 }
 
+func (h *afPacketHandle) FileSize() (size int64, err error) {
+	return
+}
+
 func newAfpacketHandle(device string, targetSizeMb int, snaplen int) (handle Handle, err error) {
 	snaplen -= 1
 	if snaplen < 0 {

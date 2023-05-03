@@ -9,10 +9,10 @@ require (
 	github.com/clbanning/mxj/v2 v2.5.5
 	github.com/dlclark/regexp2 v1.4.0
 	github.com/docker/go-units v0.5.0
+	github.com/dreadl0ck/tlsx v1.0.0
 	github.com/elastic/go-elasticsearch v0.0.0
 	github.com/elastic/go-elasticsearch/v8 v8.6.0
 	github.com/fatih/camelcase v1.0.0
-	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-co-op/gocron v1.18.0
 	github.com/go-errors/errors v1.4.2
@@ -62,6 +62,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/gopacket v1.1.17 // indirect
 	github.com/googleapis/gnostic v0.5.5 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20200327222509-2487e7298839 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect

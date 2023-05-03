@@ -3,11 +3,14 @@ package source
 import (
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/ip4defrag"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
@@ -19,12 +22,19 @@ type Handle interface {
 	LinkType() layers.LinkType
 	Stats() (packetsReceived uint, packetsDropped uint, err error)
 	Close() (err error)
+	FileSize() (size int64, err error)
 }
 
 type TcpPacketSource struct {
-	Handle    Handle
-	defragger *ip4defrag.IPv4Defragmenter
-	name      string
+	Handle        Handle
+	defragger     *ip4defrag.IPv4Defragmenter
+	name          string
+	filename      string
+	interfaceName string
+	targetSizeMb  int
+	promisc       bool
+	tstype        string
+	lazy          bool
 }
 
 type TcpPacketInfo struct {
@@ -35,21 +45,22 @@ type TcpPacketInfo struct {
 func NewTcpPacketSource(name, filename string, interfaceName string, packetCapture string) (*TcpPacketSource, error) {
 	var err error
 
-	result := &TcpPacketSource{
-		name:      name,
-		defragger: ip4defrag.NewIPv4Defragmenter(),
+	source := &TcpPacketSource{
+		defragger:     ip4defrag.NewIPv4Defragmenter(),
+		name:          name,
+		filename:      filename,
+		interfaceName: interfaceName,
+		targetSizeMb:  8,
+		promisc:       true,
+		tstype:        "",
+		lazy:          false,
 	}
-
-	targetSizeMb := 8
-	promisc := true
-	tstype := ""
-	lazy := false
 
 	switch packetCapture {
 	case "af_packet":
-		result.Handle, err = newAfpacketHandle(
-			interfaceName,
-			targetSizeMb,
+		source.Handle, err = newAfpacketHandle(
+			source.interfaceName,
+			source.targetSizeMb,
 			misc.Snaplen,
 		)
 		if err != nil {
@@ -57,30 +68,39 @@ func NewTcpPacketSource(name, filename string, interfaceName string, packetCaptu
 		}
 		log.Debug().Msg("Using AF_PACKET socket as the capture source")
 	default:
-		result.Handle, err = newPcapHandle(
-			filename,
-			interfaceName,
-			misc.Snaplen,
-			promisc,
-			tstype,
-		)
+		err = source.NewPcapHandle()
 		if err != nil {
 			return nil, err
 		}
 		log.Debug().Msg("Using libpcap as the capture source")
 	}
 
-	var decoder gopacket.Decoder
-	var ok bool
-	decoderName := result.Handle.LinkType().String()
-	if decoder, ok = gopacket.DecodersByLayerName[decoderName]; !ok {
-		result.Handle.Close()
-		return nil, fmt.Errorf("no decoder named %v", decoderName)
+	if filename == "" {
+		var decoder gopacket.Decoder
+		var ok bool
+		decoderName := source.Handle.LinkType().String()
+		if decoder, ok = gopacket.DecodersByLayerName[decoderName]; !ok {
+			source.Handle.Close()
+			return nil, fmt.Errorf("no decoder named %v", decoderName)
+		}
+
+		source.Handle.SetDecoder(decoder, source.lazy, true)
 	}
 
-	result.Handle.SetDecoder(decoder, lazy, true)
+	return source, nil
+}
 
-	return result, nil
+func (source *TcpPacketSource) NewPcapHandle() error {
+	var err error
+	source.Handle, err = newPcapHandle(
+		source.filename,
+		source.interfaceName,
+		misc.Snaplen,
+		source.promisc,
+		source.tstype,
+	)
+
+	return err
 }
 
 func (source *TcpPacketSource) String() string {
@@ -101,20 +121,50 @@ func (source *TcpPacketSource) Stats() (packetsReceived uint, packetsDropped uin
 	return source.Handle.Stats()
 }
 
-func (source *TcpPacketSource) ReadPackets(packets chan<- TcpPacketInfo, dontClose bool, masterCapture bool) {
+func (source *TcpPacketSource) ReadPackets(
+	packets chan<- TcpPacketInfo,
+	dontClose bool,
+	masterCapture bool,
+	sortedPackets chan<- *wcap.SortedPacket,
+) {
 	log.Debug().Str("source", source.name).Msg("Start reading packets from:")
+
+	var previousSize int64
 
 	for {
 		packet, err := source.Handle.NextPacket()
 
 		if err == io.EOF {
-			log.Debug().Str("source", source.name).Msg("Got EOF while reading packets from:")
-			if !dontClose {
-				close(packets)
-				log.Debug().Str("source", source.name).Msg("Closed packet channel because of EOF.")
+			if dontClose {
+				time.Sleep(100 * time.Millisecond)
+
+				size, err := source.Handle.FileSize()
+				if err != nil {
+					log.Debug().Err(err).Send()
+					return
+				}
+
+				// This means `resetMasterPcap` is called and
+				// the `master.pcap` file is truncated
+				if previousSize > size {
+					err = source.NewPcapHandle()
+					if err != nil {
+						log.Debug().Err(err).Send()
+						return
+					}
+				}
+				previousSize = size
+				continue
 			}
+
+			log.Debug().Str("source", source.name).Msg("Got EOF while reading packets from:")
 			return
 		} else if err != nil {
+			if strings.HasSuffix(err.Error(), "file already closed") {
+				log.Debug().Str("source", source.name).Msg("PCAP file is closed.")
+				close(packets)
+				return
+			}
 			if err.Error() != "Timeout Expired" {
 				log.Debug().Err(err).Str("source", source.name).Msg("While reading from:")
 			}

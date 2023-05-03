@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/kubeshark/ebpf/rlimit"
+	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/moby/moby/pkg/parsers/kernel"
 	"github.com/rs/zerolog/log"
@@ -31,7 +32,13 @@ type Tracer struct {
 	registeredPids  sync.Map
 }
 
-func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, extension *api.Extension) error {
+func (t *Tracer) Init(
+	chunksBufferSize int,
+	logBufferSize int,
+	procfs string,
+	extension *api.Extension,
+	assembler *assemblers.TcpAssembler,
+) error {
 	log.Info().Msg(fmt.Sprintf("Initializing tracer (chunksSize: %d) (logSize: %d)", chunksBufferSize, logBufferSize))
 
 	var err error
@@ -77,7 +84,12 @@ func (t *Tracer) Init(chunksBufferSize int, logBufferSize int, procfs string, ex
 		return err
 	}
 
-	t.poller, err = newTlsPoller(t, extension, procfs)
+	t.poller, err = newTlsPoller(
+		t,
+		extension,
+		procfs,
+		assembler,
+	)
 
 	if err != nil {
 		return err

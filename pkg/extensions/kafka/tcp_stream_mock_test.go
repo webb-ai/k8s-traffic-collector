@@ -9,8 +9,6 @@ import (
 type tcpStream struct {
 	pcapId         string
 	itemCount      int64
-	identifyMode   bool
-	emittable      bool
 	isClosed       bool
 	isTargeted     bool
 	reqResMatchers []api.RequestResponseMatcher
@@ -31,16 +29,16 @@ func (t *tcpStream) GetIndex() int64 {
 	return t.itemCount
 }
 
-func (t *tcpStream) GetIsIdentifyMode() bool {
-	return t.identifyMode
+func (t *tcpStream) ShouldWritePackets() bool {
+	return true
+}
+
+func (t *tcpStream) IsSortCapture() bool {
+	return true
 }
 
 func (t *tcpStream) IncrementItemCount() {
 	t.itemCount++
-}
-
-func (t *tcpStream) SetAsEmittable() {
-	t.emittable = true
 }
 
 func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
@@ -53,4 +51,8 @@ func (t *tcpStream) GetIsTargeted() bool {
 
 func (t *tcpStream) GetIsClosed() bool {
 	return t.isClosed
+}
+
+func (t *tcpStream) GetTls() bool {
+	return false
 }

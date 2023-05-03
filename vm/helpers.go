@@ -542,9 +542,9 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 				}
 			}
 
-			pcapsDir := misc.GetPcapsDir()
+			pcapsDir := misc.GetContextPath(misc.DefaultContext)
 			if len(call.ArgumentList) > 1 {
-				pcapsDir = misc.GetDataPath(call.Argument(1).String())
+				pcapsDir = misc.GetContextPath(call.Argument(1).String())
 			}
 
 			pcapFiles, err := os.ReadDir(pcapsDir)
@@ -571,7 +571,12 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			return value
 		},
 		"path": func(call otto.FunctionCall) otto.Value {
-			pcapPath := misc.GetPcapPath(call.Argument(0).String())
+			filename := call.Argument(0).String()
+			context := misc.DefaultContext
+			if len(call.ArgumentList) > 1 {
+				context = call.Argument(1).String()
+			}
+			pcapPath := misc.GetPcapPath(filename, context)
 
 			value, err := otto.ToValue(misc.RemoveDataDir(pcapPath))
 			if err != nil {

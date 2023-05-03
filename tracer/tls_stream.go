@@ -1,17 +1,17 @@
 package tracer
 
 import (
+	"encoding/hex"
 	"net"
-	"os"
-	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
-	"github.com/kubeshark/gopacket/pcapgo"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
+	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
@@ -35,16 +35,14 @@ type tlsStream struct {
 	id             int64
 	pcapId         string
 	itemCount      int64
-	emittable      bool
 	isClosed       bool
 	client         *tlsReader
 	server         *tlsReader
 	reqResMatchers []api.RequestResponseMatcher
 	protocol       *api.Protocol
 	streamsMap     api.TcpStreamMap
-	pcap           *os.File
-	pcapWriter     *pcapgo.Writer
 	layers         *tlsLayers
+	clientHello    bool
 	sync.Mutex
 }
 
@@ -60,30 +58,13 @@ func (t *tlsStream) addReqResMatcher(reqResMatcher api.RequestResponseMatcher) {
 	t.reqResMatchers = append(t.reqResMatchers, reqResMatcher)
 }
 
-func (t *tlsStream) createPcapWriter() {
-	tmpPcapPath := misc.BuildTlsTmpPcapPath(t.id)
-	log.Debug().Str("file", tmpPcapPath).Msg("Dumping TLS stream:")
-
-	var err error
-	t.pcap, err = os.OpenFile(tmpPcapPath, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Error().Err(err).Msg("Couldn't create PCAP (TLS):")
-	} else {
-		t.pcapWriter = pcapgo.NewWriter(t.pcap)
-		err = t.pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeEthernet)
-		if err != nil {
-			log.Error().Err(err).Msg("While writing the PCAP header:")
-		}
-	}
-}
-
 func (t *tlsStream) getId() int64 {
 	return t.id
 }
 
 func (t *tlsStream) setId(id int64) {
 	t.id = id
-	t.createPcapWriter()
+	t.pcapId = misc.BuildPcapFilename(t.id)
 }
 
 func (t *tlsStream) close() {
@@ -101,38 +82,12 @@ func (t *tlsStream) close() {
 
 	t.isClosed = true
 
-	if t.pcap != nil {
-		log.Debug().Str("pcap", t.pcap.Name()).Msg("Closing:")
-		t.pcap.Close()
-		pcapPath := misc.BuildPcapPath(t.id)
-		misc.AlivePcaps.Delete(pcapPath)
-	}
-
 	t.streamsMap.Delete(t.id)
 	t.poller.closeStreams <- t.key
 }
 
-func (t *tlsStream) isEmittable() bool {
-	return t.emittable
-}
-
 func (t *tlsStream) SetProtocol(protocol *api.Protocol) {
 	t.protocol = protocol
-}
-
-func (t *tlsStream) SetAsEmittable() {
-	if !t.isEmittable() {
-		tmpPcapPath := misc.BuildTlsTmpPcapPath(t.id)
-		pcapPath := misc.BuildTlsPcapPath(t.id)
-		misc.AlivePcaps.Store(pcapPath, true)
-		log.Debug().Str("old", tmpPcapPath).Str("new", pcapPath).Msg("Renaming PCAP:")
-		err := os.Rename(tmpPcapPath, pcapPath)
-		if err != nil {
-			log.Error().Err(err).Str("pcap", tmpPcapPath).Msg("Couldn't rename the PCAP file:")
-		}
-		t.pcapId = filepath.Base(pcapPath)
-	}
-	t.emittable = true
 }
 
 func (t *tlsStream) GetPcapId() string {
@@ -142,8 +97,11 @@ func (t *tlsStream) GetPcapId() string {
 func (t *tlsStream) GetIndex() int64 {
 	return t.itemCount
 }
+func (t *tlsStream) ShouldWritePackets() bool {
+	return true
+}
 
-func (t *tlsStream) GetIsIdentifyMode() bool {
+func (t *tlsStream) IsSortCapture() bool {
 	return true
 }
 
@@ -161,6 +119,10 @@ func (t *tlsStream) GetIsClosed() bool {
 
 func (t *tlsStream) IncrementItemCount() {
 	t.itemCount++
+}
+
+func (t *tlsStream) GetTls() bool {
+	return true
 }
 
 func (t *tlsStream) doTcpHandshake() {
@@ -207,6 +169,10 @@ func (t *tlsStream) writeData(data []byte, reader *tlsReader) {
 }
 
 func (t *tlsStream) writeLayers(data []byte, isClient bool, sentLen uint32) {
+	if isClient && !t.clientHello {
+		t.writeClientHello()
+	}
+
 	t.writePacket(
 		layers.LayerTypeEthernet,
 		t.layers.ethernet,
@@ -219,29 +185,56 @@ func (t *tlsStream) writeLayers(data []byte, isClient bool, sentLen uint32) {
 
 func (t *tlsStream) writePacket(firstLayerType gopacket.LayerType, l ...gopacket.SerializableLayer) {
 	buf := gopacket.NewSerializeBuffer()
-	opts := gopacket.SerializeOptions{FixLengths: true, ComputeChecksums: false}
+	opts := gopacket.SerializeOptions{
+		FixLengths:       true,
+		ComputeChecksums: true,
+	}
 	err := gopacket.SerializeLayers(buf, opts, l...)
 	if err != nil {
 		log.Error().Err(err).Msg("Error serializing packet:")
 		return
 	}
 
-	packet := gopacket.NewPacket(buf.Bytes(), firstLayerType, gopacket.Lazy)
-	outgoingPacket := packet.Data()
+	data := buf.Bytes()
+	info := t.createCaptureInfo(data)
 
-	info := packet.Metadata().CaptureInfo
-	info.Length = len(outgoingPacket)
-	info.CaptureLength = len(outgoingPacket)
-	info.Timestamp = info.Timestamp.UTC()
-
-	if t.pcapWriter == nil {
-		log.Debug().Msg("PCAP writer for this TLS stream does not exist (too many open files)!")
-		return
-	}
-
-	err = t.pcapWriter.WritePacket(info, outgoingPacket)
+	err = t.poller.assembler.GetMasterPcap().WritePacket(info, data)
 	if err != nil {
 		log.Error().Err(err).Msg("Error writing PCAP:")
+	}
+
+	t.poller.assembler.SendSortedPacket(&wcap.SortedPacket{
+		PCAP: t.pcapId,
+		CI:   info,
+		Data: data,
+	})
+}
+
+func (t *tlsStream) writeClientHello() {
+	data, err := hex.DecodeString(misc.ClientHelloBasicPacket)
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+
+	packet := gopacket.NewPacket(data, layers.LayerTypeEthernet, gopacket.Lazy)
+	outgoingPacket := packet.Data()
+
+	info := t.createCaptureInfo(outgoingPacket)
+
+	err = t.poller.assembler.GetMasterPcap().WritePacket(info, outgoingPacket)
+	if err != nil {
+		log.Error().Err(err).Msg("Error writing PCAP:")
+	}
+
+	t.doTcpSeqAckWalk(true, uint32(len(data)))
+	t.clientHello = true
+}
+
+func (t *tlsStream) createCaptureInfo(data []byte) gopacket.CaptureInfo {
+	return gopacket.CaptureInfo{
+		Timestamp:     time.Now().UTC(),
+		Length:        len(data),
+		CaptureLength: len(data),
 	}
 }
 
@@ -268,19 +261,24 @@ func (t *tlsStream) doTcpSeqAckWalk(isClient bool, sentLen uint32) {
 }
 
 func (t *tlsStream) setLayers(data []byte, reader *tlsReader) {
+	ipv4 := t.newIPv4Layer(reader)
+	tcp := t.newTCPLayer(reader)
+	err := tcp.SetNetworkLayerForChecksum(ipv4)
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
+
 	if t.layers == nil {
 		t.layers = &tlsLayers{
 			ethernet: ethernet.NewEthernetLayer(layers.EthernetTypeIPv4),
-			ipv4:     t.newIPv4Layer(reader),
-			tcp:      t.newTCPLayer(reader),
+			ipv4:     ipv4,
+			tcp:      tcp,
 		}
 		t.doTcpHandshake()
 	} else {
-		ipv4 := t.newIPv4Layer(reader)
 		t.layers.ipv4.SrcIP = ipv4.SrcIP
 		t.layers.ipv4.DstIP = ipv4.DstIP
 
-		tcp := t.newTCPLayer(reader)
 		t.layers.tcp.SrcPort = tcp.SrcPort
 		t.layers.tcp.DstPort = tcp.DstPort
 	}

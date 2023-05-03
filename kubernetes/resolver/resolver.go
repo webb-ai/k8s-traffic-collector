@@ -43,7 +43,7 @@ func (resolver *Resolver) Start(ctx context.Context, nameResolutionHistoryPath s
 		if clusterMode {
 			resolver.setStorageLimit(ctx)
 
-			go resolver.dumpNameResolutionHistoryEveryNSeconds(3)
+			go resolver.dumpNameResolutionHistoryEveryNSeconds(misc.NameResolutionDumpPeriod)
 			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchServices)
 			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchEndpoints)
 			go resolver.infiniteErrorHandleRetryFunc(ctx, resolver.watchPods)
@@ -91,7 +91,7 @@ func (resolver *Resolver) setStorageLimit(ctx context.Context) {
 				storageLimit := item.Spec.Resources.Requests.Storage()
 				value, ok := storageLimit.AsInt64()
 				if ok {
-					misc.SetPcapsDirSizeLimit(value)
+					misc.SetMasterPcapSizeLimit(value)
 					log.Info().Str("value", storageLimit.String()).Msg("Storage limit is set to:")
 				} else {
 					log.Error().Str("value", storageLimit.String()).Msg("Incompatible value for setting the storage limit:")

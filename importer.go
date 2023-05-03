@@ -20,7 +20,7 @@ func startImporter(folder string, opts *misc.Opts, streamsMap api.TcpStreamMap, 
 	packets := make(chan source.TcpPacketInfo)
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
-	assembler := assemblers.NewTcpAssembler("", true, outputItems, streamsMap, opts)
+	assembler := assemblers.NewTcpAssembler("", assemblers.MasterCapture, nil, outputItems, streamsMap, opts)
 
 	go func() {
 		for {
@@ -67,7 +67,7 @@ func walkFolder(folder string, packets chan<- source.TcpPacketInfo, opts *misc.O
 			return err
 		}
 
-		hostSource.ReadPackets(packets, true, true)
+		hostSource.ReadPackets(packets, true, true, nil)
 
 		return nil
 	}

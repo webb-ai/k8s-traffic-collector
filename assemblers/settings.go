@@ -9,10 +9,9 @@ import (
 )
 
 const (
-	MemoryProfilingEnabledEnvVarName               = "MEMORY_PROFILING_ENABLED"
-	MemoryProfilingDumpPath                        = "MEMORY_PROFILING_DUMP_PATH"
-	MemoryProfilingTimeIntervalSeconds             = "MEMORY_PROFILING_INTERVAL_SECONDS"
-	MemoryUsageTimeIntervalMilliseconds            = "MEMORY_USAGE_INTERVAL_MILLISECONDS"
+	ProfilingEnabledEnvVarName                     = "PROFILING_ENABLED"
+	ProfilingDumpPath                              = "PROFILING_DUMP_PATH"
+	ProfilingTimeIntervalSeconds                   = "PROFILING_INTERVAL_SECONDS"
 	MaxBufferedPagesTotalEnvVarName                = "MAX_BUFFERED_PAGES_TOTAL"
 	MaxBufferedPagesPerConnectionEnvVarName        = "MAX_BUFFERED_PAGES_PER_CONNECTION"
 	MaxBufferedPagesTotalDefaultValue              = 5000
@@ -41,8 +40,8 @@ func GetMaxBufferedPagesPerConnection() int {
 	return valueFromEnv
 }
 
-func GetMemoryProfilingEnabled() bool {
-	return os.Getenv(MemoryProfilingEnabledEnvVarName) != ""
+func GetProfilingEnabled() bool {
+	return os.Getenv(ProfilingEnabledEnvVarName) != ""
 }
 
 func GetTcpChannelTimeoutMs() time.Duration {

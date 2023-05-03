@@ -9,6 +9,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/golang-lru/simplelru"
 	"github.com/kubeshark/ebpf/perf"
+	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
@@ -29,9 +30,15 @@ type tlsPoller struct {
 	procfs         string
 	fdCache        *simplelru.LRU // Actual type is map[string]addressPair
 	evictedCounter int
+	assembler      *assemblers.TcpAssembler
 }
 
-func newTlsPoller(tls *Tracer, extension *api.Extension, procfs string) (*tlsPoller, error) {
+func newTlsPoller(
+	tls *Tracer,
+	extension *api.Extension,
+	procfs string,
+	assembler *assemblers.TcpAssembler,
+) (*tlsPoller, error) {
 	poller := &tlsPoller{
 		tls:           tls,
 		streams:       make(map[string]*tlsStream),
@@ -40,6 +47,7 @@ func newTlsPoller(tls *Tracer, extension *api.Extension, procfs string) (*tlsPol
 		extension:     extension,
 		chunksReader:  nil,
 		procfs:        procfs,
+		assembler:     assembler,
 	}
 
 	fdCache, err := simplelru.NewLRU(fdCacheMaxItems, poller.fdCacheEvictCallback)

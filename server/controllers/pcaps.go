@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -16,42 +15,34 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func GetTotalTcpStreams(c *gin.Context) {
-	pcapsDir := misc.GetPcapsDir()
-	pcapFiles, err := os.ReadDir(pcapsDir)
+func GetTotalSize(c *gin.Context) {
+	fileInfo, err := os.Stat(misc.GetMasterPcapPath())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
+		log.Error().Err(err).Send()
 		c.JSON(http.StatusInternalServerError, err)
 		return
 	}
 
-	var counter int64
-	for _, pcap := range pcapFiles {
-		if filepath.Ext(pcap.Name()) != ".pcap" {
-			continue
-		}
-
-		counter++
-	}
-
 	c.JSON(http.StatusOK, gin.H{
-		"total": counter,
+		"total": fileInfo.Size(),
 	})
 }
 
 func GetDownloadPcap(c *gin.Context) {
 	id := c.Param("id")
+	context := c.Query("c")
 
 	c.Header("Content-Description", "File Transfer")
 	c.Header("Content-Transfer-Encoding", "binary")
 	c.Header("Content-Disposition", "attachment; filename="+id)
 	c.Header("Content-Type", "application/octet-stream")
-	c.File(misc.GetPcapPath(id))
+	c.File(misc.GetPcapPath(id, context))
 }
 
 type postMergeRequest struct {
-	Query string   `json:"query"`
-	Pcaps []string `json:"pcaps"`
+	Query   string   `json:"query"`
+	Context string   `json:"context"`
+	Pcaps   []string `json:"pcaps"`
 }
 
 func PostMerge(c *gin.Context) {
@@ -61,7 +52,7 @@ func PostMerge(c *gin.Context) {
 		return
 	}
 
-	pcapsDir := misc.GetPcapsDir()
+	pcapsDir := misc.GetContextPath(req.Context)
 	pcapFiles, err := os.ReadDir(pcapsDir)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed get the list of PCAP files!")
@@ -96,6 +87,7 @@ func PostMerge(c *gin.Context) {
 
 func GetReplay(c *gin.Context) {
 	id := c.Param("id")
+	context := c.Query("c")
 
 	count, err := strconv.ParseUint(c.Query("count"), 0, 64)
 	if err != nil {
@@ -131,7 +123,7 @@ func GetReplay(c *gin.Context) {
 		concurrency = false
 	}
 
-	pcapPath := misc.GetPcapPath(id)
+	pcapPath := misc.GetPcapPath(id, context)
 	err = replay.Replay(pcapPath, host, port, count, delay, concurrency)
 	if err != nil {
 		log.Error().Str("path", pcapPath).Err(err).Msg("Couldn't replay the PCAP:")

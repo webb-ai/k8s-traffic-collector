@@ -13,6 +13,7 @@ import (
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/kubeshark/worker/queue"
 	"github.com/kubeshark/worker/source"
@@ -30,19 +31,36 @@ var table2 []table.Row
 var table3 []table.Row
 
 func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
-	go misc.LimitPcapsDirSize()
+	sortedPackets := make(chan *wcap.SortedPacket)
+	writer, err := wcap.NewWriter(misc.DefaultContext)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed creating writer:")
+		return
+	}
+	go writer.Write(sortedPackets)
+
+	assembler := initializeWorker(
+		opts,
+		outputItems,
+		streamsMap,
+		sortedPackets,
+	)
+	go startAssembler(streamsMap, assembler)
 
 	if *tls {
 		for _, e := range extensions {
 			if e.Protocol.Name == "http" {
-				target.TracerInstance = startTracer(e, outputItems, streamsMap, updateTargetsQueue)
+				target.TracerInstance = startTracer(
+					e,
+					outputItems,
+					streamsMap,
+					updateTargetsQueue,
+					assembler,
+				)
 				break
 			}
 		}
 	}
-
-	assembler := initializeWorker(opts, outputItems, streamsMap)
-	go startAssembler(streamsMap, assembler)
 }
 
 func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
@@ -117,7 +135,6 @@ func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 			currentAppStats.TcpPacketsCount,
 			currentAppStats.DnsPacketsCount,
 			currentAppStats.ReassembledTcpPayloadsCount,
-			currentAppStats.TlsConnectionsCount,
 			currentAppStats.MatchedPairs,
 			currentAppStats.DroppedTcpStreams,
 			currentAppStats.LiveTcpStreams,
@@ -159,7 +176,6 @@ func printPeriodicStats(cleaner *Cleaner, assembler *assemblers.TcpAssembler) {
 			"TCP Packets",
 			"UDP Packets",
 			"Reassembled",
-			"TLS Conns",
 			"Matched Pairs",
 			"Dropped TCP Streams",
 			"Live TCP Streams",
@@ -217,7 +233,12 @@ func initializePacketSources() error {
 	return err
 }
 
-func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap) *assemblers.TcpAssembler {
+func initializeWorker(
+	opts *misc.Opts,
+	outputItems chan *api.OutputChannelItem,
+	streamsMap api.TcpStreamMap,
+	sortedPackets chan<- *wcap.SortedPacket,
+) *assemblers.TcpAssembler {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 
 	target.MainPacketInputChan = make(chan source.TcpPacketInfo)
@@ -228,7 +249,14 @@ func initializeWorker(opts *misc.Opts, outputItems chan *api.OutputChannelItem, 
 
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
-	return assemblers.NewTcpAssembler("", true, outputItems, streamsMap, opts)
+	return assemblers.NewTcpAssembler(
+		"",
+		assemblers.MasterCapture,
+		sortedPackets,
+		outputItems,
+		streamsMap,
+		opts,
+	)
 }
 
 func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssembler) {
@@ -245,7 +273,9 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 	}
 	cleaner.start()
 
-	go printPeriodicStats(&cleaner, assembler)
+	if *debug {
+		go printPeriodicStats(&cleaner, assembler)
+	}
 
 	assembler.ProcessPackets(target.MainPacketInputChan)
 
@@ -263,12 +293,24 @@ func startAssembler(streamsMap api.TcpStreamMap, assembler *assemblers.TcpAssemb
 	log.Info().Interface("AppStats", diagnose.AppStats).Send()
 }
 
-func startTracer(extension *api.Extension, outputItems chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, updateTargetsQueue *queue.Queue) *tracer.Tracer {
+func startTracer(
+	extension *api.Extension,
+	outputItems chan *api.OutputChannelItem,
+	streamsMap api.TcpStreamMap,
+	updateTargetsQueue *queue.Queue,
+	assembler *assemblers.TcpAssembler,
+) *tracer.Tracer {
 	tls := tracer.Tracer{}
 	chunksBufferSize := os.Getpagesize() * 100
 	logBufferSize := os.Getpagesize()
 
-	if err := tls.Init(chunksBufferSize, logBufferSize, *procfs, extension); err != nil {
+	if err := tls.Init(
+		chunksBufferSize,
+		logBufferSize,
+		*procfs,
+		extension,
+		assembler,
+	); err != nil {
 		tracer.LogError(err)
 		return nil
 	}

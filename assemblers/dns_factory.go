@@ -2,16 +2,14 @@ package assemblers
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
-	"github.com/kubeshark/gopacket/pcapgo"
 	"github.com/kubeshark/worker/kubernetes/resolver"
 	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/misc/ethernet"
+	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/kubeshark/worker/pkg/extensions"
 	"github.com/rs/zerolog/log"
@@ -20,72 +18,61 @@ import (
 
 type dnsFactory struct {
 	pcapId        string
-	identifyMode  bool
+	assembler     *TcpAssembler
 	outputChannel chan *api.OutputChannelItem
 	streamsMap    api.TcpStreamMap
 	idMap         map[uint16]int64
-	pcapMap       map[uint16]*os.File
-	pcapWriterMap map[uint16]*pcapgo.Writer
 	opts          *misc.Opts
 }
 
-func NewDnsFactory(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *misc.Opts) *dnsFactory {
+func NewDnsFactory(
+	pcapId string,
+	assembler *TcpAssembler,
+	outputChannel chan *api.OutputChannelItem,
+	streamsMap api.TcpStreamMap,
+	opts *misc.Opts,
+) *dnsFactory {
 	return &dnsFactory{
 		pcapId:        pcapId,
-		identifyMode:  identifyMode,
+		assembler:     assembler,
 		outputChannel: outputChannel,
 		streamsMap:    streamsMap,
 		idMap:         make(map[uint16]int64),
-		pcapMap:       make(map[uint16]*os.File),
-		pcapWriterMap: make(map[uint16]*pcapgo.Writer),
 		opts:          opts,
 	}
 }
 
-func (factory *dnsFactory) writePacket(packet gopacket.Packet, dnsID uint16) {
-	if factory.identifyMode {
-		var pcap *os.File
-		var pcapWriter *pcapgo.Writer
-		var err error
-
-		_, ok := factory.idMap[dnsID]
-		if !ok {
-			id := factory.streamsMap.NextId()
-
-			pcapPath := misc.BuildUdpPcapPath(id)
-			log.Debug().Str("file", pcapPath).Msg("Dumping DNS stream:")
-
-			pcap, err = os.OpenFile(pcapPath, os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				log.Error().Int("dns-id", int(dnsID)).Err(err).Msg("Couldn't create PCAP:")
-				return
-			} else {
-				pcapWriter = pcapgo.NewWriter(pcap)
-				err = pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeEthernet)
-				if err != nil {
-					log.Error().Err(err).Msg("While writing the PCAP header:")
-				} else {
-					log.Debug().Str("file", pcapPath).Msg("WROTE HEADER:")
-				}
-			}
-
-			factory.pcapId = filepath.Base(pcapPath)
-
-			factory.idMap[dnsID] = id
-			factory.pcapMap[dnsID] = pcap
-			factory.pcapWriterMap[dnsID] = pcapWriter
-		} else {
-			pcap = factory.pcapMap[dnsID]
-			pcapWriter = factory.pcapWriterMap[dnsID]
-		}
-
-		if pcapWriter != nil {
-			factory.writeWithEthernetLayer(packet, pcap, pcapWriter)
+func (factory *dnsFactory) writePacket(ci gopacket.CaptureInfo, data []byte, pcapName string) {
+	if factory.assembler.captureMode == MasterCapture {
+		if err := factory.assembler.GetMasterPcap().WritePacket(ci, data); err != nil {
+			log.Error().Str("pcap", factory.assembler.GetMasterPcap().file.Name()).Err(err).Msg("Couldn't write the packet:")
 		}
 	}
+
+	factory.assembler.SendSortedPacket(&wcap.SortedPacket{
+		PCAP: pcapName,
+		CI:   ci,
+		Data: data,
+	})
 }
 
-func (factory *dnsFactory) writeWithEthernetLayer(packet gopacket.Packet, pcap *os.File, pcapWriter *pcapgo.Writer) {
+func (factory *dnsFactory) handlePacket(packet gopacket.Packet, dnsID uint16) {
+	var pcapName string
+	if factory.assembler.captureMode != ItemCapture {
+		var id int64
+		var ok bool
+		id, ok = factory.idMap[dnsID]
+		if !ok {
+			id = factory.streamsMap.NextId()
+			factory.idMap[dnsID] = id
+		}
+		pcapName = misc.BuildUdpPcapFilename(id)
+	}
+
+	factory.writeWithEthernetLayer(packet, pcapName)
+}
+
+func (factory *dnsFactory) writeWithEthernetLayer(packet gopacket.Packet, pcapName string) {
 	var serializableLayers []gopacket.SerializableLayer
 
 	// Get Linux SLL layer
@@ -148,14 +135,12 @@ func (factory *dnsFactory) writeWithEthernetLayer(packet gopacket.Packet, pcap *
 
 	outgoingPacket := newPacket.Data()
 
-	info := newPacket.Metadata().CaptureInfo
+	info := packet.Metadata().CaptureInfo
 	info.Length = len(outgoingPacket)
 	info.CaptureLength = len(outgoingPacket)
 	info.Timestamp = info.Timestamp.UTC()
 
-	if err := pcapWriter.WritePacket(info, outgoingPacket); err != nil {
-		log.Debug().Str("pcap", pcap.Name()).Err(err).Msg("Couldn't write the packet:")
-	}
+	factory.writePacket(info, outgoingPacket, pcapName)
 }
 
 func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
@@ -211,9 +196,17 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		Payload:     mapDNSLayerToResponse(dns),
 	}
 
+	pcapId := factory.pcapId
+	if pcapId == "" {
+		id, ok := factory.idMap[dns.ID]
+		if ok {
+			pcapId = misc.BuildUdpPcapFilename(id)
+		}
+	}
+
 	item := api.OutputChannelItem{
 		Index:          0,
-		Stream:         factory.pcapId,
+		Stream:         pcapId,
 		Protocol:       *dnsExtension.Protocol,
 		Timestamp:      req.CaptureTime.UnixNano() / int64(time.Millisecond),
 		ConnectionInfo: connetionInfo,
@@ -248,15 +241,5 @@ func (factory *dnsFactory) emitItem(packet gopacket.Packet, dns *layers.DNS) {
 		}, watch.Added)
 	}
 
-	pcap := factory.pcapMap[dns.ID]
-	pcap.Close()
-
 	delete(factory.idMap, dns.ID)
-	delete(factory.pcapMap, dns.ID)
-	delete(factory.pcapWriterMap, dns.ID)
-
-	if !isTargeted {
-		os.Remove(misc.GetPcapPath(pcap.Name()))
-	}
-
 }

@@ -266,6 +266,7 @@ func (d dissecting) Analyze(item *api.OutputChannelItem, resolvedSource *api.Res
 		Stream:       item.Stream,
 		Node:         &api.Node{},
 		Protocol:     protocol,
+		Tls:          item.Tls,
 		Source:       resolvedSource,
 		Destination:  resolvedDestination,
 		Outgoing:     item.ConnectionInfo.IsOutgoing,

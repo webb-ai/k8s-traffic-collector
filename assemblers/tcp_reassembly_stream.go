@@ -3,6 +3,7 @@ package assemblers
 import (
 	"encoding/binary"
 
+	"github.com/dreadl0ck/tlsx"
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers" // pulls in all layers decoders
 	"github.com/kubeshark/gopacket/reassembly"
@@ -136,8 +137,20 @@ func (t *tcpReassemblyStream) ReassemblyComplete(ac reassembly.AssemblerContext)
 }
 
 func (t *tcpReassemblyStream) ReceivePacket(packet gopacket.Packet) {
-	if t.tcpStream.GetIsTargeted() && t.tcpStream.GetIsIdentifyMode() {
+	t.detectClientHello(packet)
+
+	if t.tcpStream.GetIsTargeted() && t.tcpStream.ShouldWritePackets() {
 		t.writeWithEthernetLayer(packet)
+	}
+}
+
+func (t *tcpReassemblyStream) detectClientHello(packet gopacket.Packet) {
+	if t.tcpStream.assembler.captureMode == SortCapture && packet.ApplicationLayer() != nil {
+		clientHello := tlsx.ClientHelloBasic{}
+		err := clientHello.Unmarshal(packet.ApplicationLayer().LayerContents())
+		if err == nil {
+			t.tcpStream.tls = true
+		}
 	}
 }
 
@@ -201,23 +214,15 @@ func (t *tcpReassemblyStream) writeWithEthernetLayer(packet gopacket.Packet) {
 
 	newPacket := gopacket.NewPacket(buf.Bytes(), layers.LayerTypeEthernet, gopacket.Lazy)
 
-	t.writePacket(newPacket)
+	t.writePacket(packet.Metadata().CaptureInfo, newPacket)
 }
 
-func (t *tcpReassemblyStream) writePacket(packet gopacket.Packet) {
+func (t *tcpReassemblyStream) writePacket(info gopacket.CaptureInfo, packet gopacket.Packet) {
 	outgoingPacket := packet.Data()
 
-	info := packet.Metadata().CaptureInfo
 	info.Length = len(outgoingPacket)
 	info.CaptureLength = len(outgoingPacket)
 	info.Timestamp = info.Timestamp.UTC()
 
-	if t.tcpStream.pcapWriter == nil {
-		log.Debug().Msg("PCAP writer for this TCP stream does not exist (too many open files)!")
-		return
-	}
-
-	if err := t.tcpStream.pcapWriter.WritePacket(info, outgoingPacket); err != nil {
-		log.Debug().Str("pcap", t.tcpStream.pcap.Name()).Err(err).Msg("Couldn't write the packet:")
-	}
+	t.tcpStream.writePacket(info, outgoingPacket)
 }

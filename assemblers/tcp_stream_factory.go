@@ -23,14 +23,20 @@ import (
  */
 type tcpStreamFactory struct {
 	pcapId        string
-	identifyMode  bool
+	assembler     *TcpAssembler
 	outputChannel chan *api.OutputChannelItem
 	streamsMap    api.TcpStreamMap
 	ownIps        []string
 	opts          *misc.Opts
 }
 
-func NewTcpStreamFactory(pcapId string, identifyMode bool, outputChannel chan *api.OutputChannelItem, streamsMap api.TcpStreamMap, opts *misc.Opts) *tcpStreamFactory {
+func NewTcpStreamFactory(
+	pcapId string,
+	assembler *TcpAssembler,
+	outputChannel chan *api.OutputChannelItem,
+	streamsMap api.TcpStreamMap,
+	opts *misc.Opts,
+) *tcpStreamFactory {
 	var ownIps []string
 
 	if localhostIPs, err := getLocalhostIPs(); err != nil {
@@ -43,7 +49,7 @@ func NewTcpStreamFactory(pcapId string, identifyMode bool, outputChannel chan *a
 
 	return &tcpStreamFactory{
 		pcapId:        pcapId,
-		identifyMode:  identifyMode,
+		assembler:     assembler,
 		outputChannel: outputChannel,
 		streamsMap:    streamsMap,
 		ownIps:        ownIps,
@@ -62,7 +68,12 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 
 	props := factory.getStreamProps(srcIp, srcPort, dstIp, dstPort)
 	isTargeted := props.isTargeted
-	stream := NewTcpStream(factory.pcapId, factory.identifyMode, isTargeted, factory.streamsMap)
+	stream := NewTcpStream(
+		factory.pcapId,
+		factory.assembler,
+		isTargeted,
+		factory.streamsMap,
+	)
 	var emitter api.Emitter = &api.Emitting{
 		AppStats:      &diagnose.AppStats,
 		Stream:        stream,
@@ -123,7 +134,6 @@ func (factory *tcpStreamFactory) New(net, transport gopacket.Flow, tcpLayer *lay
 
 func (factory *tcpStreamFactory) waitGoRoutines(stream *tcpStream, wg *sync.WaitGroup) {
 	wg.Wait()
-	stream.handlePcapDissectionResult()
 }
 
 func inArrayPod(pods []v1.Pod, address string) bool {

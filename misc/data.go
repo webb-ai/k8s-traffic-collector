@@ -12,10 +12,14 @@ import (
 )
 
 const NameResolutionHistoryFilename string = "name_resolution_history.json"
+const DefaultContext string = "master"
+const PcapTTL time.Duration = 10 * time.Second
+const MasterPcapSizeCheckPeriod time.Duration = 5 * time.Second
+const NameResolutionDumpPeriod time.Duration = 3 * time.Second
+const ClientHelloBasicPacket string = "48d343aac4b8f018982a38be0800450002390000400040063dddc0a8b20d58c62f66fa5401bb22afc03a4f66c79a80180814af8900000101080a571eb2fab5d8c2d71603010200010001fc03030c4c5a78621a9d1f687fda02e40b01897bc32fefdd8f66612360cb40f186e29f2075aae50aca7bd3d7db205ce25ddc409a902578c8b5b6b1eb1f1cbe19cc02a45a0034130113021303c02cc02bc024c023c00ac009cca9c030c02fc028c027c014c013cca8009d009c003d003c0035002fc008c012000a0100017fff010001000000001a00180000156463382e733234302e6d656574726963732e6e657400170000000d0018001604030804040105030203080508050501080606010201000500050100000000001200000010000e000c02683208687474702f312e31000b00020100003300260024001d00200bd78e1307f42e2e1ce25309a2191a31f8436c270476f7808171d787c7d2b25f002d00020101002b0009080304030303020301000a000a0008001d001700180019001500c80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
 
 var dataDir = "data"
-var pcapsDirSizeLimit int64 = 200 * units.MiB
-var pcapsDirSizeLimitInterval = 5 * time.Second
+var masterPcapSizeLimit int64 = 200 * units.MiB
 
 func InitDataDir() {
 	body, err := os.ReadFile("/etc/machine-id")
@@ -57,46 +61,24 @@ func GetPcapsDir() string {
 	return GetDataPath("pcaps")
 }
 
-func GetPcapPath(id string) string {
-	return fmt.Sprintf("%s/%s", GetPcapsDir(), id)
+func GetContextPath(context string) string {
+	return fmt.Sprintf("%s/%s", GetPcapsDir(), context)
 }
 
-func BuildPcapPath(id int64) string {
-	return fmt.Sprintf("%s/%012d.pcap", GetPcapsDir(), id)
+func GetPcapPath(filename string, context string) string {
+	return fmt.Sprintf("%s/%s/%s", GetPcapsDir(), context, filename)
 }
 
-func BuildTmpPcapPath(id int64) string {
-	return fmt.Sprintf("%stmp", BuildPcapPath(id))
+func GetMasterPcapPath() string {
+	return fmt.Sprintf("%s/master.pcap", GetDataDir())
 }
 
-func BuildTlsPcapPath(id int64) string {
-	return fmt.Sprintf("%s/%012d_tls.pcap", GetPcapsDir(), id)
+func BuildPcapFilename(id int64) string {
+	return fmt.Sprintf("%012d.pcap", id)
 }
 
-func BuildTlsTmpPcapPath(id int64) string {
-	return fmt.Sprintf("%stmp", BuildTlsPcapPath(id))
-}
-
-func BuildUdpPcapPath(id int64) string {
-	return fmt.Sprintf("%s/%012d_udp.pcap", GetPcapsDir(), id)
-}
-
-func CleanUpTmpPcaps() error {
-	pcapFiles, err := os.ReadDir(GetPcapsDir())
-	if err != nil {
-		return err
-	}
-
-	for _, pcap := range pcapFiles {
-		if filepath.Ext(pcap.Name()) == ".pcaptmp" {
-			err = os.Remove(GetPcapPath(pcap.Name()))
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
+func BuildUdpPcapFilename(id int64) string {
+	return fmt.Sprintf("%012d_udp.pcap", id)
 }
 
 func GetNameResolutionHistoryPath() string {
@@ -107,66 +89,10 @@ func IsTls(id string) bool {
 	return strings.HasSuffix(id[:len(id)-len(filepath.Ext(id))], "_tls")
 }
 
-func SetPcapsDirSizeLimit(limit int64) {
-	pcapsDirSizeLimit = limit
+func GetMasterPcapSizeLimit() int64 {
+	return masterPcapSizeLimit
 }
 
-func limitPcapsDirSize() {
-	if pcapsDirSizeLimit < 0 {
-		return
-	}
-
-	var size int64
-	err := filepath.Walk(GetPcapsDir(), func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return err
-	})
-
-	if err != nil {
-		log.Error().Err(err).Send()
-	}
-
-	log.Debug().Int("size", int(size)).Msg("PCAP directory:")
-
-	if size > pcapsDirSizeLimit {
-		pcapsDirSizeLimitInterval = pcapsDirSizeLimitInterval * time.Duration(pcapsDirSizeLimit/(size-pcapsDirSizeLimit))
-		err := filepath.Walk(GetPcapsDir(), func(pcapPath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			if info.IsDir() {
-				return nil
-			}
-
-			if size <= pcapsDirSizeLimit {
-				return nil
-			}
-
-			err = os.Remove(pcapPath)
-			if err != nil {
-				return err
-			}
-
-			size -= info.Size()
-
-			log.Debug().Int("size", int(size)).Str("pcap", pcapPath).Msg("Removed PCAP file:")
-
-			return err
-		})
-
-		if err != nil {
-			log.Error().Err(err).Send()
-		}
-	}
-}
-
-func LimitPcapsDirSize() {
-	for range time.Tick(pcapsDirSizeLimitInterval) {
-		limitPcapsDirSize()
-	}
+func SetMasterPcapSizeLimit(limit int64) {
+	masterPcapSizeLimit = limit
 }

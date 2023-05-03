@@ -1,14 +1,12 @@
 package assemblers
 
 import (
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/kubeshark/gopacket/layers"
-	"github.com/kubeshark/gopacket/pcapgo"
+	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/worker/misc"
+	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
@@ -22,8 +20,7 @@ type tcpStream struct {
 	id             int64
 	pcapId         string
 	itemCount      int64
-	identifyMode   bool
-	emittable      bool
+	assembler      *TcpAssembler
 	isClosed       bool
 	protocol       *api.Protocol
 	isTargeted     bool
@@ -33,48 +30,39 @@ type tcpStream struct {
 	reqResMatchers []api.RequestResponseMatcher
 	createdAt      time.Time
 	streamsMap     api.TcpStreamMap
-	pcap           *os.File
-	pcapWriter     *pcapgo.Writer
+	tls            bool
 	sync.Mutex
 }
 
-func NewTcpStream(pcapId string, identifyMode bool, isTargeted bool, streamsMap api.TcpStreamMap) *tcpStream {
+func NewTcpStream(
+	pcapId string,
+	assembler *TcpAssembler,
+	isTargeted bool,
+	streamsMap api.TcpStreamMap,
+) *tcpStream {
 	t := &tcpStream{
-		pcapId:       pcapId,
-		identifyMode: identifyMode,
-		isTargeted:   isTargeted,
-		streamsMap:   streamsMap,
-		createdAt:    time.Now(),
+		pcapId:     pcapId,
+		assembler:  assembler,
+		isTargeted: isTargeted,
+		streamsMap: streamsMap,
+		createdAt:  time.Now(),
 	}
 
 	return t
 }
 
-func (t *tcpStream) createPcapWriter() {
-	if t.GetIsIdentifyMode() {
-		tmpPcapPath := misc.BuildTmpPcapPath(t.id)
-		log.Debug().Str("file", tmpPcapPath).Msg("Dumping TCP stream:")
-
-		var err error
-		t.pcap, err = os.OpenFile(tmpPcapPath, os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Error().Err(err).Msg("Couldn't create PCAP:")
-		} else {
-			t.pcapWriter = pcapgo.NewWriter(t.pcap)
-			err = t.pcapWriter.WriteFileHeader(uint32(misc.Snaplen), layers.LinkTypeEthernet)
-			if err != nil {
-				log.Error().Err(err).Msg("While writing the PCAP header:")
-			}
+func (t *tcpStream) writePacket(ci gopacket.CaptureInfo, data []byte) {
+	if t.assembler.captureMode == MasterCapture {
+		if err := t.assembler.GetMasterPcap().WritePacket(ci, data); err != nil {
+			log.Error().Str("pcap", t.assembler.GetMasterPcap().file.Name()).Err(err).Msg("Couldn't write the packet:")
 		}
 	}
-}
 
-func (t *tcpStream) handlePcapDissectionResult() {
-	if t.GetIsIdentifyMode() && !t.isEmittable() {
-		tmpPcapPath := misc.BuildTmpPcapPath(t.id)
-		log.Debug().Str("file", tmpPcapPath).Int("id", int(t.id)).Msg("Removing PCAP:")
-		os.Remove(tmpPcapPath)
-	}
+	t.assembler.SendSortedPacket(&wcap.SortedPacket{
+		PCAP: t.pcapId,
+		CI:   ci,
+		Data: data,
+	})
 }
 
 func (t *tcpStream) getId() int64 {
@@ -83,7 +71,9 @@ func (t *tcpStream) getId() int64 {
 
 func (t *tcpStream) setId(id int64) {
 	t.id = id
-	t.createPcapWriter()
+	if t.assembler.captureMode != ItemCapture {
+		t.pcapId = misc.BuildPcapFilename(t.id)
+	}
 }
 
 func (t *tcpStream) close() {
@@ -95,13 +85,6 @@ func (t *tcpStream) close() {
 	}
 
 	t.isClosed = true
-
-	if t.pcap != nil && t.GetIsIdentifyMode() {
-		log.Debug().Str("pcap", t.pcap.Name()).Msg("Closing:")
-		t.pcap.Close()
-		pcapPath := misc.BuildPcapPath(t.id)
-		misc.AlivePcaps.Delete(pcapPath)
-	}
 
 	t.streamsMap.Delete(t.id)
 	t.client.close()
@@ -116,10 +99,6 @@ func (t *tcpStream) addReqResMatcher(reqResMatcher api.RequestResponseMatcher) {
 	t.reqResMatchers = append(t.reqResMatchers, reqResMatcher)
 }
 
-func (t *tcpStream) isEmittable() bool {
-	return t.emittable
-}
-
 func (t *tcpStream) SetProtocol(protocol *api.Protocol) {
 	t.Lock()
 	t.protocol = protocol
@@ -130,21 +109,6 @@ func (t *tcpStream) SetProtocol(protocol *api.Protocol) {
 	t.Unlock()
 }
 
-func (t *tcpStream) SetAsEmittable() {
-	if t.GetIsIdentifyMode() && !t.isEmittable() {
-		tmpPcapPath := misc.BuildTmpPcapPath(t.id)
-		pcapPath := misc.BuildPcapPath(t.id)
-		misc.AlivePcaps.Store(pcapPath, true)
-		log.Debug().Str("old", tmpPcapPath).Str("new", pcapPath).Msg("Renaming PCAP:")
-		err := os.Rename(tmpPcapPath, pcapPath)
-		if err != nil {
-			log.Error().Err(err).Str("pcap", tmpPcapPath).Msg("Couldn't rename the PCAP file:")
-		}
-		t.pcapId = filepath.Base(pcapPath)
-	}
-	t.emittable = true
-}
-
 func (t *tcpStream) GetPcapId() string {
 	return t.pcapId
 }
@@ -153,8 +117,12 @@ func (t *tcpStream) GetIndex() int64 {
 	return t.itemCount
 }
 
-func (t *tcpStream) GetIsIdentifyMode() bool {
-	return t.identifyMode
+func (t *tcpStream) ShouldWritePackets() bool {
+	return t.assembler.captureMode == MasterCapture || t.IsSortCapture()
+}
+
+func (t *tcpStream) IsSortCapture() bool {
+	return t.assembler.captureMode == SortCapture
 }
 
 func (t *tcpStream) GetReqResMatchers() []api.RequestResponseMatcher {
@@ -171,4 +139,8 @@ func (t *tcpStream) GetIsClosed() bool {
 
 func (t *tcpStream) IncrementItemCount() {
 	t.itemCount++
+}
+
+func (t *tcpStream) GetTls() bool {
+	return t.tls
 }

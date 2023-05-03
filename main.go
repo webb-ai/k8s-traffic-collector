@@ -40,6 +40,13 @@ var statsevery = flag.Int("stats", 5, "Output statistics every N seconds")
 var memprofile = flag.String("memprofile", "", "Write memory profile")
 
 func main() {
+	if assemblers.GetProfilingEnabled() {
+		go diagnose.StartProfiler(
+			os.Getenv(assemblers.ProfilingDumpPath),
+			os.Getenv(assemblers.ProfilingTimeIntervalSeconds),
+		)
+	}
+
 	flag.Parse()
 
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -50,7 +57,6 @@ func main() {
 	}
 
 	misc.InitDataDir()
-	misc.InitAlivePcapsMap()
 	vm.Init()
 
 	run()
@@ -63,18 +69,11 @@ func run() {
 	opts := &misc.Opts{
 		ClusterMode: err == nil,
 	}
-	streamsMap := assemblers.NewTcpStreamMap(true)
+	streamsMap := assemblers.NewTcpStreamMap()
 
 	outputItems := make(chan *api.OutputChannelItem)
 
 	resolver.StartResolving(misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
-
-	if assemblers.GetMemoryProfilingEnabled() {
-		diagnose.StartMemoryProfiler(
-			os.Getenv(assemblers.MemoryProfilingDumpPath),
-			os.Getenv(assemblers.MemoryProfilingTimeIntervalSeconds),
-			os.Getenv(assemblers.MemoryUsageTimeIntervalMilliseconds))
-	}
 
 	updateTargetsQueue := queue.NewQueue("UpdateTargets")
 
@@ -121,7 +120,6 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
 		entry.Node.Name = node
 		entry.BuildId()
-		entry.Tls = misc.IsTls(entry.Stream)
 
 		vm.ItemCapturedHook(entry)
 	}

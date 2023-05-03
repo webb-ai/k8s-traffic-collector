@@ -37,22 +37,23 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 	}
 
 	query := c.Query("q")
+	context := c.Query("c")
 	worker := c.Query("worker")
 	node := c.Query("node")
 
 	outputChannel := make(chan *api.OutputChannelItem)
 
-	streamsMap := assemblers.NewTcpStreamMap(false)
+	streamsMap := assemblers.NewTcpStreamMap()
 	packets := make(chan source.TcpPacketInfo)
-	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id), "", "libpcap")
+	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id, context), "", "libpcap")
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")
-		c.String(http.StatusNotFound, fmt.Sprintf("The TCP/UDP stream %s was removed from the node: %s", id, node))
+		c.String(http.StatusNotFound, fmt.Sprintf("The TCP/UDP stream %s was removed from the node: %s/%s", id, node, context))
 		return
 	}
-	go s.ReadPackets(packets, false, false)
+	go s.ReadPackets(packets, false, false, nil)
 
-	assembler := assemblers.NewTcpAssembler(id, false, outputChannel, streamsMap, opts)
+	assembler := assemblers.NewTcpAssembler(id, assemblers.ItemCapture, nil, outputChannel, streamsMap, opts)
 	go func() {
 		for {
 			packetInfo, ok := <-packets
@@ -62,6 +63,8 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 			assembler.ProcessPacket(packetInfo, false)
 		}
 	}()
+
+	defer s.Close()
 
 	var i int64 = -1
 	for item := range outputChannel {
@@ -90,7 +93,6 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 		entry.Node.IP = misc.RemovePortFromWorkerHost(worker)
 		entry.Node.Name = node
 		entry.BuildId()
-		entry.Tls = misc.IsTls(entry.Stream)
 
 		extension := extensions.ExtensionsMap[entry.Protocol.Name]
 
