@@ -51,7 +51,7 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 		c.String(http.StatusNotFound, fmt.Sprintf("The TCP/UDP stream %s was removed from the node: %s/%s", id, node, context))
 		return
 	}
-	go s.ReadPackets(packets, false, false, nil)
+	go s.ReadPackets(packets, false, false)
 
 	assembler := assemblers.NewTcpAssembler(id, assemblers.ItemCapture, nil, outputChannel, streamsMap, opts)
 	go func() {

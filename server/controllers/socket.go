@@ -76,7 +76,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 	)
 
 	packets := make(chan source.TcpPacketInfo)
-	go s.ReadPackets(packets, true, false, sortedPackets)
+	go s.ReadPackets(packets, true, false)
 	go assembler.ProcessPackets(packets)
 
 	<-shutdown

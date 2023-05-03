@@ -10,7 +10,6 @@ import (
 	"github.com/kubeshark/gopacket/ip4defrag"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/worker/misc"
-	"github.com/kubeshark/worker/misc/wcap"
 	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog/log"
 )
@@ -125,7 +124,6 @@ func (source *TcpPacketSource) ReadPackets(
 	packets chan<- TcpPacketInfo,
 	dontClose bool,
 	masterCapture bool,
-	sortedPackets chan<- *wcap.SortedPacket,
 ) {
 	log.Debug().Str("source", source.name).Msg("Start reading packets from:")
 

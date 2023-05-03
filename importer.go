@@ -67,7 +67,7 @@ func walkFolder(folder string, packets chan<- source.TcpPacketInfo, opts *misc.O
 			return err
 		}
 
-		hostSource.ReadPackets(packets, true, true, nil)
+		hostSource.ReadPackets(packets, true, true)
 
 		return nil
 	}
