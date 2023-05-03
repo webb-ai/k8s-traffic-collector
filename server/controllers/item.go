@@ -41,10 +41,10 @@ func GetItem(c *gin.Context, opts *misc.Opts) {
 	worker := c.Query("worker")
 	node := c.Query("node")
 
-	outputChannel := make(chan *api.OutputChannelItem)
+	outputChannel := make(chan *api.OutputChannelItem, misc.ItemChannelBufferSize)
 
 	streamsMap := assemblers.NewTcpStreamMap()
-	packets := make(chan source.TcpPacketInfo)
+	packets := make(chan source.TcpPacketInfo, misc.PacketChannelBufferSize)
 	s, err := source.NewTcpPacketSource(id, misc.GetPcapPath(id, context), "", "libpcap")
 	if err != nil {
 		log.Error().Err(err).Str("pcap", id).Msg("Failed to create packet source!")

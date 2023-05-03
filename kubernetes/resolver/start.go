@@ -3,13 +3,14 @@ package resolver
 import (
 	"context"
 
+	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 )
 
 var K8sResolver *Resolver
 
 func StartResolving(nameResolutionHistoryPath string, clusterMode bool) {
-	errOut := make(chan error, 100)
+	errOut := make(chan error, misc.ErrorChannelBufferSize)
 	res := NewFromInCluster(errOut)
 
 	ctx := context.Background()

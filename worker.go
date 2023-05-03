@@ -31,7 +31,7 @@ var table2 []table.Row
 var table3 []table.Row
 
 func startWorker(opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem, extensions []*api.Extension, updateTargetsQueue *queue.Queue) {
-	sortedPackets := make(chan *wcap.SortedPacket)
+	sortedPackets := make(chan *wcap.SortedPacket, misc.PacketChannelBufferSize)
 	writer, err := wcap.NewWriter(misc.DefaultContext)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed creating writer:")
@@ -241,7 +241,7 @@ func initializeWorker(
 ) *assemblers.TcpAssembler {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 
-	target.MainPacketInputChan = make(chan source.TcpPacketInfo)
+	target.MainPacketInputChan = make(chan source.TcpPacketInfo, misc.PacketChannelBufferSize)
 
 	if err := initializePacketSources(); err != nil {
 		log.Fatal().Err(err).Send()

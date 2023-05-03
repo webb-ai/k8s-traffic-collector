@@ -17,7 +17,7 @@ import (
 func startImporter(folder string, opts *misc.Opts, streamsMap api.TcpStreamMap, outputItems chan *api.OutputChannelItem) {
 	diagnose.InitializeErrorsMap(*debug, *verbose, *quiet)
 
-	packets := make(chan source.TcpPacketInfo)
+	packets := make(chan source.TcpPacketInfo, misc.PacketChannelBufferSize)
 	opts.StaleConnectionTimeout = time.Duration(*staleTimeoutSeconds) * time.Second
 
 	assembler := assemblers.NewTcpAssembler("", assemblers.MasterCapture, nil, outputItems, streamsMap, opts)

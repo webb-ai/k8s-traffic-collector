@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,7 +73,7 @@ func TestDissect(t *testing.T) {
 		basePath := _path[:len(_path)-8]
 
 		// Channel to verify the output
-		itemChannel := make(chan *api.OutputChannelItem)
+		itemChannel := make(chan *api.OutputChannelItem, misc.ItemChannelBufferSize)
 		var emitter api.Emitter = &api.Emitting{
 			AppStats:      &api.AppStats{},
 			OutputChannel: itemChannel,

@@ -11,6 +11,7 @@ import (
 	"github.com/kubeshark/ebpf/perf"
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
+	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/rs/zerolog/log"
 )
@@ -42,7 +43,7 @@ func newTlsPoller(
 	poller := &tlsPoller{
 		tls:           tls,
 		streams:       make(map[string]*tlsStream),
-		closeStreams:  make(chan string, 100),
+		closeStreams:  make(chan string, misc.TlsCloseChannelBufferSize),
 		reqResMatcher: extension.Dissector.NewResponseRequestMatcher(),
 		extension:     extension,
 		chunksReader:  nil,

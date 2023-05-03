@@ -37,7 +37,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 	defer ws.Close()
 
 	shutdown := make(chan bool)
-	outputChannel := make(chan *api.OutputChannelItem)
+	outputChannel := make(chan *api.OutputChannelItem, misc.ItemChannelBufferSize)
 
 	go writeChannelToSocket(outputChannel, ws, c.Query("worker"), c.Query("node"), c.Query("q"))
 
@@ -58,7 +58,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 		return
 	}
 
-	sortedPackets := make(chan *wcap.SortedPacket)
+	sortedPackets := make(chan *wcap.SortedPacket, misc.PacketChannelBufferSize)
 	writer, err := wcap.NewWriter(c.Query("c"))
 	if err != nil {
 		log.Error().Err(err).Msg("Failed creating writer:")
@@ -75,7 +75,7 @@ func WebsocketHandler(c *gin.Context, opts *misc.Opts) {
 		opts,
 	)
 
-	packets := make(chan source.TcpPacketInfo)
+	packets := make(chan source.TcpPacketInfo, misc.PacketChannelBufferSize)
 	go s.ReadPackets(packets, true, false)
 	go assembler.ProcessPackets(packets)
 

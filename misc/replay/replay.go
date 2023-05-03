@@ -12,6 +12,7 @@ import (
 	"github.com/kubeshark/gopacket"
 	"github.com/kubeshark/gopacket/layers"
 	"github.com/kubeshark/gopacket/pcapgo"
+	"github.com/kubeshark/worker/misc"
 	"github.com/rs/zerolog/log"
 )
 
@@ -59,7 +60,7 @@ func replay(pcapPath string, host string, port string, delayGrace time.Duration)
 	}
 	defer f.Close()
 
-	packets := make(chan gopacket.Packet)
+	packets := make(chan gopacket.Packet, misc.PacketChannelBufferSize)
 	defer close(packets)
 
 	reader, err := pcapgo.NewReader(f)

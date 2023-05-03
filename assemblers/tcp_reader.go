@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kubeshark/worker/misc"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/kubeshark/worker/pkg/extensions"
 )
@@ -36,7 +37,7 @@ type tcpReader struct {
 
 func NewTcpReader(ident string, tcpId *api.TcpID, parent *tcpStream, isClient bool, isOutgoing bool, emitter api.Emitter) *tcpReader {
 	return &tcpReader{
-		msgQueue:   make(chan api.TcpReaderDataMsg),
+		msgQueue:   make(chan api.TcpReaderDataMsg, misc.PacketChannelBufferSize),
 		progress:   &api.ReadProgress{},
 		ident:      ident,
 		tcpID:      tcpId,

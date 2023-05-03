@@ -2,6 +2,8 @@ package vm
 
 import (
 	"testing"
+
+	"github.com/kubeshark/worker/misc"
 )
 
 func TestWebhookHelper(t *testing.T) {
@@ -13,7 +15,7 @@ function onItemCaptured(item) {
 
 `
 	LogGlobal = &LogState{
-		Channel: make(chan *Log),
+		Channel: make(chan *Log, misc.LogChannelBufferSize),
 	}
 
 	v, err := Create(key, code, "minikube", "192.168.1.1")

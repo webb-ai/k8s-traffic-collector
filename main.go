@@ -71,7 +71,7 @@ func run() {
 	}
 	streamsMap := assemblers.NewTcpStreamMap()
 
-	outputItems := make(chan *api.OutputChannelItem)
+	outputItems := make(chan *api.OutputChannelItem, misc.ItemChannelBufferSize)
 
 	resolver.StartResolving(misc.GetNameResolutionHistoryPath(), opts.ClusterMode)
 
@@ -88,7 +88,7 @@ func run() {
 	}
 
 	vm.LogGlobal = &vm.LogState{
-		Channel: make(chan *vm.Log),
+		Channel: make(chan *vm.Log, misc.LogChannelBufferSize),
 	}
 	go vm.RecieveLogChannel()
 
