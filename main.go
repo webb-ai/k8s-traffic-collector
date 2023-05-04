@@ -3,8 +3,12 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"github.com/kubeshark/worker/server"
 	"os"
 	"time"
+
+	"github.com/kubeshark/worker/metrics"
+	"github.com/kubeshark/worker/vm"
 
 	"github.com/kubeshark/worker/assemblers"
 	"github.com/kubeshark/worker/diagnose"
@@ -13,9 +17,7 @@ import (
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/kubeshark/worker/pkg/extensions"
 	"github.com/kubeshark/worker/queue"
-	"github.com/kubeshark/worker/server"
 	"github.com/kubeshark/worker/utils"
-	"github.com/kubeshark/worker/vm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"k8s.io/client-go/rest"
@@ -92,6 +94,7 @@ func run() {
 	}
 	go vm.RecieveLogChannel()
 
+	metrics.StartMetricsServer(":9090", "/webbai_metrics")
 	ginApp := server.Build(opts, *procfs, updateTargetsQueue)
 	server.Start(ginApp, *port)
 }
@@ -122,5 +125,8 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		entry.BuildId()
 
 		vm.ItemCapturedHook(entry)
+		log.Info().Msg("record metrics")
+
+		metrics.Record(entry)
 	}
 }
