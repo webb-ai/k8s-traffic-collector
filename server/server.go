@@ -30,6 +30,8 @@ func Build(opts *misc.Opts, procfs string, updateTargetsQueue *queue.Queue) *gin
 
 	ginApp.Use(middlewares.CORSMiddleware())
 
+	routes.LicenseRoutes(ginApp)
+
 	routes.WebSocketRoutes(ginApp, opts)
 	routes.ItemRoutes(ginApp, opts)
 	routes.PodsRoutes(ginApp, procfs, updateTargetsQueue)
