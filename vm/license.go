@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const licenseErrorMsgFormat = "%s helper requires Pro license! Please visit https://kubeshark.co/pro"
+const licenseErrorMsgFormat = "%s helper requires Pro license! Please visit https://kubeshark.co/pricing"
 
 var license bool
 
