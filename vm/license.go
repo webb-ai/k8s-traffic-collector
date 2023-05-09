@@ -9,7 +9,7 @@ const licenseErrorMsgFormat = "%s helper requires Pro license! Please visit http
 var license bool
 
 func protectLicense(helperName string, scriptIndex int64) bool {
-	if license {
+	if !license {
 		SendLogError(scriptIndex, fmt.Sprintf(licenseErrorMsgFormat, helperName))
 
 		return true
