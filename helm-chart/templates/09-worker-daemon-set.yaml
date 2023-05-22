@@ -40,6 +40,9 @@ spec:
           image: 'public.ecr.aws/p5v6t9h8/ebpf-worker:latest'
           imagePullPolicy: '{{ .Values.tap.docker.imagepullpolicy }}'
           name: kubeshark-worker-daemon-set
+          env:
+            - name: GOGC
+              value: '50'
           ports:
             - containerPort: {{ .Values.tap.proxy.worker.srvport }}
               hostPort: {{ .Values.tap.proxy.worker.srvport }}
