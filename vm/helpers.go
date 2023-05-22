@@ -558,7 +558,7 @@ func definePcap(o *otto.Otto, scriptIndex int64) {
 			}
 			defer outFile.Close()
 
-			err = mergecap.Mergecap(pcapFiles, "", selectedPcaps, outFile)
+			err = mergecap.Mergecap(pcapFiles, "", misc.DefaultContext, selectedPcaps, outFile)
 			if err != nil {
 				return throwError(call, err)
 			}

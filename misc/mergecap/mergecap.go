@@ -3,7 +3,6 @@ package mergecap
 import (
 	"bufio"
 	"container/heap"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -23,12 +22,12 @@ const maxSnaplen uint32 = 262144
 // It helps us find bad/corrupted packets with weird timestamps.
 var previousTimestamp int64
 
-func Mergecap(pcapFiles []fs.DirEntry, query string, selectedPcaps []string, outFile *os.File) error {
+func Mergecap(pcapFiles []fs.DirEntry, query string, context string, selectedPcaps []string, outFile *os.File) error {
 	// Init a minimum heap by packet timestamp
 	minTimeHeap := minheap.PacketHeap{}
 	heap.Init(&minTimeHeap)
 
-	linkType := initHeapWithPcapFiles(pcapFiles, query, selectedPcaps, &minTimeHeap)
+	linkType := initHeapWithPcapFiles(pcapFiles, query, context, selectedPcaps, &minTimeHeap)
 
 	// Init the output file
 	bufferedFileWriter := bufio.NewWriter(outFile)
@@ -80,7 +79,7 @@ func Mergecap(pcapFiles []fs.DirEntry, query string, selectedPcaps []string, out
 // initHeapWithPcapFiles inits minTimeHeap with one packet from each source file.
 // It also returns the output LinkType, which is decided by the LinkTypes of all of the
 // input files.
-func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, query string, selectedPcaps []string, minTimeHeap *minheap.PacketHeap) layers.LinkType {
+func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, query string, context string, selectedPcaps []string, minTimeHeap *minheap.PacketHeap) layers.LinkType {
 	var totalInputSizeBytes int64
 	var linkType layers.LinkType
 
@@ -94,7 +93,7 @@ func initHeapWithPcapFiles(pcapFiles []fs.DirEntry, query string, selectedPcaps 
 		}
 
 		// Read the first packet and push it to the heap
-		inputFile, err := os.Open(fmt.Sprintf("%s/%s", misc.GetPcapsDir(), pcap.Name()))
+		inputFile, err := os.Open(misc.GetPcapPath(pcap.Name(), context))
 		if err != nil {
 			log.Error().Err(err).Str("pcap", pcap.Name()).Msg("(Mergecap) Skipping PCAP file:")
 			continue

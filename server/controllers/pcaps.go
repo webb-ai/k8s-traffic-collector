@@ -69,7 +69,7 @@ func PostMerge(c *gin.Context) {
 	defer outFile.Close()
 	defer os.Remove(outFile.Name())
 
-	err = mergecap.Mergecap(pcapFiles, req.Query, req.Pcaps, outFile)
+	err = mergecap.Mergecap(pcapFiles, req.Query, req.Context, req.Pcaps, outFile)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to merge the PCAP files!")
 		c.JSON(http.StatusInternalServerError, err)
