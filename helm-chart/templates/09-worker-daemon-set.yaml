@@ -37,7 +37,7 @@ spec:
             - -tls
             - -procfs
             - /hostproc
-          image: 'public.ecr.aws/p5v6t9h8/ebpf-worker:latest'
+          image: 'public.ecr.aws/p5v6t9h8/k8s-traffic-collector:latest'
           imagePullPolicy: '{{ .Values.tap.docker.imagepullpolicy }}'
           name: kubeshark-worker-daemon-set
           env:
