@@ -96,7 +96,7 @@ func run() {
 	}
 	go vm.RecieveLogChannel()
 
-	metrics.StartMetricsServer(fmt.Sprintf(":%d", metricsPort), "/webbai_metrics")
+	metrics.StartMetricsServer(fmt.Sprintf(":%d", *metricsPort), "/webbai_metrics")
 	ginApp := server.Build(opts, *procfs, updateTargetsQueue)
 	server.Start(ginApp, *port)
 }
