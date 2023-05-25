@@ -127,8 +127,6 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		entry.BuildId()
 
 		vm.ItemCapturedHook(entry)
-		log.Info().Msg("record metrics")
-
 		metrics.Record(entry)
 	}
 }
