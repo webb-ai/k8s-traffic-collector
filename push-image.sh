@@ -6,8 +6,9 @@ DOCKER_TAG=$(git describe --dirty --tags)
 docker build . -t ${DOCKER_REPO}:${DOCKER_TAG}-amd64 --build-arg BUILDARCH=amd64 --build-arg TARGETARCH=amd64
 docker build . -t ${DOCKER_REPO}:${DOCKER_TAG}-arm64v8 --build-arg BUILDARCH=amd64 --build-arg TARGETARCH=arm64v8
 
-docker manifest create ${DOCKER_REPO}:${DOCKER_TAG} ${DOCKER_REPO}:${DOCKER_TAG}-amd64 ${DOCKER_REPO}:${DOCKER_TAG}-arm64v8
 docker push ${DOCKER_REPO}:${DOCKER_TAG}-amd64
 docker push ${DOCKER_REPO}:${DOCKER_TAG}-arm64v8
+
+docker manifest create ${DOCKER_REPO}:${DOCKER_TAG} ${DOCKER_REPO}:${DOCKER_TAG}-amd64 ${DOCKER_REPO}:${DOCKER_TAG}-arm64v8
 docker manifest push ${DOCKER_REPO}:${DOCKER_TAG}
 
