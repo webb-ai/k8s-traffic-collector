@@ -106,7 +106,7 @@ func Record(entry *api.Entry) {
 }
 
 func StartMetricsServer(port, endpoint string) {
-	log.Info().Msg("starting metrics server")
+	log.Info().Msgf("starting metrics server at endpoint %s of port %s", endpoint, port)
 	http.Handle(endpoint, Handler())
 	go http.ListenAndServe(port, nil)
 }
