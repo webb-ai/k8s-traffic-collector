@@ -81,10 +81,21 @@ func Record(entry *api.Entry) {
 
 	switch entry.Protocol.Name {
 	case "http":
-		labels[Method] = entry.Request["method"].(string)
-		labels[Endpoint] = entry.Request["path"].(string)
-		labels[StatusCode] = strconv.Itoa(int(entry.Response["status"].(float64)))
-		labels[DestinationHost] = entry.Request["headers"].(map[string]interface{})["Host"].(string)
+		request := entry.Request
+		response := entry.Response
+		if request["method"] != nil {
+			labels[Method] = request["method"].(string)
+		}
+		if request["path"] != nil {
+			labels[Endpoint] = request["path"].(string)
+		}
+		if response["status"] != nil {
+			labels[StatusCode] = strconv.Itoa(int(response["status"].(float64)))
+		}
+		if request["headers"].(map[string]interface{})["Host"] != nil {
+			labels[DestinationHost] = request["headers"].(map[string]interface{})["Host"].(string)
+		}
+
 	case "dns":
 	}
 
@@ -96,6 +107,11 @@ func Record(entry *api.Entry) {
 
 func StartMetricsServer(port, endpoint string) {
 	log.Info().Msg("starting metrics server")
+	http.Handle(endpoint, Handler())
+	go http.ListenAndServe(port, nil)
+}
+
+func Handler() http.Handler {
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(
 		allMetrics.RequestCountTotal,
@@ -103,6 +119,5 @@ func StartMetricsServer(port, endpoint string) {
 		allMetrics.ResponseSizeBytes,
 		allMetrics.RequestDurationSeconds,
 	)
-	http.Handle(endpoint, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	go http.ListenAndServe(port, nil)
+	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 }

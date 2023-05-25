@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"flag"
+	"fmt"
 	"github.com/kubeshark/worker/server"
 	"os"
 	"time"
@@ -24,6 +25,7 @@ import (
 )
 
 var port = flag.Int("port", 80, "Port number of the HTTP server")
+var metricsPort = flag.Int("metrics-port", 9095, "Port number of the prom metrics server")
 
 // capture
 var iface = flag.String("i", "en0", "Interface to read packets from")
@@ -94,7 +96,7 @@ func run() {
 	}
 	go vm.RecieveLogChannel()
 
-	metrics.StartMetricsServer(":9090", "/webbai_metrics")
+	metrics.StartMetricsServer(fmt.Sprintf(":%d", metricsPort), "/webbai_metrics")
 	ginApp := server.Build(opts, *procfs, updateTargetsQueue)
 	server.Start(ginApp, *port)
 }
