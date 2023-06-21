@@ -126,7 +126,6 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		entry.Node.Name = node
 		entry.BuildId()
 
-		vm.ItemCapturedHook(entry)
 		metrics.Record(entry)
 	}
 }
