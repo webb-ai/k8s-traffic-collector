@@ -14,6 +14,7 @@ const (
 	SourceIP        = "source_ip"
 	DestinationIP   = "destination_ip"
 	DestinationHost = "destination_host"
+	DestinationPort = "destination_port"
 	Protocol        = "protocol"
 	Method          = "method"
 	Endpoint        = "endpoint"
@@ -30,7 +31,7 @@ type metrics struct {
 }
 
 func newMetrics() *metrics {
-	labels := []string{SourceIP, DestinationIP, DestinationHost, Protocol, Method, Endpoint, StatusCode}
+	labels := []string{SourceIP, DestinationIP, DestinationHost, DestinationPort, Protocol, Method, Endpoint, StatusCode}
 	requestCount := promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "request_count_total",
@@ -72,6 +73,7 @@ func Record(entry *api.Entry) {
 	labels := map[string]string{
 		SourceIP:        entry.Source.IP,
 		DestinationIP:   entry.Destination.IP,
+		DestinationPort: entry.Destination.Port,
 		DestinationHost: "",
 		Protocol:        entry.Protocol.Name,
 		Method:          "",
