@@ -126,6 +126,8 @@ func handleCapturedItems(outputItems chan *api.OutputChannelItem) {
 		entry.Node.Name = node
 		entry.BuildId()
 
+		log.Debug().Interface("entry", entry).Msg("entry")
+
 		metrics.Record(entry)
 	}
 }
