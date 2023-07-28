@@ -39,6 +39,7 @@ func Build(opts *misc.Opts, procfs string, updateTargetsQueue *queue.Queue) *gin
 	routes.ScriptsRoutes(ginApp)
 	routes.JobsRoutes(ginApp)
 	routes.SelfRoutes(ginApp)
+	routes.ServiceIpRoutes(ginApp)
 
 	return ginApp
 }

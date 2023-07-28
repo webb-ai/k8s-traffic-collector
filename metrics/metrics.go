@@ -11,17 +11,21 @@ import (
 )
 
 const (
-	SourceIP        = "source_ip"
-	DestinationIP   = "destination_ip"
-	DestinationHost = "destination_host"
-	DestinationPort = "destination_port"
-	Protocol        = "protocol"
-	Method          = "method"
-	Endpoint        = "endpoint"
-	StatusCode      = "status_code"
+	SourceIP           = "source_ip"
+	SourceService      = "source_service"
+	DestinationIP      = "destination_ip"
+	DestinationHost    = "destination_host"
+	DestinationPort    = "destination_port"
+	DestinationService = "destination_service"
+	Protocol           = "protocol"
+	Method             = "method"
+	Endpoint           = "endpoint"
+	StatusCode         = "status_code"
 )
 
 var allMetrics = newMetrics()
+var ServiceByIps map[string]string        // global
+var ServiceByClusterIps map[string]string // global
 
 type metrics struct {
 	RequestCountTotal      *prometheus.CounterVec
@@ -31,7 +35,7 @@ type metrics struct {
 }
 
 func newMetrics() *metrics {
-	labels := []string{SourceIP, DestinationIP, DestinationHost, DestinationPort, Protocol, Method, Endpoint, StatusCode}
+	labels := []string{SourceIP, SourceService, DestinationIP, DestinationHost, DestinationPort, DestinationService, Protocol, Method, Endpoint, StatusCode}
 	requestCount := promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "request_count_total",
@@ -71,14 +75,28 @@ func newMetrics() *metrics {
 func Record(entry *api.Entry) {
 	durationSeconds := float64(entry.ElapsedTime) / 1000.0
 	labels := map[string]string{
-		SourceIP:        entry.Source.IP,
-		DestinationIP:   entry.Destination.IP,
-		DestinationPort: entry.Destination.Port,
-		DestinationHost: "",
-		Protocol:        entry.Protocol.Name,
-		Method:          "",
-		Endpoint:        "",
-		StatusCode:      "",
+		SourceIP:           entry.Source.IP,
+		SourceService:      "",
+		DestinationIP:      entry.Destination.IP,
+		DestinationPort:    entry.Destination.Port,
+		DestinationHost:    "",
+		DestinationService: "",
+		Protocol:           entry.Protocol.Name,
+		Method:             "",
+		Endpoint:           "",
+		StatusCode:         "",
+	}
+
+	if service, ok := ServiceByIps[entry.Source.IP]; ok {
+		labels[SourceService] = service
+	}
+
+	if service, ok := ServiceByIps[entry.Destination.IP]; ok {
+		labels[DestinationService] = service
+	}
+
+	if service, ok := ServiceByClusterIps[entry.Destination.IP]; ok {
+		labels[DestinationService] = service
 	}
 
 	switch entry.Protocol.Name {
