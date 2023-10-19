@@ -193,6 +193,7 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 				Namespace: pod.Namespace,
 				Pod:       pod,
 			}, event.Type)
+			clearPodFields(pod)
 		case <-ctx.Done():
 			watcher.Stop()
 			return nil
@@ -243,6 +244,7 @@ func (resolver *Resolver) watchEndpoints(ctx context.Context) error {
 
 				}
 			}
+			clearEndpoints(endpoint)
 		case <-ctx.Done():
 			watcher.Stop()
 			return nil
@@ -298,6 +300,7 @@ func (resolver *Resolver) watchServices(ctx context.Context) error {
 					}
 				}
 			}
+			clearService(service)
 		case <-ctx.Done():
 			watcher.Stop()
 			return nil
@@ -360,4 +363,21 @@ func (resolver *Resolver) infiniteErrorHandleRetryFunc(ctx context.Context, fun 
 			return
 		}
 	}
+}
+
+func clearPodFields(pod *corev1.Pod) {
+	pod.ManagedFields = nil
+	pod.Spec = corev1.PodSpec{}
+	pod.Status = corev1.PodStatus{}
+}
+
+func clearEndpoints(endpoint *corev1.Endpoints) {
+	endpoint.ManagedFields = nil
+	endpoint.Subsets = nil
+}
+
+func clearService(service *corev1.Service) {
+	service.ManagedFields = nil
+	service.Spec = corev1.ServiceSpec{}
+	service.Status = corev1.ServiceStatus{}
 }

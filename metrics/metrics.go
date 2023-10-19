@@ -6,26 +6,31 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
+	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strconv"
 )
 
 const (
-	SourceIP           = "source_ip"
-	SourceService      = "source_service"
-	DestinationIP      = "destination_ip"
-	DestinationHost    = "destination_host"
-	DestinationPort    = "destination_port"
-	DestinationService = "destination_service"
-	Protocol           = "protocol"
-	Method             = "method"
-	Endpoint           = "endpoint"
-	StatusCode         = "status_code"
+	DestinationEndpoint  = "destination_endpoint"
+	DestinationHost      = "destination_host"
+	DestinationIP        = "destination_ip"
+	DestinationPod       = "destination_pod"
+	DestinationPort      = "destination_port"
+	DestinationService   = "destination_service"
+	DestinationNameSpace = "destination_namespace"
+	Endpoint             = "endpoint"
+	Method               = "method"
+	Protocol             = "protocol"
+	SourceEndpoint       = "source_endpoint"
+	SourceIP             = "source_ip"
+	SourceNameSpace      = "source_namespace"
+	SourcePod            = "source_pod"
+	SourceService        = "source_service"
+	StatusCode           = "status_code"
 )
 
 var allMetrics = newMetrics()
-var ServiceByIps map[string]string        // global
-var ServiceByClusterIps map[string]string // global
 
 type metrics struct {
 	RequestCountTotal      *prometheus.CounterVec
@@ -35,7 +40,9 @@ type metrics struct {
 }
 
 func newMetrics() *metrics {
-	labels := []string{SourceIP, SourceService, DestinationIP, DestinationHost, DestinationPort, DestinationService, Protocol, Method, Endpoint, StatusCode}
+	labels := []string{DestinationEndpoint, DestinationHost, DestinationIP, DestinationPod, DestinationPort,
+		DestinationService, DestinationNameSpace, Endpoint, Method, Protocol, SourceEndpoint, SourceIP,
+		SourceNameSpace, SourcePod, SourceService, StatusCode}
 	requestCount := promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "request_count_total",
@@ -72,31 +79,46 @@ func newMetrics() *metrics {
 	}
 }
 
+func getPodName(pod *corev1.Pod) string {
+	if pod == nil {
+		return ""
+	}
+	return pod.Name
+}
+
+func getEndpointName(endpoint *corev1.Endpoints) string {
+	if endpoint == nil {
+		return ""
+	}
+	return endpoint.Name
+}
+
+func getServiceName(service *corev1.Service) string {
+	if service == nil {
+		return ""
+	}
+	return service.Name
+}
+
 func Record(entry *api.Entry) {
 	durationSeconds := float64(entry.ElapsedTime) / 1000.0
 	labels := map[string]string{
-		SourceIP:           entry.Source.IP,
-		SourceService:      "",
-		DestinationIP:      entry.Destination.IP,
-		DestinationPort:    entry.Destination.Port,
-		DestinationHost:    "",
-		DestinationService: "",
-		Protocol:           entry.Protocol.Name,
-		Method:             "",
-		Endpoint:           "",
-		StatusCode:         "",
-	}
-
-	if service, ok := ServiceByIps[entry.Source.IP]; ok {
-		labels[SourceService] = service
-	}
-
-	if service, ok := ServiceByIps[entry.Destination.IP]; ok {
-		labels[DestinationService] = service
-	}
-
-	if service, ok := ServiceByClusterIps[entry.Destination.IP]; ok {
-		labels[DestinationService] = service
+		DestinationEndpoint:  getEndpointName(entry.Destination.EndpointSlice),
+		DestinationIP:        entry.Destination.IP,
+		DestinationNameSpace: entry.Destination.Namespace,
+		DestinationPod:       getPodName(entry.Destination.Pod),
+		DestinationPort:      entry.Destination.Port,
+		DestinationService:   getServiceName(entry.Destination.Service),
+		SourceEndpoint:       getEndpointName(entry.Source.EndpointSlice),
+		SourceIP:             entry.Source.IP,
+		SourceNameSpace:      entry.Source.Namespace,
+		SourcePod:            getPodName(entry.Source.Pod),
+		SourceService:        getServiceName(entry.Source.Service),
+		Protocol:             entry.Protocol.Name,
+		DestinationHost:      "",
+		Endpoint:             "",
+		Method:               "",
+		StatusCode:           "",
 	}
 
 	switch entry.Protocol.Name {
