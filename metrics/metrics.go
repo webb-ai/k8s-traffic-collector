@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"fmt"
 	"github.com/kubeshark/worker/pkg/api"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -9,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -79,13 +81,6 @@ func newMetrics() *metrics {
 	}
 }
 
-func getPodName(pod *corev1.Pod) string {
-	if pod == nil {
-		return ""
-	}
-	return pod.Name
-}
-
 func getEndpointName(endpoint *corev1.Endpoints) string {
 	if endpoint == nil {
 		return ""
@@ -100,25 +95,53 @@ func getServiceName(service *corev1.Service) string {
 	return service.Name
 }
 
+func getPodOwner(pod *corev1.Pod) string {
+	if pod == nil {
+		return ""
+	}
+	for _, ref := range pod.GetOwnerReferences() {
+		if ref.Kind == "Deployment" || ref.Kind == "StatefulSet" || ref.Kind == "DaemonSet" || ref.Kind == "CronJob" || ref.Kind == "Job" {
+			return fmt.Sprintf("%s|%s|%s", ref.APIVersion, ref.Kind, ref.Name)
+		}
+
+		if ref.Kind == "ReplicaSet" {
+			lastDashIndex := strings.LastIndex(ref.Name, "-")
+			if lastDashIndex == -1 {
+				// shouldn't happen
+				return ""
+			}
+			deployName := ref.Name[:lastDashIndex]
+
+			return fmt.Sprintf("apps/v1|Deployment|%s", deployName)
+		}
+	}
+
+	return ""
+}
+
 func Record(entry *api.Entry) {
 	durationSeconds := float64(entry.ElapsedTime) / 1000.0
 	labels := map[string]string{
 		DestinationEndpoint:  getEndpointName(entry.Destination.EndpointSlice),
 		DestinationIP:        entry.Destination.IP,
 		DestinationNameSpace: entry.Destination.Namespace,
-		DestinationPod:       getPodName(entry.Destination.Pod),
+		DestinationPod:       getPodOwner(entry.Destination.Pod),
 		DestinationPort:      entry.Destination.Port,
 		DestinationService:   getServiceName(entry.Destination.Service),
 		SourceEndpoint:       getEndpointName(entry.Source.EndpointSlice),
 		SourceIP:             entry.Source.IP,
 		SourceNameSpace:      entry.Source.Namespace,
-		SourcePod:            getPodName(entry.Source.Pod),
+		SourcePod:            getPodOwner(entry.Source.Pod),
 		SourceService:        getServiceName(entry.Source.Service),
 		Protocol:             entry.Protocol.Name,
 		DestinationHost:      "",
 		Endpoint:             "",
 		Method:               "",
 		StatusCode:           "",
+	}
+
+	if labels[SourcePod] == "" {
+		return
 	}
 
 	switch entry.Protocol.Name {

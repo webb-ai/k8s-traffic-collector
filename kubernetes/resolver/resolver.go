@@ -188,12 +188,15 @@ func (resolver *Resolver) watchPods(ctx context.Context) error {
 			}
 
 			pod := event.Object.(*corev1.Pod)
-			resolver.SaveResolution(pod.Status.PodIP, &api.Resolution{
-				Name:      pod.Name,
-				Namespace: pod.Namespace,
-				Pod:       pod,
-			}, event.Type)
-			clearPodFields(pod)
+			if pod.Status.PodIP != pod.Status.HostIP {
+				resolver.SaveResolution(pod.Status.PodIP, &api.Resolution{
+					Name:      pod.Name,
+					Namespace: pod.Namespace,
+					Pod:       pod,
+				}, event.Type)
+				clearPodFields(pod)
+			}
+
 		case <-ctx.Done():
 			watcher.Stop()
 			return nil
